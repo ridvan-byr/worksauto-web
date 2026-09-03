@@ -4,6 +4,7 @@ import { Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/query-provider"
+import { AuthProvider } from "@/features/auth/auth-context"
 import { AppShell } from "@/components/layout/app-shell"
 import { DynamicFavicon } from "@/components/dynamic-favicon"
 
@@ -52,7 +53,9 @@ export default async function RootLayout({
         >
           <DynamicFavicon />
           <QueryProvider>
-            <AppShell defaultCollapsed={defaultCollapsed}>{children}</AppShell>
+            <AuthProvider>
+              <AppShell defaultCollapsed={defaultCollapsed}>{children}</AppShell>
+            </AuthProvider>
           </QueryProvider>
         </ThemeProvider>
       </body>

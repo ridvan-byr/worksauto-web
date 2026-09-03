@@ -12,6 +12,7 @@ import {
 import { BrandLogo } from "@/components/shared/brand-logo"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "./theme-toggle"
+import { useAuth } from "@/features/auth/auth-context"
 import { restartPageAnimation } from "@/lib/animation"
 
 interface AppHeaderProps {
@@ -21,6 +22,7 @@ interface AppHeaderProps {
 
 export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
   const pathname = usePathname()
+  const { user } = useAuth()
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/80 dark:border-slate-800/80 dark:bg-[#070b12]/80 px-4 lg:px-8 backdrop-blur-md transition-colors">
@@ -89,11 +91,11 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
         {/* User Badge */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-500 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-sm">
-            R
+            {user ? user.name.charAt(0) : "S"}
           </div>
           <div className="hidden xl:block text-left">
             <p className="text-xs font-semibold leading-tight text-slate-900 dark:text-slate-100">
-              Rıdvan Bayır
+              {user ? `${user.name} ${user.surname}` : "Servis Yöneticisi"}
             </p>
             <p className="text-[10px] text-slate-500 dark:text-slate-400">
               Servis Yöneticisi

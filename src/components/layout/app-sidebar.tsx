@@ -17,8 +17,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
+  LogOut,
 } from "lucide-react"
 import { BrandLogo } from "@/components/shared/brand-logo"
+import { useAuth } from "@/features/auth/auth-context"
 import { restartPageAnimation } from "@/lib/animation"
 import { cn } from "@/lib/utils"
 
@@ -95,6 +97,7 @@ export function AppSidebar({
   onCloseMobile,
 }: AppSidebarProps) {
   const pathname = usePathname()
+  const { tenant, user, logout } = useAuth()
 
   const handleNavClick = (href: string) => {
     onCloseMobile()
@@ -198,31 +201,49 @@ export function AppSidebar({
           })}
         </div>
 
-        {/* Footer Tenant Info */}
-        <div className="p-2.5 border-t border-slate-200/70 dark:border-slate-800/70">
+        {/* Footer Tenant Info & Logout */}
+        <div className="p-2.5 border-t border-slate-200/70 dark:border-slate-800/70 space-y-1.5">
           {!collapsed ? (
-            <div className="flex items-center gap-3 p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 transition-opacity duration-200">
-              <div className="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 font-bold text-xs border border-sky-500/20">
-                YS
+            <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 transition-opacity duration-200">
+              <div className="flex items-center gap-2.5 overflow-hidden">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 font-bold text-xs border border-sky-500/20">
+                  {tenant?.name ? tenant.name.slice(0, 2).toUpperCase() : "WA"}
+                </div>
+                <div className="overflow-hidden flex-1">
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
+                    {tenant?.name || "Servis Paneli"}
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                    <ShieldCheck size={11} className="text-emerald-500 shrink-0" />
+                    Pro Plan (Aktif)
+                  </p>
+                </div>
               </div>
-              <div className="overflow-hidden flex-1">
-                <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
-                  Yıldız Oto Servis
-                </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                  <ShieldCheck size={11} className="text-emerald-500 shrink-0" />
-                  Pro Plan (Aktif)
-                </p>
-              </div>
+              <button
+                type="button"
+                onClick={logout}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                title="Oturumu Kapat"
+              >
+                <LogOut size={15} />
+              </button>
             </div>
           ) : (
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-1.5">
               <div
                 className="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-500 flex items-center justify-center font-bold text-xs border border-sky-500/20 cursor-pointer hover:scale-105 transition-transform"
-                title="Yıldız Oto Servis (Pro Plan)"
+                title={`${tenant?.name || "Servis"} (Pro Plan)`}
               >
-                YS
+                {tenant?.name ? tenant.name.slice(0, 2).toUpperCase() : "WA"}
               </div>
+              <button
+                type="button"
+                onClick={logout}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                title="Oturumu Kapat"
+              >
+                <LogOut size={14} />
+              </button>
             </div>
           )}
         </div>

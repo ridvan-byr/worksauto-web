@@ -1,8 +1,10 @@
 "use client"
 
 import * as React from "react"
+import { usePathname } from "next/navigation"
 import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
+import { useAuth } from "@/features/auth/auth-context"
 import { cn } from "@/lib/utils"
 
 const COOKIE_NAME = "worksauto_sidebar_collapsed"
@@ -13,6 +15,8 @@ interface AppShellProps {
 }
 
 export function AppShell({ children, defaultCollapsed = false }: AppShellProps) {
+  const pathname = usePathname()
+  const { tenant } = useAuth()
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed)
   const [mobileOpen, setMobileOpen] = React.useState(false)
 
@@ -33,6 +37,17 @@ export function AppShell({ children, defaultCollapsed = false }: AppShellProps) 
       return next
     })
   }, [])
+
+  // Immersive Fullscreen Routes: Login & Onboarding do NOT render the dashboard shell
+  const isImmersiveRoute = pathname === "/login" || pathname === "/onboarding"
+
+  if (isImmersiveRoute) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100">
+        {children}
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100 transition-colors">
