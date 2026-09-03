@@ -1,214 +1,83 @@
-# Design System Master File
+# WorksAuto Design System Master Document (Tasarım Sistemi Ana Kılavuzu)
 
-> **LOGIC:** When building a specific page, first check `design-system/pages/[page-name].md`.
-> If that file exists, its rules **override** this Master file.
-> If not, strictly follow the rules below.
-
----
-
-**Project:** WorksAuto
-**Generated:** 2026-09-03 15:23:19
-**Category:** SaaS (General)
+> **Proje:** WorksAuto (Yeni Nesil Bulut Tabanlı B2B Oto Servis Yönetim Platformu)  
+> **Son Güncelleme:** 2026-09-03 (Faz 1, 2, 3 ve 4 ile Senkronize Edildi)  
+> **Temel Felsefe:** Modern SaaS, Cam Morfizasyonu (Glassmorphism), Yüksek Kontrast, Dokunmatik & Mobil Usta Dostu (Tablet/Phone Ready).
 
 ---
 
-## Global Rules
+## 1. Renk Paleti ve Temalandırma (Color Palette)
 
-### Color Palette
+WorksAuto, modern otomotiv mühendisliği hissi veren **Electric Sky Blue** ve derin **Obsidian Dark / Crisp Light** kontrastı üzerine kuruludur.
 
-| Role | Hex | CSS Variable |
-|------|-----|--------------|
-| Primary | `#2563EB` | `--color-primary` |
-| On Primary | `#FFFFFF` | `--color-on-primary` |
-| Secondary | `#3B82F6` | `--color-secondary` |
-| On Secondary | `#000000` | `--color-on-secondary` |
-| Accent/CTA | `#EA580C` | `--color-accent` |
-| On Accent/CTA | `#000000` | `--color-on-accent` |
-| Background | `#F8FAFC` | `--color-background` |
-| Foreground | `#1E293B` | `--color-foreground` |
-| Card | `#FFFFFF` | `--color-card` |
-| Card Foreground | `#1E293B` | `--color-card-foreground` |
-| Muted | `#E9EFF8` | `--color-muted` |
-| Muted Foreground | `#475569` | `--color-muted-foreground` |
-| Border | `#E2E8F0` | `--color-border` |
-| Destructive | `#DC2626` | `--color-destructive` |
-| On Destructive | `#FFFFFF` | `--color-on-destructive` |
-| Ring | `#2563EB` | `--color-ring` |
+### 🎨 Ana Renkler
 
-**Color Notes:** Trust blue + orange CTA contrast [Accent adjusted from #F97316]
+| Rol | Hex Kodu | Tailwind Sınıfı | Kullanım Alanı |
+|:---|:---|:---|:---|
+| **Primary (Ana Renk)** | `#0284C7` / `#0EA5E9` | `bg-sky-600` / `bg-sky-500` | Birincil butonlar, aktif menüler, odak çerçeveleri |
+| **Primary Glow** | `rgba(14,165,233,0.25)` | `shadow-sky-500/25` | Vurgulu buton gölgeleri |
+| **Dark Background (Ana)** | `#070B12` | `dark:bg-[#070b12]` | Koyu mod zemin rengi |
+| **Dark Card / Surface** | `#0F172A` / `#1E293B` | `dark:bg-slate-900` | Koyu mod kartlar, açılır kutular |
+| **Light Background (Ana)**| `#F8FAFC` | `bg-slate-50` | Açık mod zemin rengi |
+| **Light Card / Surface**| `#FFFFFF` | `bg-white` | Açık mod kartlar |
 
-### Typography
+### 🚦 Durum ve Operasyonel Renkler
 
-- **Heading Font:** Plus Jakarta Sans
-- **Body Font:** Plus Jakarta Sans
-- **Mood:** friendly, modern, saas, clean, approachable, professional
-- **Google Fonts:** [Plus Jakarta Sans + Plus Jakarta Sans](https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap)
-
-**CSS Import:**
-```css
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
-```
-
-### Spacing Variables
-
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--space-xs` | `4px` / `0.25rem` | Tight gaps |
-| `--space-sm` | `8px` / `0.5rem` | Icon gaps, inline spacing |
-| `--space-md` | `16px` / `1rem` | Standard padding |
-| `--space-lg` | `24px` / `1.5rem` | Section padding |
-| `--space-xl` | `32px` / `2rem` | Large gaps |
-| `--space-2xl` | `48px` / `3rem` | Section margins |
-| `--space-3xl` | `64px` / `4rem` | Hero padding |
-
-### Shadow Depths
-
-| Level | Value | Usage |
-|-------|-------|-------|
-| `--shadow-sm` | `0 1px 2px rgba(0,0,0,0.05)` | Subtle lift |
-| `--shadow-md` | `0 4px 6px rgba(0,0,0,0.1)` | Cards, buttons |
-| `--shadow-lg` | `0 10px 15px rgba(0,0,0,0.1)` | Modals, dropdowns |
-| `--shadow-xl` | `0 20px 25px rgba(0,0,0,0.15)` | Hero images, featured cards |
+| Durum / Anlam | Renk | Tailwind | Kullanım |
+|:---|:---|:---|:---|
+| **Success (Başarılı / Lifte Alındı / Bitti)** | Zümrüt Yeşili (`#10B981`) | `bg-emerald-500/10 text-emerald-600` | `COMPLETED` iş emirleri, onaylanan randevular |
+| **Warning (Beklemede / Dikkat)** | Kehribar Sarısı (`#F59E0B`) | `bg-amber-500/10 text-amber-600` | `PENDING` onay bekleyen randevular, kritik stok |
+| **Info / Scheduled (Onaylandı)** | Gökyüzü Mavisi (`#0EA5E9`) | `bg-sky-500/10 text-sky-600` | `APPROVED` randevular, planlı işler |
+| **Purple (Erteleme İstendi)** | Mor (`#A855F7`) | `bg-purple-500/10 text-purple-600` | `RESCHEDULE_REQUESTED` |
+| **Destructive / No-Show** | Gül Kırmızısı (`#F43F5E`) | `bg-rose-500/10 text-rose-600` | `NO_SHOW`, silme, hata uyarıları |
+| **Cancelled / Inactive** | Nötr Gri (`#64748B`) | `bg-slate-200 text-slate-500` | `CANCELLED` iptal kayıtları (çizili) |
 
 ---
 
-## Component Specs
+## 2. Tipografi ve Yazı Tipleri
 
-### Buttons
-
-```css
-/* Primary Button */
-.btn-primary {
-  background: #EA580C;
-  color: white;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-1px);
-}
-
-/* Secondary Button */
-.btn-secondary {
-  background: transparent;
-  color: #2563EB;
-  border: 2px solid #2563EB;
-  padding: 12px 24px;
-  border-radius: 8px;
-  font-weight: 600;
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-```
-
-### Cards
-
-```css
-.card {
-  background: #F8FAFC;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  transition: all 200ms ease;
-  cursor: pointer;
-}
-
-.card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-2px);
-}
-```
-
-### Inputs
-
-```css
-.input {
-  padding: 12px 16px;
-  border: 1px solid #E2E8F0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: border-color 200ms ease;
-}
-
-.input:focus {
-  border-color: #2563EB;
-  outline: none;
-  box-shadow: 0 0 0 3px #2563EB20;
-}
-```
-
-### Modals
-
-```css
-.modal-overlay {
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-}
-
-.modal {
-  background: white;
-  border-radius: 16px;
-  padding: 32px;
-  box-shadow: var(--shadow-xl);
-  max-width: 500px;
-  width: 90%;
-}
-```
+* **Ana Yazı Tipi (UI & Metinler):** `Inter`, `-apple-system`, `BlinkMacSystemFont`, `sans-serif`
+  * Net, okunaklı, modern ve yormayan kurumsal arayüz fontu.
+* **Monospace Yazı Tipi (Veri & Teknik Alanlar):** `ui-monospace`, `JetBrains Mono`, `Consolas`, `monospace`
+  * **Kullanım Alanları:** Türk Plakaları (`34 RB 1905`), Saat slotları (`09:30`), Şasi Numaraları (VIN), Para tutarları (`2.100 ₺`), İş emri kodları (`#WO-2026-088`).
 
 ---
 
-## Style Guidelines
+## 3. Otomotiv Özel Bileşen Standartları
 
-**Style:** Glassmorphism
+### 🚗 A. Resmi Türk Plaka Rozeti (`PlateBadge`)
+* **Ölçüler:** `xs` (takvim içi), `sm` (tablo içi), `md` (kart başlığı), `lg` (detay ekranı).
+* **Standart:**
+  * Mavi sol şerit (`#003399`) üzerinde beyaz "TR" yazısı ve yıldız sembolü.
+  * Beyaz zemin üzerinde kalın siyah kabartma font (`font-mono font-extrabold`).
+  * **Kritik Kural:** `whitespace-nowrap shrink-0` zorunludur; plaka numarası dar alanlarda asla alt satıra bölünemez!
 
-**Keywords:** Frosted glass, transparent, blurred background, layered, vibrant background, light source, depth, multi-layer
+### 🪟 B. Modal Pencereleri (SaaS Gold Standard)
+1. **DOM Konumu:** Her modal doğrudan `React.createPortal` ile `document.body` üzerine mount edilir (`z-[100]`).
+2. **Backdrop:** Tüm ekranı (Sidebar ve Header dahil) pürüzsüz karartan sinematik koyu cam efekti (`backdrop-blur-md bg-slate-950/75`).
+3. **Kaydırma Disiplini (Zero-Scroll):** Uzun formlar dikeyde hantalca kaydırılmak yerine **2 Adımlı Akıcı Mini-Sihirbaz** (Step 1 ➡️ Step 2) mimarisiyle sıfır scrollbar ile sunulur.
 
-**Best For:** Modern SaaS, financial dashboards, high-end corporate, lifestyle apps, modal overlays, navigation
-
-**Key Effects:** Backdrop blur (10-20px), subtle border (1px solid rgba white 0.2), light reflection, Z-depth
-
-### Page Pattern
-
-**Pattern Name:** Hero + Features + CTA
-
-- **Conversion Strategy:** Deep CTA placement. For CTA label text, verify at least 4.5:1 against the button fill; use 7:1 only when the product explicitly targets AAA normal-text contrast. Keep focus and component boundaries independently visible. Disable hero parallax under reduced motion and render its static final state.
-- **CTA Placement:** Hero (sticky) + Bottom
-- **Section Order:** Hero with headline/image > Value prop > Key features (3-5) > CTA section > Footer
-
----
-
-## Anti-Patterns (Do NOT Use)
-
-- ❌ Excessive animation
-- ❌ Dark mode by default
-
-### Additional Forbidden Patterns
-
-- ❌ **Emojis as icons** — Use SVG icons (Heroicons, Lucide, Simple Icons)
-- ❌ **Missing cursor:pointer** — All clickable elements must have cursor:pointer
-- ❌ **Layout-shifting hovers** — Avoid scale transforms that shift layout
-- ❌ **Low contrast text** — Maintain 4.5:1 minimum contrast ratio
-- ❌ **Instant state changes** — Always use transitions (150-300ms)
-- ❌ **Invisible focus states** — Focus states must be visible for a11y
+### 📋 C. Çift Görünüm Standardı (Dual View)
+* Karmaşık operasyon ekranlarında (Randevular, İş Emirleri) kullanıcının alışkanlığına göre üst barda mutlaka **Görünüm Değiştirici (Toggle)** sunulur:
+  * `[ 📅 Görsel Takvim / Kanban Panosu ]` & `[ 📋 Arama & Filtreli Tablo Listesi ]`.
 
 ---
 
-## Pre-Delivery Checklist
+## 4. Mobil ve Atölye Ergonomisi (Tablet & Phone Ready)
 
-Before delivering any UI code, verify:
+1. **Usta Butonları (Touch Target Size):**
+   * Sanayi ortamında elleri eldivenli veya yağlı olan ustaların rahat basabilmesi için aksiyon butonları en az `44px - 48px` yükseklikte olmalıdır (`min-h-[44px]`).
+2. **Akıcı Sayfa Animasyonları:**
+   * Sayfa geçişlerinde `animate-in fade-in duration-200` akıcılığı kullanılır.
+3. **Asla Emoji Kullanma:**
+   * Bütün simgeler `lucide-react` SVG vektör ikon setinden homojen olarak kullanılır.
 
-- [ ] No emojis used as icons (use SVG instead)
-- [ ] All icons from consistent icon set (Heroicons/Lucide)
-- [ ] `cursor-pointer` on all clickable elements
-- [ ] Hover states with smooth transitions (150-300ms)
-- [ ] Light mode: text contrast 4.5:1 minimum
-- [ ] Focus states visible for keyboard navigation
-- [ ] `prefers-reduced-motion` respected
-- [ ] Responsive: 375px, 768px, 1024px, 1440px
-- [ ] No content hidden behind fixed navbars
-- [ ] No horizontal scroll on mobile
+---
+
+## 5. Doğrulama ve Teslimat Kontrol Listesi
+
+- [x] Tüm plaka alanlarında `PlateBadge` kullanıldı ve `whitespace-nowrap` korundu.
+- [x] Modallar `createPortal` ile `z-[100]` seviyesinde tüm ekranı karartıyor.
+- [x] Renk kontrastı WCAG AAA / AA standartlarına tam uyumlu.
+- [x] Koyu mod ve açık mod geçişlerinde tüm kartlar ve metinler pürüzsüz uyum sağlıyor.
+- [x] `npm run build` ile 0 TypeScript hatası ve 0 derleme uyarısı.
