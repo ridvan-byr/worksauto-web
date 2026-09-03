@@ -468,7 +468,7 @@ export default function WorkOrderDetailPage() {
               <Button
                 type="button"
                 className="w-full h-11 rounded-xl text-xs font-bold gap-2 cursor-pointer"
-                onClick={() => alert(`İş emri #${order.workOrderNumber} faturaya aktarılmak üzere kaydedildi!`)}
+                onClick={() => router.push("/invoices")}
               >
                 <FileText size={15} />
                 <span>Fatura Oluştur (Tahsilat)</span>

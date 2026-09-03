@@ -16,7 +16,7 @@ const jakarta = Plus_Jakarta_Sans({
 })
 
 export const metadata: Metadata = {
-  title: "WorksAuto | Yeni Nesil Araç Servis SaaS Paneli",
+  title: "WorksAuto | Yeni Nesil Araç Servis Paneli",
   description:
     "Araç servisleri ve atölyeler için çok kiracılı (multi-tenant) randevu, iş emri, stok ve cari yönetim platformu.",
   icons: {

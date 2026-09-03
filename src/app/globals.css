@@ -138,3 +138,38 @@ body {
   animation: pageEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
   will-change: transform, opacity;
 }
+
+/* Isolated Clean Invoice & Cari Print Styles (Prevents dual-page printing & preserves design) */
+@media print {
+  /* Arkadaki tüm siteyi (header, sidebar, ana sayfa) gizle */
+  body > *:not(#invoice-modal-root):not(#cari-modal-root) {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+  }
+
+  #invoice-modal-root,
+  #cari-modal-root {
+    position: static !important;
+    background: transparent !important;
+    padding: 0 !important;
+    display: block !important;
+    width: 100% !important;
+  }
+
+  #invoice-card-container,
+  #cari-card-container {
+    box-shadow: none !important;
+    border: none !important;
+    max-height: none !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+
+  @page {
+    size: A4 portrait;
+    margin: 8mm 12mm;
+  }
+}
