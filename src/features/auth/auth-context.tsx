@@ -13,7 +13,7 @@ const MOCK_TENANTS: Record<string, { user: User; tenant: Tenant }> = {
     user: {
       id: "usr_1",
       name: "Rıdvan",
-      surname: "Bayır",
+      surname: "Bayar",
       phone: "05320000001",
       email: "ridvan@yildizoto.com",
       role: "tenant_admin",

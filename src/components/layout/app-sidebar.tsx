@@ -24,6 +24,15 @@ import { useAuth } from "@/features/auth/auth-context"
 import { restartPageAnimation } from "@/lib/animation"
 import { cn } from "@/lib/utils"
 
+interface NavItem {
+  title: string
+  href: string
+  icon: any
+  badge?: string
+  badgeVariant?: "accent" | "warning"
+  highlight?: boolean
+}
+
 interface AppSidebarProps {
   collapsed: boolean
   onToggleCollapse: () => void
@@ -31,7 +40,7 @@ interface AppSidebarProps {
   onCloseMobile: () => void
 }
 
-const navItems = [
+const navItems: NavItem[] = [
   {
     title: "Ana Sayfa & Panel",
     href: "/",
@@ -76,12 +85,6 @@ const navItems = [
     title: "Cari Hesaplar",
     href: "/current-accounts",
     icon: FileSpreadsheet,
-  },
-  {
-    title: "Onboarding Wizard",
-    href: "/onboarding",
-    icon: Sparkles,
-    highlight: true,
   },
   {
     title: "Servis Ayarları",
