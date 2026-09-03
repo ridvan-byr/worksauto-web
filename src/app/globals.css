@@ -1,0 +1,140 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --background: #f8fafc;
+    --foreground: #0f172a;
+    --card: #ffffff;
+    --card-foreground: #0f172a;
+    --popover: #ffffff;
+    --popover-foreground: #0f172a;
+    --primary: #0284c7;
+    --primary-foreground: #ffffff;
+    --secondary: #f1f5f9;
+    --secondary-foreground: #0f172a;
+    --muted: #f1f5f9;
+    --muted-foreground: #64748b;
+    --accent: #38bdf8;
+    --accent-foreground: #0f172a;
+    --destructive: #ef4444;
+    --destructive-foreground: #ffffff;
+    --border: #e2e8f0;
+    --input: #e2e8f0;
+    --ring: #0284c7;
+    --radius: 0.75rem;
+  }
+
+  .dark {
+    --background: #070b12;
+    --foreground: #f8fafc;
+    --card: #0e1524;
+    --card-foreground: #f8fafc;
+    --popover: #0e1524;
+    --popover-foreground: #f8fafc;
+    --primary: #38bdf8;
+    --primary-foreground: #070b12;
+    --secondary: #162032;
+    --secondary-foreground: #f8fafc;
+    --muted: #162032;
+    --muted-foreground: #94a3b8;
+    --accent: #38bdf8;
+    --accent-foreground: #070b12;
+    --destructive: #f87171;
+    --destructive-foreground: #ffffff;
+    --border: #1e293b;
+    --input: #1e293b;
+    --ring: #38bdf8;
+  }
+
+  /* Global Cursor Pointer */
+  button,
+  [role="button"],
+  a,
+  select,
+  input[type="checkbox"],
+  input[type="radio"],
+  summary {
+    cursor: pointer !important;
+  }
+
+  button:disabled,
+  [role="button"]:disabled {
+    cursor: not-allowed !important;
+  }
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.4);
+}
+
+/* View Transition API - Bidirectional Circular Reveal Theme Animation */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 99999;
+}
+
+/* Metallic Shimmer on Logo */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) skewX(-12deg);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(200%) skewX(-12deg);
+    opacity: 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 0.75s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Single Unified Page Transition (Zero Glitch, Zero Multi-Trigger) */
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.animate-page-enter {
+  animation: pageEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  will-change: transform, opacity;
+}
