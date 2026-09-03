@@ -4,7 +4,7 @@
   <img src="public/brand/worksauto-logo-white.png#gh-dark-mode-only" alt="WorksAuto Logo" width="340" />
 
   <p align="center">
-    <strong>Yeni Nesil Çok Kiracılı (Multi-Tenant) Araç Servis & Atölye Yönetim Platformu</strong>
+    <strong>Next-Generation Multi-Tenant Auto Service & Workshop Management SaaS Platform</strong>
   </p>
 
   <p align="center">
@@ -16,122 +16,122 @@
   </p>
 
   <p align="center">
-    <a href="#-proje-hakkında">Proje Hakkında</a> •
-    <a href="#-temel-özellikler">Özellikler</a> •
-    <a href="#-teknoloji-yığını">Teknoloji Yığını</a> •
-    <a href="#-proje-yapısı">Proje Yapısı</a> •
-    <a href="#-kurulum--çalıştırma">Kurulum</a> •
-    <a href="#-yol-haritası">Yol Haritası</a>
+    <a href="#-about-the-project">About</a> •
+    <a href="#-key-features">Features</a> •
+    <a href="#-tech-stack">Tech Stack</a> •
+    <a href="#-project-structure">Structure</a> •
+    <a href="#-getting-started">Getting Started</a> •
+    <a href="#-roadmap">Roadmap</a>
   </p>
 
 </div>
 
 ---
 
-## 📖 Proje Hakkında
+## 📖 About the Project
 
-**WorksAuto**, modern oto servisleri, tamirhaneler, yetkili/özel servis ağları ve filo bakım merkezleri için tasarlanmış yüksek performanslı, çok kiracılı (multi-tenant) bir SaaS platformudur. 
+**WorksAuto** is a multi-tenant B2B SaaS platform engineered for automotive workshops, repair centers, authorized dealerships, and fleet maintenance hubs.
 
-Bu depo (`worksauto-web`), platformun son teknoloji web standartlarıyla inşa edilen **Frontend (Kullanıcı Arayüzü)** katmanını barındırmaktadır. Titizlikle tasarlanmış kullanıcı deneyimi, sıfır gecikmeli sayfa geçişleri, otomotiv sektörüne özel kurumsal tasarım sistemi ve uçtan uca tip güvenliği ile donatılmıştır.
-
----
-
-## ✨ Temel Özellikler (Faz 1: UI Bootstrap & Core Shell)
-
-### 🎨 Akıllı Marka & Dinamik Logo Sistemi
-- **Duyarlı Logo Mimarisi (`BrandLogo.tsx`):**
-  - **Genişletilmiş Sidebar:** Koyu modda beyaz tam logo (`worksauto-logo-white.png`), açık modda koyu antrasit logo (`worksauto-logo-dark.png`) ve üzerine gelindiğinde zarif **metalik ışık dalgası (Shimmer Sweep)** efekti.
-  - **Daraltılmış Sidebar:** Şeffaf zemin üzerinde tam oranlı yüksek çözünürlüklü ikon (`worksauto-icon-white-tight.png`), hover sırasında neon haresi ve dinamik mikro eğilme (`rotate-[-2deg]`).
-- **Dinamik Favicon Motoru (`DynamicFavicon.tsx`):** Tarayıcı sekmesindeki favicon, aktif temayı (`resolvedTheme`) çalışma anında dinleyerek açık temada siyah, koyu temada beyaz renk alır.
-
-### 🌗 Gelişmiş Tema Yönetimi
-- **3 Seçenekli Tema Deneyimi:** Açık (Light), Koyu (Dark) ve Sistem (System) modları.
-- **Circular Reveal Animasyonu:** Modern **View Transitions API** kullanılarak tıklanan butondan dışa doğru genişleyen dairesel bir dalga efektiyle pürüzsüz tema geçişi.
-
-### 🏛️ Sıfır Titremeli (Zero-Flicker) SaaS Layout Shell
-- **Next.js Server Cookie Mimarisi:** Sidebar genişlik durumu (`collapsed`) sunucu tarafında HTTP çerezleri (`cookies()`) üzerinden okunur. Sayfa geçişlerinde veya sayfa yenilendiğinde asla genişleyip sonradan kapanma (Hydration Flicker) yaşanmaz.
-- **Floating Edge Handle:** Sidebar daraldığında logo ile çakışmayan, sağ sınır çizgisi üzerinde yüzen modern tutamaç toggle butonu.
-- **İpeksi Sayfa Açılışları (`template.tsx`):** Next.js App Router şablonu ile rota geçişlerinde donanımsal GPU hızlandırmalı, 10px mikro süzülme ve opaklık geçişi (`translate3d(0, 10px, 0)`).
-- **Kurumsal Minimalist 404:** Linear ve Stripe standartlarında zarif ve tipografi odaklı hata sayfası (`not-found.tsx`).
+This repository (`worksauto-web`) contains the **Frontend (Web UI)** application built on top of modern web standards. It delivers an enterprise-grade user experience with zero-flicker state persistence, silky-smooth hardware-accelerated transitions, an automotive-tailored design system, and end-to-end type safety.
 
 ---
 
-## 🛠️ Teknoloji Yığını
+## ✨ Key Features (Phase 1: UI Bootstrap & Core Shell)
 
-| Alan | Teknoloji | Açıklama |
+### 🎨 Intelligent Brand & Dynamic Logo Architecture
+- **Responsive Brand Logo (`BrandLogo.tsx`):**
+  - **Expanded Sidebar:** High-contrast crisp vector logo (`worksauto-logo-white.png` / `worksauto-logo-dark.png`) featuring an ambient glow and a 45-degree **metallic light sweep (Shimmer Sweep)** on hover.
+  - **Collapsed Sidebar:** High-resolution tight icon logo (`worksauto-icon-white-tight.png` / `worksauto-icon-black-tight.png`) with an atmospheric cyan halo and dynamic micro-tilt (`rotate-[-2deg]`).
+- **Dynamic Adaptive Favicon (`DynamicFavicon.tsx`):** Listens to `resolvedTheme` at runtime to automatically swap tab icons (white for dark theme, black for light theme) without hydration mismatch.
+
+### 🌗 Enterprise Theme Management
+- **3-Way Theme Switcher:** Light, Dark, and System modes.
+- **Circular Reveal Animation:** Native **View Transitions API** creates an expanding circular ripple originating directly from the trigger button coordinates for a seamless visual transition.
+
+### 🏛️ Zero-Flicker SaaS Layout Shell
+- **Next.js Server Cookie Architecture:** The sidebar collapsed state is read directly on the server via `next/headers` (`cookies()`). Ensures HTML is pre-rendered with the correct width, eliminating hydration mismatches and client-side flash-of-unstyled-content (FOUC).
+- **Floating Edge Handle:** Minimalist circular toggle anchored along the right border of the sidebar, preventing any overlap with the brand mark.
+- **Hardware-Accelerated Page Transitions (`template.tsx`):** Smooth 10px lift and opacity interpolation utilizing GPU hardware acceleration (`translate3d(0, 10px, 0)`).
+- **Refined Minimalist 404 Page:** Clean, typography-driven error layout adhering to Linear and Stripe design guidelines (`not-found.tsx`).
+
+---
+
+## 🛠️ Tech Stack
+
+| Domain | Technology | Highlights |
 | :--- | :--- | :--- |
-| **Framework** | **Next.js 16.3 (App Router)** | Hibrit SSR & Client mimarisi, Turbopack desteği |
-| **Kütüphane** | **React 19.2** | Modern bileşen mimarisi ve Hooks |
-| **Stil / CSS** | **Tailwind CSS v4** | CSS-first `@custom-variant dark` ve tam donanım hızlandırması |
-| **Tasarım Sistemi** | **UI/UX Pro Max** | Otomotiv sektörüne özel renk ve tipografi token'ları (`MASTER.md`) |
-| **Tipografi** | **Plus Jakarta Sans** | Google Fonts ile optimize edilmiş kurumsal yazı tipi |
-| **İkon Seti** | **Lucide React** | Tutarlı ve hafif SVG ikon kütüphanesi |
-| **Tema Yönetimi** | **next-themes** | Kalıcı yerel tema saklama ve sistem tercihi algılama |
-| **Veri Yönetimi** | **@tanstack/react-query** | Tip güvenli asenkron veri yönetimi ve önbellekleme |
-| **Tip Denetimi** | **TypeScript 5.x** | Sıkı tip denetimi (Strict Mode) |
+| **Framework** | **Next.js 16.3 (App Router)** | Hybrid SSR & Client components, Turbopack engine |
+| **UI Library** | **React 19.2** | Modern component lifecycle & hooks |
+| **Styling** | **Tailwind CSS v4** | CSS-first `@custom-variant dark`, hardware-accelerated keyframes |
+| **Design System** | **UI/UX Pro Max** | Tailored automotive dark/light token palette (`MASTER.md`) |
+| **Typography** | **Plus Jakarta Sans** | Performance-optimized variable font via Google Fonts |
+| **Icons** | **Lucide React** | Consistent, lightweight vector icon set |
+| **Theme Engine** | **next-themes** | Persistent local storage theme synchronization |
+| **Data Fetching** | **@tanstack/react-query** | Type-safe asynchronous state caching and server state |
+| **Language** | **TypeScript 5.x** | Strict mode type verification |
 
 ---
 
-## 📂 Proje Yapısı
+## 📂 Project Structure
 
 ```
 worksauto-web/
 ├── public/
-│   └── brand/                   # Optimize edilmiş SVG/PNG logo, ikon ve favicon paketi
+│   └── brand/                   # Optimized SVG/PNG logos, icons, and favicon pack
 ├── src/
 │   ├── app/
-│   │   ├── globals.css          # Tailwind v4, CSS değişkenleri ve keyframe animasyonları
-│   │   ├── layout.tsx           # Kök layout, sunucu çerez okuma, font ve tema sağlayıcıları
-│   │   ├── template.tsx         # Akıcı sayfa geçiş animasyon şablonu (Page Transition)
-│   │   ├── not-found.tsx        # Minimalist kurumsal 404 hata sayfası
-│   │   └── page.tsx             # Ana operasyonel gösterge paneli (Dashboard)
+│   │   ├── globals.css          # Tailwind v4 configuration, theme variables & keyframes
+│   │   ├── layout.tsx           # Root layout, server cookie reading, font & providers
+│   │   ├── template.tsx         # Unified hardware-accelerated page transition template
+│   │   ├── not-found.tsx        # Minimalist corporate 404 error page
+│   │   └── page.tsx             # Primary operational dashboard
 │   ├── components/
-│   │   ├── dynamic-favicon.tsx  # Temaya duyarlı dinamik sekme ikonu bileşeni
-│   │   ├── query-provider.tsx   # TanStack Query istemci sağlayıcısı
-│   │   ├── theme-provider.tsx   # next-themes tema sarmalayıcısı
+│   │   ├── dynamic-favicon.tsx  # Dynamic browser tab favicon switcher
+│   │   ├── query-provider.tsx   # TanStack Query client wrapper
+│   │   ├── theme-provider.tsx   # next-themes provider wrapper
 │   │   ├── layout/
-│   │   │   ├── app-header.tsx   # Arama, bildirim, tema ve kullanıcı profil üst çubuğu
-│   │   │   ├── app-sidebar.tsx  # Floating edge tutamaçlı, daralabilir kurumsal menü
-│   │   │   ├── app-shell.tsx    # Responsive yerleşim kabuğu ve durum yöneticisi
-│   │   │   └── theme-toggle.tsx # 3 seçenekli ve dairesel animasyonlu tema seçici
+│   │   │   ├── app-header.tsx   # Search bar, notifications, theme toggle & user profile
+│   │   │   ├── app-sidebar.tsx  # Collapsible navigation with floating edge handle
+│   │   │   ├── app-shell.tsx    # Responsive application shell & state coordinator
+│   │   │   └── theme-toggle.tsx # 3-way circular reveal theme dropdown
 │   │   ├── shared/
-│   │   │   └── brand-logo.tsx   # Otomatik tema ve boyut duyarlı WorksAuto logosu
-│   │   └── ui/                  # Atomik UI bileşenleri (Button, Card, Badge, Input vb.)
+│   │   │   └── brand-logo.tsx   # Auto-theme & collapsed-aware WorksAuto brand mark
+│   │   └── ui/                  # Atomic primitives (Button, Card, Badge, Input, etc.)
 │   └── lib/
-│       ├── animation.ts         # Güvenli DOM reflow animasyon tetikleyicisi
-│       └── utils.ts             # Tailwind class birleştirici (cn helper)
+│       ├── animation.ts         # Safe DOM reflow animation restart utility
+│       └── utils.ts             # Tailwind class merging utility (cn helper)
 └── design-system/
-    └── worksauto/MASTER.md      # Otomotiv SaaS tasarım sistemi kuralları
+    └── worksauto/MASTER.md      # Automotive SaaS design tokens and style guide
 ```
 
 ---
 
-## 🚀 Kurulum ve Çalıştırma
+## 🚀 Getting Started
 
-### Gereksinimler
-- **Node.js:** `v20.0.0` veya üzeri (Node `v24+` önerilir)
-- **npm:** `v10.0.0` veya üzeri
+### Prerequisites
+- **Node.js:** `v20.0.0` or higher (`v24+` recommended)
+- **npm:** `v10.0.0` or higher
 
-### Adımlar
+### Local Development Setup
 
-1. **Depoyu klonlayın:**
+1. **Clone the repository:**
    ```bash
    git clone https://github.com/ridvan-byr/worksauto-web.git
    cd worksauto-web
    ```
 
-2. **Bağımlılıkları yükleyin:**
+2. **Install dependencies:**
    ```bash
    npm install
    ```
 
-3. **Geliştirme sunucusunu başlatın:**
+3. **Start the local development server:**
    ```bash
    npm run dev
    ```
-   *Uygulama varsayılan olarak [http://localhost:3000](http://localhost:3000) adresinde çalışacaktır.*
+   *The application will be accessible at [http://localhost:3000](http://localhost:3000).*
 
-4. **Üretim derlemesi (Build) alın:**
+4. **Create an optimized production build:**
    ```bash
    npm run build
    npm run start
@@ -139,26 +139,26 @@ worksauto-web/
 
 ---
 
-## 🗺️ Geliştirme Yol Haritası (Frontend-First)
+## 🗺️ Implementation Roadmap (Frontend-First)
 
-| Aşama | Modül | Kapsam | Durum |
+| Phase | Module | Scope | Status |
 | :---: | :--- | :--- | :---: |
-| **Faz 1** | **UI Bootstrap & Design System** | Proje kurulumu, tema motoru, marka entegrasyonu, responsive shell | 🟢 **Tamamlandı** |
-| **Faz 2** | **Kimlik & Tenant Onboarding Wizard** | Giriş/Kayıt, 6 adımlı servis kurulum sihirbazı, sayfa koruma | 🟡 *Sıradaki* |
-| **Faz 3** | **Müşteri & Araç Yönetimi UI** | Müşteri dizini, Türk plaka maskeli araç kaydı, 4'lü servis geçmişi | ⚪ Beklemede |
-| **Faz 4** | **Randevu Takvimi & İş Emri Geçişi** | Haftalık servis slotları, "Onayla & İş Emri Aç" otomasyonu | ⚪ Beklemede |
-| **Faz 5** | **İş Emri & Atölye Paneli UI** | Mobil usta atölye ekranı, hasar kabul galerisi, işçilik takibi | ⚪ Beklemede |
-| **Faz 6** | **Stok ve Envanter Yönetimi UI** | Yedek parça kataloğu, kritik stok uyarıları, stok hareketleri | ⚪ Beklemede |
-| **Faz 7** | **Fatura, Tahsilat & Cari Hesap UI** | İş emri tamamlama, servis faturası basımı, cari bakiye ekstresi | ⚪ Beklemede |
-| **Faz 8** | **İnteraktif Sunum & Demo Senaryosu**| Zengin servis test verileri, canlı sunum kılavuzu | ⚪ Beklemede |
-| **Faz 9** | **Backend API Entegrasyonu** | NestJS Clean Architecture, PostgreSQL, Docker bağlantısı (`worksauto-api`) | ⚪ Beklemede |
+| **Phase 1** | **UI Bootstrap & Design System** | Setup, theme engine, brand integration, responsive shell | 🟢 **Completed** |
+| **Phase 2** | **Auth & Tenant Onboarding Wizard** | Auth layouts, 6-step workshop setup wizard, route guards | 🟡 *Next Up* |
+| **Phase 3** | **Customer & Vehicle Management UI** | Customer directory, Turkish license-plate format masks, service log | ⚪ Queued |
+| **Phase 4** | **Appointment Calendar & Transition** | Weekly workshop scheduling grid, "Approve & Open Work Order" | ⚪ Queued |
+| **Phase 5** | **Work Order & Workshop Board UI** | Mobile mechanic dashboard, vehicle intake damage gallery, labor tracking | ⚪ Queued |
+| **Phase 6** | **Inventory & Spare Parts UI** | Parts catalog, minimum stock alerts, stock transaction history | ⚪ Queued |
+| **Phase 7** | **Invoicing, Cashflow & Current Accounts**| Work order closure, PDF-ready service invoices, client balances | ⚪ Queued |
+| **Phase 8** | **Interactive Presentation & Demo Seed** | Seed data, realistic automotive demo workflows | ⚪ Queued |
+| **Phase 9** | **Backend API Integration** | NestJS Clean Architecture, PostgreSQL, Docker (`worksauto-api`) | ⚪ Queued |
 
 ---
 
-## 📄 Lisans
+## 📄 License
 
-Bu proje gizli ve tescilli bir ticari yazılım projesidir. Tüm hakları saklıdır.
+This repository contains proprietary software. All rights reserved.
 
 <div align="center">
-  <sub>WorksAuto Ekibi tarafından ❤️ ile geliştirilmektedir.</sub>
+  <sub>Engineered with precision for the WorksAuto Platform.</sub>
 </div>
