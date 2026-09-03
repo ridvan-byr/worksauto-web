@@ -110,9 +110,9 @@ export default function WorkOrderDetailPage() {
     setOrder(updated)
   }
 
-  const handleAddPhoto = (caption: string, type: "CHECKIN" | "DAMAGE" | "COMPLETED") => {
+  const handleAddPhoto = (caption: string, type: "CHECKIN" | "DAMAGE" | "COMPLETED", url?: string) => {
     const updated = addPhotoToWorkOrder(order.id, {
-      url: "/assets/brand/preview.html",
+      url: url || "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?q=80&w=1200&auto=format&fit=crop",
       caption,
       uploaderName: order.assignedMechanicName || "Usta",
       type,

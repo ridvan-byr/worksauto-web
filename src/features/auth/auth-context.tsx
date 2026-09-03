@@ -114,6 +114,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (saved) {
         const parsed = JSON.parse(saved)
         if (parsed.user && parsed.tenant) {
+          if (parsed.user.surname === "Bayır") {
+            parsed.user.surname = "Bayar"
+            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed))
+          }
           setUser(parsed.user)
           setTenant(parsed.tenant)
         }

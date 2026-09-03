@@ -71,7 +71,9 @@ export function ThemeToggle() {
         title="Tema Tercihi"
         aria-label="Tema Tercihi"
       >
-        {isDark ? (
+        {mounted && theme === "system" ? (
+          <Laptop size={16} className="text-sky-400" />
+        ) : isDark ? (
           <Moon size={16} className="text-sky-400" />
         ) : (
           <Sun size={16} className="text-amber-500" />
