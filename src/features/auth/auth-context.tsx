@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (isLoading) return
 
-    const isAuthRoute = pathname === "/login"
+    const isAuthRoute = pathname === "/sign-in"
     const isOnboardingRoute = pathname === "/onboarding"
 
     // If logged in but onboarding is NOT completed, lock into /onboarding
@@ -188,7 +188,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (e) {
       // ignore
     }
-    router.push("/login")
+    router.push("/sign-in")
   }, [router])
 
   const completeOnboarding = React.useCallback(

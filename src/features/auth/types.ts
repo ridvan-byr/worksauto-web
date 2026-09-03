@@ -10,6 +10,7 @@ export interface User {
 export interface ServiceItem {
   id: string
   name: string
+  category?: string
   durationMinutes: number
   laborPrice: number
 }
@@ -45,7 +46,10 @@ export interface Tenant {
   staff?: StaffMember[]
   // Operational Settings
   appointmentSlotDuration?: 30 | 45 | 60
+  activeLiftCount?: number
   autoWorkOrder?: boolean
+  notifyAppointmentReminder?: boolean
+  notifyReadyForPickup?: boolean
   criticalStockThreshold?: number
   // Status
   onboardingCompleted: boolean

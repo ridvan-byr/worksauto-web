@@ -39,7 +39,7 @@ export function AppShell({ children, defaultCollapsed = false }: AppShellProps) 
   }, [])
 
   // Immersive Fullscreen Routes: Login & Onboarding do NOT render the dashboard shell
-  const isImmersiveRoute = pathname === "/login" || pathname === "/onboarding"
+  const isImmersiveRoute = pathname === "/sign-in" || pathname === "/login" || pathname === "/onboarding"
 
   if (isImmersiveRoute) {
     return (
