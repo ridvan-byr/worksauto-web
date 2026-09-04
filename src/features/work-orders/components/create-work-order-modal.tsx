@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import { X, Wrench, Play, ArrowRight, ArrowLeft, CheckCircle2, User, Car } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkOrder, WorkOrderPriority } from "../types"
-import { getStoredCustomers } from "@/features/customers/mock-data"
+import { useCustomers } from "@/features/customers/api/use-customers"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"
 
@@ -18,11 +18,41 @@ interface CreateWorkOrderModalProps {
 export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkOrderModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const [step, setStep] = React.useState<1 | 2>(1)
-  const customers = React.useMemo(() => getStoredCustomers(), [isOpen])
+  const { data: apiCustomers } = useCustomers()
+
+  const customers = React.useMemo(() => {
+    if (!apiCustomers) return []
+    return apiCustomers.map((c: any) => ({
+      id: c.id,
+      name: c.firstName,
+      surname: c.lastName,
+      phone: c.phone,
+      type: c.type === 'CORPORATE' ? 'corporate' : 'individual',
+      companyTitle: c.companyTitle,
+      vehicles: (c.vehicles || []).map((v: any) => ({
+        id: v.id,
+        plate: v.plate,
+        brand: v.brand,
+        model: v.model,
+        year: v.year,
+        kilometer: v.mileage || 0,
+        vin: v.vin,
+      })),
+    }))
+  }, [apiCustomers])
 
   // Form State
-  const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>(customers[0]?.id || "")
-  const [selectedVehicleId, setSelectedVehicleId] = React.useState<string>(customers[0]?.vehicles[0]?.id || "")
+  const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>("")
+  const [selectedVehicleId, setSelectedVehicleId] = React.useState<string>("")
+
+  React.useEffect(() => {
+    if (customers.length > 0 && !selectedCustomerId) {
+      setSelectedCustomerId(customers[0].id)
+      if (customers[0].vehicles.length > 0) {
+        setSelectedVehicleId(customers[0].vehicles[0].id)
+      }
+    }
+  }, [customers, selectedCustomerId])
   const [assignedLift, setAssignedLift] = React.useState("Lift 1 (Mekanik)")
   const [assignedMechanic, setAssignedMechanic] = React.useState("Ahmet Usta")
   const [priority, setPriority] = React.useState<WorkOrderPriority>("NORMAL")
@@ -53,7 +83,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
   if (!isOpen || !mounted) return null
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId)
-  const selectedVehicle = selectedCustomer?.vehicles.find((v) => v.id === selectedVehicleId)
+  const selectedVehicle = selectedCustomer?.vehicles.find((v: any) => v.id === selectedVehicleId)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -173,7 +203,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                 onChange={(e) => setSelectedVehicleId(e.target.value)}
                 className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
               >
-                {selectedCustomer?.vehicles.map((v) => (
+                {selectedCustomer?.vehicles.map((v: any) => (
                   <option key={v.id} value={v.id}>
                     {v.plate} — {v.brand} {v.model} ({v.kilometer.toLocaleString("tr-TR")} KM)
                   </option>

@@ -1,5 +1,7 @@
 "use client"
 
+import { useVehicles } from "@/features/vehicles/api/use-vehicles"
+
 import * as React from "react"
 import Link from "next/link"
 import {
@@ -13,18 +15,35 @@ import {
   Settings2,
   Users,
 } from "lucide-react"
-import { getAllVehicles } from "@/features/customers/mock-data"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"
 
 export default function VehiclesPage() {
-  const [vehicles, setVehicles] = React.useState<ReturnType<typeof getAllVehicles>>([])
+  const [vehicles, setVehicles] = React.useState<any[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
   const [brandFilter, setBrandFilter] = React.useState<string>("all")
 
+  const { data: apiVehicles } = useVehicles()
+
   React.useEffect(() => {
-    setVehicles(getAllVehicles())
-  }, [])
+    if (apiVehicles) {
+      const mapped = apiVehicles.map((v: any) => ({
+        id: v.id,
+        tenantId: v.tenantId || 'ten_1',
+        plate: v.plate,
+        brand: v.brand,
+        model: v.model,
+        year: v.year,
+        kilometer: v.mileage || 0,
+        fuelType: v.fuelType,
+        transmission: v.transmission,
+        customerId: v.customerId,
+        customerName: v.customer ? `${v.customer.firstName} ${v.customer.lastName}` : 'Müşteri',
+        customerPhone: v.customer?.phone || '',
+      }))
+      setVehicles(mapped)
+    }
+  }, [apiVehicles])
 
   // Unique brands
   const brands = React.useMemo(() => {

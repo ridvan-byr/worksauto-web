@@ -32,17 +32,23 @@ export function CalendarGrid({
   onSelectAppointment,
   onSlotClick,
 }: CalendarGridProps) {
-  // Generate 6 working days (Mon-Sat)
+  // Generate 7 working days (Mon-Sun)
   const weekDays = React.useMemo(() => {
+    const formatLocalDate = (d: Date) => {
+      const year = d.getFullYear()
+      const month = String(d.getMonth() + 1).padStart(2, "0")
+      const day = String(d.getDate()).padStart(2, "0")
+      return `${year}-${month}-${day}`
+    }
+
     const days: { dateStr: string; dayName: string; dayNumber: number; isToday: boolean }[] = []
-    const dayNames = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"]
-    const todayStr = new Date().toISOString().split("T")[0]
+    const todayStr = formatLocalDate(new Date())
 
     const allDayNames = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
     for (let i = 0; i < 7; i++) {
       const d = new Date(currentWeekStart)
       d.setDate(d.getDate() + i)
-      const dateStr = d.toISOString().split("T")[0]
+      const dateStr = formatLocalDate(d)
       days.push({
         dateStr,
         dayName: allDayNames[i],

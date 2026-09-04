@@ -18,8 +18,8 @@ import { BrandLogo } from "@/components/shared/brand-logo"
 import { Button } from "@/components/ui/button"
 import { ThemeToggle } from "./theme-toggle"
 import { useAuth } from "@/features/auth/auth-context"
+import { useVehicles } from "@/features/vehicles/api/use-vehicles"
 import { restartPageAnimation } from "@/lib/animation"
-import { getAllVehicles, getStoredCustomers } from "@/features/customers/mock-data"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"
 
@@ -32,6 +32,7 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
   const pathname = usePathname()
   const router = useRouter()
   const { user } = useAuth()
+  const { data: apiVehicles } = useVehicles()
 
   // Global Quick Search State
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -60,15 +61,24 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
     return () => document.removeEventListener("keydown", handleKeyDown)
   }, [])
 
-  // Search Results
+  // Live Search Results
   const searchResults = React.useMemo(() => {
     if (!searchQuery.trim() || searchQuery.trim().length < 2) return []
 
     const q = searchQuery.toLowerCase().trim()
     const cleanPlateQ = q.replace(/\s/g, "")
-    const allVehicles = getAllVehicles()
+    const allVehicles = (apiVehicles || []).map((v: any) => ({
+      id: v.id,
+      plate: v.plate,
+      brand: v.brand,
+      model: v.model,
+      year: v.year,
+      customerId: v.customerId,
+      customerName: v.customer ? `${v.customer.firstName} ${v.customer.lastName}` : "Müşteri",
+      customerPhone: v.customer?.phone || "",
+    }))
 
-    return allVehicles.filter((v) => {
+    return allVehicles.filter((v: any) => {
       const matchPlate = v.plate.toLowerCase().replace(/\s/g, "").includes(cleanPlateQ)
       const matchModel = `${v.brand} ${v.model}`.toLowerCase().includes(q)
       const matchCustomer = v.customerName.toLowerCase().includes(q)
@@ -76,7 +86,7 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
 
       return matchPlate || matchModel || matchCustomer || matchPhone
     }).slice(0, 5) // Top 5 matches
-  }, [searchQuery])
+  }, [searchQuery, apiVehicles])
 
   const handleSelectResult = (customerId: string) => {
     setIsOpen(false)

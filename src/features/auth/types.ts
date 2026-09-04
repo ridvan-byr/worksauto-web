@@ -1,10 +1,20 @@
+export type UserRole =
+  | "OWNER"
+  | "SERVICE_MANAGER"
+  | "TECHNICIAN"
+  | "CASHIER"
+  | "WAREHOUSE_KEEPER"
+  | "tenant_admin"
+  | "technician"
+  | "service_advisor"
+
 export interface User {
   id: string
   name: string
   surname: string
   phone: string
-  email: string
-  role: "tenant_admin" | "technician" | "service_advisor"
+  email?: string
+  role: UserRole
 }
 
 export interface ServiceItem {

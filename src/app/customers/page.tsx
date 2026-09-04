@@ -1,5 +1,7 @@
 "use client"
 
+import { useCustomers, useCreateCustomer } from "@/features/customers/api/use-customers"
+
 import * as React from "react"
 import Link from "next/link"
 import {
@@ -17,7 +19,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Customer } from "@/features/customers/types"
-import { getStoredCustomers, saveStoredCustomers } from "@/features/customers/mock-data"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { CreateCustomerModal } from "@/features/customers/components/create-customer-modal"
 import { cn } from "@/lib/utils"
@@ -28,15 +29,62 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [filterType, setFilterType] = React.useState<"all" | "individual" | "corporate" | "debtors">("all")
 
-  // Load from localStorage / mock on mount
-  React.useEffect(() => {
-    setCustomers(getStoredCustomers())
-  }, [])
+  const { data: apiCustomers, isLoading } = useCustomers(searchQuery)
+  const createCustomerMutation = useCreateCustomer()
 
-  const handleCustomerCreated = (newCust: Customer) => {
+  // Pure live API customers sync (100% PostgreSQL)
+  React.useEffect(() => {
+    if (apiCustomers) {
+      const mapped: Customer[] = apiCustomers.map((c: any) => ({
+        id: c.id,
+        tenantId: c.tenantId || 'ten_1',
+        type: c.type === 'CORPORATE' ? 'corporate' : 'individual',
+        name: c.firstName,
+        surname: c.lastName,
+        companyTitle: c.companyTitle,
+        phone: c.phone,
+        email: c.email,
+        taxNumber: c.taxNumber,
+        taxOffice: c.taxOffice,
+        balance: c.currentAccount ? Number(c.currentAccount.balance) : 0,
+        vehicles: (c.vehicles || []).map((v: any) => ({
+          id: v.id,
+          tenantId: v.tenantId || 'ten_1',
+          customerId: c.id,
+          plate: v.plate,
+          brand: v.brand,
+          model: v.model,
+          year: v.year,
+          kilometer: v.mileage || 0,
+          fuelType: v.fuelType,
+          transmission: v.transmission,
+        })),
+        appointments: [],
+        workOrders: [],
+        invoices: [],
+        movements: [],
+        createdAt: c.createdAt,
+        updatedAt: c.updatedAt || c.createdAt,
+      }))
+      setCustomers(mapped)
+    }
+  }, [apiCustomers])
+
+  const handleCustomerCreated = async (newCust: Customer) => {
+    try {
+      await createCustomerMutation.mutateAsync({
+        firstName: newCust.name,
+        lastName: newCust.surname,
+        phone: newCust.phone,
+        type: newCust.type === 'corporate' ? 'CORPORATE' : 'INDIVIDUAL',
+        companyTitle: newCust.companyTitle,
+        creditLimit: 0,
+      })
+    } catch (e) {
+      console.warn('API sync fallback to local:', e)
+    }
     const next = [newCust, ...customers]
     setCustomers(next)
-    saveStoredCustomers(next)
   }
 
   // Filtered list

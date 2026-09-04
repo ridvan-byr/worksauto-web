@@ -2,96 +2,22 @@
 
 import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
-import { User, Tenant, ServiceItem, StaffMember } from "./types"
+import { toast } from "@/components/ui/sonner"
+import { User, Tenant } from "./types"
 
 const AUTH_STORAGE_KEY = "worksauto_auth_session"
-
-// 1. Initial Mock Tenants
-const MOCK_TENANTS: Record<string, { user: User; tenant: Tenant }> = {
-  // Scenario 1: Active Completed Workshop
-  "05320000001": {
-    user: {
-      id: "usr_1",
-      name: "Rıdvan",
-      surname: "Bayar",
-      phone: "05320000001",
-      email: "ridvan@yildizoto.com",
-      role: "tenant_admin",
-    },
-    tenant: {
-      id: "ten_yildiz",
-      name: "Yıldız Oto Servis",
-      legalName: "Yıldız Motorlu Araçlar San. ve Tic. Ltd. Şti.",
-      taxOffice: "Kadıköy",
-      taxNumber: "9876543210",
-      city: "İstanbul",
-      district: "Kadıköy",
-      address: "Oto Sanayi Sitesi A Blok No: 14",
-      logo: "/brand/worksauto-icon-white-tight.png",
-      primaryColor: "#0284c7",
-      slogan: "Güvenilir & Garantili Araç Bakım ve Onarım Merkezi",
-      workingDays: ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
-      workStartTime: "08:30",
-      workEndTime: "18:30",
-      breakStartTime: "12:30",
-      breakEndTime: "13:30",
-      services: [
-        { id: "s1", name: "Periyodik Bakım (Yağ + 4 Filtre)", durationMinutes: 60, laborPrice: 1250 },
-        { id: "s2", name: "Ön & Arka Fren Balata Değişimi", durationMinutes: 45, laborPrice: 850 },
-        { id: "s3", name: "Bilgisayarlı Arıza Tespit & Teşhis", durationMinutes: 30, laborPrice: 500 },
-      ],
-      staff: [
-        { id: "st1", name: "Ahmet", surname: "Usta", phone: "0532 111 22 33", expertise: "Motor & Mekanik" },
-        { id: "st2", name: "Mustafa", surname: "Demir", phone: "0533 222 33 44", expertise: "Oto Elektrik & Beyin" },
-      ],
-      appointmentSlotDuration: 45,
-      autoWorkOrder: true,
-      criticalStockThreshold: 5,
-      onboardingCompleted: true,
-    },
-  },
-
-  // Scenario 2: Newly Provisioned Workshop (Only 4 fields by Super Admin)
-  "05320000002": {
-    user: {
-      id: "usr_2",
-      name: "Mehmet",
-      surname: "Demir",
-      phone: "05320000002",
-      email: "mehmet@egemotor.com",
-      role: "tenant_admin",
-    },
-    tenant: {
-      id: "ten_ege",
-      name: "", // To be filled in onboarding
-      legalName: "",
-      taxOffice: "",
-      taxNumber: "",
-      city: "",
-      district: "",
-      address: "",
-      logo: "",
-      primaryColor: "#0284c7",
-      slogan: "",
-      workingDays: ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma"],
-      workStartTime: "08:30",
-      workEndTime: "18:00",
-      services: [],
-      staff: [],
-      appointmentSlotDuration: 45,
-      autoWorkOrder: true,
-      criticalStockThreshold: 5,
-      onboardingCompleted: false, // Must complete onboarding!
-    },
-  },
-}
+const ACCESS_TOKEN_KEY = "worksauto_access_token"
+const REFRESH_TOKEN_KEY = "worksauto_refresh_token"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"
 
 interface AuthContextType {
   user: User | null
   tenant: Tenant | null
   isAuthenticated: boolean
   isLoading: boolean
-  login: (phone: string, codeOrPass: string) => { success: boolean; error?: string }
+  sendOtp: (phone: string) => Promise<{ success: boolean; error?: string; devCode?: string }>
+  verifyOtp: (phone: string, code: string) => Promise<{ success: boolean; error?: string }>
+  login: (phone: string, codeOrPass: string) => Promise<{ success: boolean; error?: string }>
   logout: () => void
   completeOnboarding: (data: Partial<Tenant>) => void
 }
@@ -102,86 +28,194 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
 
-  // Default to active session in dev or check localStorage
-  const [user, setUser] = React.useState<User | null>(MOCK_TENANTS["05320000001"].user)
-  const [tenant, setTenant] = React.useState<Tenant | null>(MOCK_TENANTS["05320000001"].tenant)
+  const [user, setUser] = React.useState<User | null>(null)
+  const [tenant, setTenant] = React.useState<Tenant | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
 
-  // Load from localStorage on mount
+  // Load active 30-day session from localStorage on mount (Requires real JWT Token)
   React.useEffect(() => {
     try {
       const saved = localStorage.getItem(AUTH_STORAGE_KEY)
-      if (saved) {
+      const token = localStorage.getItem(ACCESS_TOKEN_KEY)
+      if (saved && token) {
         const parsed = JSON.parse(saved)
         if (parsed.user && parsed.tenant) {
-          if (parsed.user.surname === "Bayır") {
-            parsed.user.surname = "Bayar"
-            localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed))
+          if (parsed.user.role === "tenant_admin") {
+            parsed.user.role = "OWNER"
+          } else if (parsed.user.role === "technician") {
+            parsed.user.role = "TECHNICIAN"
           }
           setUser(parsed.user)
           setTenant(parsed.tenant)
+        } else {
+          setUser(null)
+          setTenant(null)
         }
+      } else {
+        // Without a valid saved session & JWT, user remains unauthenticated
+        setUser(null)
+        setTenant(null)
       }
-    } catch (e) {
-      // ignore
+    } catch {
+      setUser(null)
+      setTenant(null)
     } finally {
       setIsLoading(false)
     }
   }, [])
 
-  // Route Guard: enforce onboarding and auth rules
+  // Route Guard: strictly enforce authentication and onboarding
   React.useEffect(() => {
     if (isLoading) return
 
-    const isAuthRoute = pathname === "/sign-in"
-    const isOnboardingRoute = pathname === "/onboarding"
+    const currentPath = pathname || (typeof window !== "undefined" ? window.location.pathname : "")
+    if (!currentPath) return
 
-    // If logged in but onboarding is NOT completed, lock into /onboarding
-    if (user && tenant && !tenant.onboardingCompleted) {
+    const isAuthRoute = currentPath === "/sign-in" || currentPath === "/login"
+    const isOnboardingRoute = currentPath === "/onboarding"
+    const isPublicRoute = currentPath.startsWith("/book")
+    const isAdminRoute = currentPath.startsWith("/admin")
+
+    // Admin routes are completely isolated and managed by AdminLayout
+    if (isAdminRoute) return
+
+    // 1. Unauthenticated users cannot access protected tenant routes
+    if (!user || !tenant) {
+      if (!isAuthRoute && !isPublicRoute) {
+        router.replace("/sign-in")
+      }
+      return
+    }
+
+    // 2. Authenticated users should not see sign-in page
+    if (isAuthRoute) {
+      router.replace("/")
+      return
+    }
+
+    // 3. If logged in but onboarding is NOT completed, lock into /onboarding
+    if (!tenant.onboardingCompleted) {
       if (!isOnboardingRoute) {
         router.replace("/onboarding")
       }
+      return
     }
 
-    // If logged in and onboarding IS completed, prevent access to /onboarding
-    if (user && tenant && tenant.onboardingCompleted && isOnboardingRoute) {
+    // 4. If logged in and onboarding IS completed, prevent access to /onboarding
+    if (tenant.onboardingCompleted && isOnboardingRoute) {
       router.replace("/")
     }
   }, [user, tenant, isLoading, pathname, router])
 
-  const login = React.useCallback(
-    (rawPhone: string, codeOrPass: string) => {
-      const cleanPhone = rawPhone.replace(/\D/g, "")
-      const account = MOCK_TENANTS[cleanPhone]
+  /**
+   * Canlı API: Kullanıcı telefonuna SMS OTP gönderir
+   */
+  const sendOtp = React.useCallback(async (rawPhone: string) => {
+    const cleanPhone = rawPhone.replace(/\D/g, "")
+    try {
+      const res = await fetch(`${API_BASE_URL}/auth/otp/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: cleanPhone }),
+      })
 
-      if (!account) {
+      const data = await res.json()
+      if (!res.ok) {
         return {
           success: false,
-          error: "NOT_FOUND",
+          error: data.message || "NOT_FOUND",
         }
       }
 
-      setUser(account.user)
-      setTenant(account.tenant)
+      return {
+        success: true,
+        devCode: data.devCode,
+      }
+    } catch {
+      return { success: false, error: "Sunucu bağlantı hatası oluştu." }
+    }
+  }, [])
 
+  /**
+   * Canlı API: SMS kodunu doğrular ve 30 günlük oturum başlatır
+   */
+  const verifyOtp = React.useCallback(
+    async (rawPhone: string, code: string) => {
+      const cleanPhone = rawPhone.replace(/\D/g, "")
       try {
-        localStorage.setItem(
-          AUTH_STORAGE_KEY,
-          JSON.stringify({ user: account.user, tenant: account.tenant })
-        )
-      } catch (e) {
-        // ignore
-      }
+        const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ phone: cleanPhone, code }),
+        })
 
-      if (!account.tenant.onboardingCompleted) {
-        router.push("/onboarding")
-      } else {
+        const data = await res.json()
+        if (!res.ok) {
+          return {
+            success: false,
+            error: data.message || "INVALID_OTP",
+          }
+        }
+
+        // Live user & tenant mapping
+        const liveUser: User = {
+          id: data.user.id,
+          name: data.user.name,
+          surname: data.user.surname,
+          phone: data.user.phone || cleanPhone,
+          email: data.user.email || "",
+          role: data.user.role || "OWNER",
+        }
+
+        const liveTenant: Tenant = {
+          id: data.user.tenantId,
+          name: data.user.tenantTitle || "Bayar Oto Servis",
+          legalName: data.user.tenantTitle || "Bayar Oto Servis",
+          taxOffice: "İkitelli",
+          taxNumber: "1234567890",
+          city: "İstanbul",
+          district: "Başakşehir",
+          address: "İkitelli OSB, Dolapdere Sanayi Sitesi",
+          logo: "/brand/worksauto-icon-white-tight.png",
+          primaryColor: "#0284c7",
+          slogan: "Güvenilir & Garantili Araç Bakım ve Onarım Merkezi",
+          workingDays: ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
+          workStartTime: "08:30",
+          workEndTime: "18:30",
+          services: [],
+          staff: [],
+          appointmentSlotDuration: 45,
+          autoWorkOrder: true,
+          criticalStockThreshold: 5,
+          onboardingCompleted: true,
+        }
+
+        setUser(liveUser)
+        setTenant(liveTenant)
+
+        // Store 30-day session and JWT in localStorage
+        try {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: liveUser, tenant: liveTenant }))
+          localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken)
+          localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken)
+        } catch {
+          // ignore
+        }
+
         router.push("/")
+        return { success: true }
+      } catch {
+        return { success: false, error: "Sunucu bağlantı hatası oluştu. Lütfen API servisinin çalıştığından emin olun." }
       }
-
-      return { success: true }
     },
     [router]
+  )
+
+  const login = React.useCallback(
+    async (rawPhone: string, codeOrPass: string) => {
+      return verifyOtp(rawPhone, codeOrPass)
+    },
+    [verifyOtp]
   )
 
   const logout = React.useCallback(() => {
@@ -189,51 +223,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setTenant(null)
     try {
       localStorage.removeItem(AUTH_STORAGE_KEY)
-    } catch (e) {
+      localStorage.removeItem(ACCESS_TOKEN_KEY)
+      localStorage.removeItem(REFRESH_TOKEN_KEY)
+    } catch {
       // ignore
     }
+    toast.info("Oturum güvenli şekilde kapatıldı. Tekrar görüşmek üzere!")
     router.push("/sign-in")
   }, [router])
 
-  const completeOnboarding = React.useCallback(
-    (data: Partial<Tenant>) => {
-      setTenant((prev) => {
-        if (!prev) return null
-        const updated: Tenant = {
-          ...prev,
-          ...data,
-          onboardingCompleted: true,
+  const completeOnboarding = React.useCallback((data: Partial<Tenant>) => {
+    setTenant((prev) => {
+      if (!prev) return null
+      const updated = { ...prev, ...data, onboardingCompleted: true }
+      try {
+        const saved = localStorage.getItem(AUTH_STORAGE_KEY)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          parsed.tenant = updated
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed))
         }
-        try {
-          localStorage.setItem(
-            AUTH_STORAGE_KEY,
-            JSON.stringify({ user, tenant: updated })
-          )
-        } catch (e) {
-          // ignore
-        }
-        return updated
-      })
-      router.push("/")
-    },
-    [user, router]
+      } catch {
+        // ignore
+      }
+      return updated
+    })
+  }, [])
+
+  const value = React.useMemo(
+    () => ({
+      user,
+      tenant,
+      isAuthenticated: !!user && !!tenant,
+      isLoading,
+      sendOtp,
+      verifyOtp,
+      login,
+      logout,
+      completeOnboarding,
+    }),
+    [user, tenant, isLoading, sendOtp, verifyOtp, login, logout, completeOnboarding]
   )
 
-  return (
-    <AuthContext.Provider
-      value={{
-        user,
-        tenant,
-        isAuthenticated: !!user,
-        isLoading,
-        login,
-        logout,
-        completeOnboarding,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  )
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
 export function useAuth() {

@@ -16,7 +16,6 @@ interface AppShellProps {
 
 export function AppShell({ children, defaultCollapsed = false }: AppShellProps) {
   const pathname = usePathname()
-  const { tenant } = useAuth()
   const [collapsed, setCollapsed] = React.useState(defaultCollapsed)
   const [mobileOpen, setMobileOpen] = React.useState(false)
 
@@ -38,13 +37,41 @@ export function AppShell({ children, defaultCollapsed = false }: AppShellProps) 
     })
   }, [])
 
-  // Immersive Fullscreen Routes: Login & Onboarding do NOT render the dashboard shell
-  const isImmersiveRoute = pathname === "/sign-in" || pathname === "/login" || pathname === "/onboarding" || pathname.startsWith("/book")
+  const { user, tenant, isLoading } = useAuth()
+  const currentPath = pathname || (typeof window !== "undefined" ? window.location.pathname : "")
+
+  // Immersive Fullscreen Routes: Login, Onboarding & Admin do NOT render the tenant dashboard shell
+  const isImmersiveRoute =
+    currentPath === "/sign-in" ||
+    currentPath === "/login" ||
+    currentPath === "/onboarding" ||
+    currentPath.startsWith("/book") ||
+    currentPath.startsWith("/admin")
 
   if (isImmersiveRoute) {
     return (
       <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100">
         {children}
+      </div>
+    )
+  }
+
+  // If loading auth state, show a clean loading indicator
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100">
+        <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Oturum doğrulanıyor...</p>
+      </div>
+    )
+  }
+
+  // If not logged in, block protected content and wait for redirect to /sign-in
+  if (!user || !tenant) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100">
+        <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Giriş ekranına yönlendiriliyorsunuz...</p>
       </div>
     )
   }

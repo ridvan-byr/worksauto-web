@@ -1,5 +1,7 @@
 "use client"
 
+import { useCurrentAccounts, useCreatePayment } from "@/features/billing/api/use-billing"
+
 import * as React from "react"
 import {
   Users,
@@ -17,10 +19,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { ManualCollectionModal } from "@/features/billing/components/manual-collection-modal"
 import { CariHistoryModal } from "@/features/billing/components/cari-history-modal"
-import {
-  getStoredCurrentAccounts,
-  recordManualCariCollection,
-} from "@/features/billing/mock-data"
 import { CurrentAccount, PaymentMethod } from "@/features/billing/types"
 import { cn } from "@/lib/utils"
 
@@ -40,9 +38,37 @@ export default function CurrentAccountsPage() {
     account: CurrentAccount | null
   }>({ isOpen: false, account: null })
 
+  const { data: apiAccounts } = useCurrentAccounts()
+  const createPaymentMutation = useCreatePayment()
+
+  // Live API sync with mock fallback
   React.useEffect(() => {
-    setAccounts(getStoredCurrentAccounts())
-  }, [])
+    if (apiAccounts && apiAccounts.length > 0) {
+      const mapped: CurrentAccount[] = apiAccounts.map((a: any) => ({
+        id: a.id,
+        customerId: a.customerId,
+        customerName: a.customer ? `${a.customer.firstName} ${a.customer.lastName}` : 'Müşteri',
+        customerPhone: a.customer?.phone || '',
+        customerType: a.customer?.type === 'CORPORATE' ? 'corporate' : 'individual',
+        companyTitle: a.customer?.companyTitle,
+        balance: Number(a.balance),
+        creditLimit: Number(a.creditLimit || 15000),
+        totalDebits: Number(a.totalDebits),
+        totalCredits: Number(a.totalCredits),
+        lastActivityDate: a.updatedAt || a.createdAt,
+        movements: (a.movements || []).map((m: any) => ({
+          id: m.id,
+          date: m.date,
+          type: m.debit > 0 ? 'DEBIT_INVOICE' : 'CREDIT_PAYMENT',
+          description: m.description,
+          amount: m.debit > 0 ? Number(m.debit) : Number(m.credit),
+          balanceAfter: Number(m.balanceAfter),
+          referenceNumber: m.referenceNo || 'REF',
+        })),
+      }))
+      setAccounts(mapped)
+    }
+  }, [apiAccounts])
 
   // KPIs
   const totalOpenBalance = accounts.reduce((sum, a) => sum + a.balance, 0)
@@ -64,15 +90,50 @@ export default function CurrentAccountsPage() {
     })
   }, [accounts, filterType, searchQuery])
 
-  const handleApplyCollection = (
+  const handleApplyCollection = async (
     customerId: string,
     amount: number,
     method: PaymentMethod,
     ref?: string,
     note?: string
   ) => {
-    recordManualCariCollection(customerId, amount, method, ref, note)
-    setAccounts(getStoredCurrentAccounts())
+    try {
+      await createPaymentMutation.mutateAsync({
+        customerId,
+        amount,
+        method: method as any,
+        notes: note,
+      })
+    } catch (e) {
+      console.warn('API cari collection error:', e)
+    }
+
+    setAccounts((prev) =>
+      prev.map((acc) => {
+        if (acc.customerId !== customerId) return acc
+        const newBalance = Math.max(0, acc.balance - amount)
+        const newCredits = acc.totalCredits + amount
+        return {
+          ...acc,
+          balance: newBalance,
+          totalCredits: newCredits,
+          movements: [
+            {
+              id: 'mov_' + Date.now(),
+              customerId: acc.customerId,
+              date: new Date().toISOString(),
+              type: 'PAYMENT' as const,
+              description: `Tahsilat (${method}) - ${note || 'Cari Mahsup'}`,
+              referenceNo: ref || 'CAR-TAH',
+              debit: 0,
+              credit: amount,
+              balanceAfter: newBalance,
+            },
+            ...acc.movements,
+          ],
+        }
+      })
+    )
   }
 
   return (

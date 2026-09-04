@@ -257,7 +257,7 @@ export function AppointmentDetailModal({
                 <button
                   type="button"
                   onClick={handleConfirmNoShow}
-                  className="py-2 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                  className="py-2 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                 >
                   <UserX size={13} />
                   <span>Gelmedi</span>

@@ -7,6 +7,7 @@ import { QueryProvider } from "@/components/query-provider"
 import { AuthProvider } from "@/features/auth/auth-context"
 import { AppShell } from "@/components/layout/app-shell"
 import { DynamicFavicon } from "@/components/dynamic-favicon"
+import { Toaster } from "@/components/ui/sonner"
 
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -57,6 +58,7 @@ export default async function RootLayout({
               <AppShell defaultCollapsed={defaultCollapsed}>{children}</AppShell>
             </AuthProvider>
           </QueryProvider>
+          <Toaster />
         </ThemeProvider>
       </body>
     </html>

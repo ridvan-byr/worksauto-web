@@ -1,5 +1,8 @@
 "use client"
 
+import { useCustomer, useCustomerStats } from "@/features/customers/api/use-customers"
+import { useCreateVehicle } from "@/features/vehicles/api/use-vehicles"
+
 import * as React from "react"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
@@ -24,7 +27,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Customer, Vehicle } from "@/features/customers/types"
-import { getStoredCustomers, saveStoredCustomers } from "@/features/customers/mock-data"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { AddVehicleModal } from "@/features/customers/components/add-vehicle-modal"
 import { cn } from "@/lib/utils"
@@ -38,14 +40,59 @@ export default function CustomerDetailPage() {
   const [activeTab, setActiveTab] = React.useState<"appointments" | "workOrders" | "invoices" | "movements">("workOrders")
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = React.useState(false)
 
-  // Load customer data
+  const { data: apiCustomer } = useCustomer(customerId)
+  const { data: customerStats } = useCustomerStats(customerId)
+  const createVehicleMutation = useCreateVehicle()
+
+  // Load customer data with live API sync and mock fallback
   React.useEffect(() => {
-    const list = getStoredCustomers()
-    const found = list.find((c) => c.id === customerId)
-    if (found) {
-      setCustomer(found)
+    if (apiCustomer) {
+      setCustomer({
+        id: apiCustomer.id,
+        tenantId: apiCustomer.tenantId || 'ten_1',
+        type: apiCustomer.type === 'CORPORATE' ? 'corporate' : 'individual',
+        name: apiCustomer.firstName,
+        surname: apiCustomer.lastName,
+        companyTitle: apiCustomer.companyTitle,
+        phone: apiCustomer.phone,
+        email: apiCustomer.email,
+        taxNumber: apiCustomer.taxNumber,
+        taxOffice: apiCustomer.taxOffice,
+        balance: apiCustomer.currentAccount ? Number(apiCustomer.currentAccount.balance) : 0,
+        vehicles: (apiCustomer.vehicles || []).map((v: any) => ({
+          id: v.id,
+          tenantId: v.tenantId || 'ten_1',
+          customerId: apiCustomer.id,
+          plate: v.plate,
+          brand: v.brand,
+          model: v.model,
+          year: v.year,
+          kilometer: v.mileage || 0,
+          fuelType: v.fuelType,
+          transmission: v.transmission,
+        })),
+        appointments: [],
+        workOrders: (apiCustomer.workOrders || []).map((w: any) => ({
+          id: w.id,
+          workOrderNumber: w.workOrderNumber,
+          date: new Date(w.createdAt).toISOString().split('T')[0],
+          status: w.status,
+          grandTotal: Number(w.grandTotal || 0),
+          vehiclePlate: w.vehicle?.plate || '34XX000',
+        })),
+        invoices: (apiCustomer.invoices || []).map((inv: any) => ({
+          id: inv.id,
+          invoiceNumber: inv.invoiceNumber,
+          date: new Date(inv.issueDate).toISOString().split('T')[0],
+          grandTotal: Number(inv.grandTotal || 0),
+          status: inv.status,
+        })),
+        movements: [],
+        createdAt: apiCustomer.createdAt,
+        updatedAt: apiCustomer.updatedAt || apiCustomer.createdAt,
+      })
     }
-  }, [customerId])
+  }, [customerId, apiCustomer])
 
   const handleVehicleAdded = (newVehicle: Vehicle) => {
     if (!customer) return
@@ -54,12 +101,7 @@ export default function CustomerDetailPage() {
       vehicles: [...customer.vehicles, newVehicle],
       updatedAt: new Date().toISOString(),
     }
-
     setCustomer(updatedCustomer)
-
-    const allList = getStoredCustomers()
-    const nextList = allList.map((c) => (c.id === customer.id ? updatedCustomer : c))
-    saveStoredCustomers(nextList)
   }
 
   if (!customer) {

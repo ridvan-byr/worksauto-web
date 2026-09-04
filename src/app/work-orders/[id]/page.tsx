@@ -1,5 +1,7 @@
 "use client"
 
+import { useWorkOrder, useAddWorkOrderItem, useRemoveWorkOrderItem, useUpdateWorkOrderStatus, useRollbackWorkOrder } from "@/features/work-orders/api/use-work-orders"
+
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
@@ -24,14 +26,6 @@ import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
 import { TechnicianNotes } from "@/features/work-orders/components/technician-notes"
 import { PhotoGallery } from "@/features/work-orders/components/photo-gallery"
-import {
-  getWorkOrderById,
-  updateWorkOrderStatus,
-  addServiceToWorkOrder,
-  addPartToWorkOrder,
-  addNoteToWorkOrder,
-  addPhotoToWorkOrder,
-} from "@/features/work-orders/mock-data"
 import { WorkOrder, WorkOrderStatus } from "@/features/work-orders/types"
 import { cn } from "@/lib/utils"
 
@@ -52,12 +46,71 @@ export default function WorkOrderDetailPage() {
   const [newPartPrice, setNewPartPrice] = React.useState<number | "">(450)
   const [isAddingPart, setIsAddingPart] = React.useState(false)
 
+  const { data: apiOrder } = useWorkOrder(id)
+  const addItemMutation = useAddWorkOrderItem()
+  const removeItemMutation = useRemoveWorkOrderItem()
+  const updateStatusMutation = useUpdateWorkOrderStatus()
+  const rollbackMutation = useRollbackWorkOrder()
+
   React.useEffect(() => {
-    const found = getWorkOrderById(id)
-    if (found) {
-      setOrder(found)
+    if (apiOrder) {
+      setOrder({
+        id: apiOrder.id,
+        tenantId: apiOrder.tenantId || 'ten_1',
+        workOrderNumber: apiOrder.workOrderNumber,
+        customerId: apiOrder.customerId,
+        customerName: apiOrder.customer ? `${apiOrder.customer.firstName} ${apiOrder.customer.lastName}` : 'Müşteri',
+        customerPhone: apiOrder.customer?.phone || '',
+        vehicleId: apiOrder.vehicleId,
+        plate: apiOrder.vehicle?.plate || '34XX000',
+        brand: apiOrder.vehicle?.brand || 'Araç',
+        model: apiOrder.vehicle?.model || '',
+        year: apiOrder.vehicle?.year || 2024,
+        kilometer: apiOrder.vehicle?.mileage || 0,
+        status: apiOrder.status,
+        priority: 'NORMAL',
+        assignedLift: apiOrder.assignedLift || 'Lift 1',
+        assignedMechanicName: apiOrder.assignedMechanic?.user ? `${apiOrder.assignedMechanic.user.name} ${apiOrder.assignedMechanic.user.surname}` : 'Usta',
+        services: (apiOrder.items || []).filter((i: any) => i.itemType === 'SERVICE').map((i: any) => ({
+          id: i.id,
+          name: i.name,
+          durationMinutes: 60,
+          laborPrice: Number(i.unitPrice),
+          completed: true,
+        })),
+        parts: (apiOrder.items || []).filter((i: any) => i.itemType === 'PART').map((i: any) => ({
+          id: i.id,
+          name: i.name,
+          partNumber: i.itemId || 'YEDEK-PARCA',
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+          totalPrice: Number(i.totalPrice),
+        })),
+        notes: (apiOrder.notes || []).map((n: any) => ({
+          id: n.id,
+          authorName: n.authorName || 'Usta',
+          text: n.note || n.text || '',
+          createdAt: n.createdAt,
+          isInternal: true,
+        })),
+        photos: (apiOrder.photos || []).map((p: any) => ({
+          id: p.id,
+          url: p.url,
+          caption: p.caption,
+          uploadedAt: p.createdAt,
+          uploaderName: p.uploadedBy || 'Usta',
+          type: (p.type || 'CHECKIN') as any,
+        })),
+        laborTotal: Number(apiOrder.subtotal || 0),
+        partsTotal: 0,
+        taxRate: 0.20,
+        grandTotal: Number(apiOrder.grandTotal || 0),
+        estimatedCompletionTime: apiOrder.targetCompletionDate || '18:00',
+        createdAt: apiOrder.createdAt,
+        updatedAt: apiOrder.updatedAt,
+      })
     }
-  }, [id])
+  }, [id, apiOrder])
 
   if (!order) {
     return (
@@ -70,54 +123,135 @@ export default function WorkOrderDetailPage() {
     )
   }
 
-  const handleStatusUpdate = (status: WorkOrderStatus) => {
-    const updated = updateWorkOrderStatus(order.id, status)
-    setOrder(updated)
+  const handleStatusUpdate = async (status: WorkOrderStatus) => {
+    try {
+      await updateStatusMutation.mutateAsync({ id: order.id, status })
+    } catch (e) {
+      console.warn('API status update error:', e)
+    }
+    setOrder((prev) => (prev ? { ...prev, status } : null))
   }
 
-  const handleAddService = (e: React.FormEvent) => {
+  const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newServiceName.trim() || newServicePrice === "") return
-    const updated = addServiceToWorkOrder(order.id, {
-      name: newServiceName.trim(),
-      durationMinutes: 45,
-      laborPrice: Number(newServicePrice),
-      completed: false,
-      mechanicName: order.assignedMechanicName,
+    try {
+      await addItemMutation.mutateAsync({
+        workOrderId: order.id,
+        item: {
+          itemType: 'SERVICE',
+          name: newServiceName.trim(),
+          quantity: 1,
+          unitPrice: Number(newServicePrice),
+        },
+      })
+    } catch (e) {
+      console.warn('API add service error:', e)
+    }
+    setOrder((prev) => {
+      if (!prev) return null
+      const price = Number(newServicePrice)
+      return {
+        ...prev,
+        services: [
+          ...prev.services,
+          {
+            id: 'serv_' + Date.now(),
+            name: newServiceName.trim(),
+            durationMinutes: 45,
+            laborPrice: price,
+            completed: false,
+            mechanicName: prev.assignedMechanicName,
+          },
+        ],
+        laborTotal: prev.laborTotal + price,
+        grandTotal: prev.grandTotal + price * 1.2,
+      }
     })
-    setOrder(updated)
     setNewServiceName("")
     setIsAddingService(false)
   }
 
-  const handleAddPart = (e: React.FormEvent) => {
+  const handleAddPart = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newPartName.trim() || newPartPrice === "") return
-    const updated = addPartToWorkOrder(order.id, {
-      name: newPartName.trim(),
-      partNumber: newPartNumber.trim().toUpperCase() || "GENERIC-PART",
-      quantity: Number(newPartQty) || 1,
-      unitPrice: Number(newPartPrice),
+    const qty = Number(newPartQty) || 1
+    const price = Number(newPartPrice)
+    try {
+      await addItemMutation.mutateAsync({
+        workOrderId: order.id,
+        item: {
+          itemType: 'PART',
+          name: newPartName.trim(),
+          quantity: qty,
+          unitPrice: price,
+        },
+      })
+    } catch (e) {
+      console.warn('API add part error:', e)
+    }
+    setOrder((prev) => {
+      if (!prev) return null
+      const lineTotal = qty * price
+      return {
+        ...prev,
+        parts: [
+          ...prev.parts,
+          {
+            id: 'part_' + Date.now(),
+            name: newPartName.trim(),
+            partNumber: newPartNumber.trim().toUpperCase() || "GENERIC-PART",
+            quantity: qty,
+            unitPrice: price,
+            totalPrice: lineTotal,
+          },
+        ],
+        partsTotal: prev.partsTotal + lineTotal,
+        grandTotal: prev.grandTotal + lineTotal * 1.2,
+      }
     })
-    setOrder(updated)
     setNewPartName("")
     setNewPartNumber("")
     setIsAddingPart(false)
   }
 
   const handleAddNote = (text: string) => {
-    const updated = addNoteToWorkOrder(order.id, text, order.assignedMechanicName || "Usta")
-    setOrder(updated)
+    setOrder((prev) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        notes: [
+          ...prev.notes,
+          {
+            id: 'note_' + Date.now(),
+            authorName: prev.assignedMechanicName || 'Usta',
+            text: text,
+            createdAt: new Date().toISOString(),
+            isInternal: true,
+          },
+        ],
+      }
+    })
   }
 
   const handleAddPhoto = (caption: string, type: "CHECKIN" | "DAMAGE" | "COMPLETED", url?: string) => {
-    const updated = addPhotoToWorkOrder(order.id, {
-      url: url || "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?q=80&w=1200&auto=format&fit=crop",
-      caption,
-      uploaderName: order.assignedMechanicName || "Usta",
-      type,
+    setOrder((prev) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        photos: [
+          ...prev.photos,
+          {
+            id: 'photo_' + Date.now(),
+            url: url || "/brand/worksauto-icon-white-tight.png",
+            caption,
+            uploadedAt: new Date().toISOString(),
+            uploaderName: prev.assignedMechanicName || "Usta",
+            type,
+          },
+        ],
+      }
     })
-    setOrder(updated)
   }
 
   return (

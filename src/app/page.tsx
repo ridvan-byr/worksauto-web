@@ -1,5 +1,7 @@
 "use client"
 
+import { useDashboardSummary } from "@/features/dashboard/api/use-dashboard-summary"
+
 import * as React from "react"
 import Link from "next/link"
 import {
@@ -23,35 +25,44 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
-import { getStoredWorkOrders } from "@/features/work-orders/mock-data"
-import { getStoredAppointments } from "@/features/appointments/mock-data"
-import { getStoredProducts, getLowStockProducts } from "@/features/inventory/mock-data"
-import { getStoredInvoices } from "@/features/billing/mock-data"
-import { WorkOrder } from "@/features/work-orders/types"
-import { Appointment } from "@/features/appointments/types"
-import { Product } from "@/features/inventory/types"
-import { Invoice } from "@/features/billing/types"
+import { useWorkOrders } from "@/features/work-orders/api/use-work-orders"
+import { useAuth } from "@/features/auth/auth-context"
 
 export default function DashboardPage() {
-  const [workOrders, setWorkOrders] = React.useState<WorkOrder[]>([])
-  const [appointments, setAppointments] = React.useState<Appointment[]>([])
-  const [products, setProducts] = React.useState<Product[]>([])
-  const [lowStockProducts, setLowStockProducts] = React.useState<Product[]>([])
-  const [invoices, setInvoices] = React.useState<Invoice[]>([])
+  const { user, tenant } = useAuth()
+  const { data: summary, isLoading: isSummaryLoading } = useDashboardSummary()
+  const { data: apiWorkOrders, isLoading: isOrdersLoading } = useWorkOrders()
 
-  React.useEffect(() => {
-    setWorkOrders(getStoredWorkOrders())
-    setAppointments(getStoredAppointments())
-    setProducts(getStoredProducts())
-    setLowStockProducts(getLowStockProducts())
-    setInvoices(getStoredInvoices())
-  }, [])
+  const userName = user ? `${user.name} ${user.surname || ""}`.trim() : "Yetkili"
+  const userRole = (user?.role || "").toUpperCase()
+  const isTechnician = userRole === "TECHNICIAN"
 
-  // Dynamic Live KPIs
-  const inProgressWorkOrders = workOrders.filter((wo) => wo.status === "IN_PROGRESS")
-  const completedWorkOrders = workOrders.filter((wo) => wo.status === "COMPLETED")
-  const totalReceivables = invoices.reduce((sum, inv) => sum + inv.remainingAmount, 0)
-  const openInvoicesCount = invoices.filter((inv) => inv.status !== "PAID").length
+  // Map real database work orders
+  const recentOrders = React.useMemo(() => {
+    if (!apiWorkOrders) return []
+    return apiWorkOrders.map((w: any) => ({
+      id: w.id,
+      plate: w.vehicle?.plate || "34XX000",
+      brand: w.vehicle?.brand || "Araç",
+      model: w.vehicle?.model || "",
+      year: w.vehicle?.year || 2024,
+      customerName: w.customer ? `${w.customer.firstName} ${w.customer.lastName}` : "Müşteri",
+      assignedMechanicName: w.assignedMechanic?.user ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname}` : "Usta",
+      assignedLift: w.assignedLift || "Lift-1",
+      status: w.status,
+      grandTotal: Number(w.grandTotal || 0),
+      services: (w.items || []).filter((i: any) => i.itemType === "SERVICE").map((i: any) => ({ name: i.name })),
+    }))
+  }, [apiWorkOrders])
+
+  // Dynamic Live KPIs (Directly from PostgreSQL summary API)
+  const activeWOCount = summary?.activeWorkOrdersCount ?? 0
+  const todayAppCount = summary?.todayAppointmentsCount ?? 0
+  const criticalStock = summary?.criticalStockCount ?? 0
+  const openInvoicesCount = summary?.unpaidInvoicesCount ?? 0
+  const totalReceivables = summary?.unpaidTotal ?? 0
+  const todayRevenue = summary?.todayRevenue ?? 0
+  const monthlyRevenue = summary?.monthlyRevenue ?? 0
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 pb-12">
@@ -60,11 +71,22 @@ export default function DashboardPage() {
         <div className="absolute right-0 top-0 -mt-10 -mr-10 w-80 h-80 bg-sky-400/15 dark:bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="space-y-2">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-              Hoş Geldiniz, Rıdvan Bayar 👋
-            </h1>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+                Hoş Geldiniz, {userName} 👋
+              </h1>
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
+                isTechnician
+                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25"
+                  : "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25"
+              }`}>
+                {isTechnician ? "Atölye Teknisyeni" : "Servis Yöneticisi"}
+              </span>
+            </div>
             <p className="text-slate-600 dark:text-slate-400 text-sm max-w-xl">
-              Atölyede şu an lifte {inProgressWorkOrders.length} araç işlem görüyor. {lowStockProducts.length} adet kritik stok uyarısı ve {appointments.length} kayıtlı randevu bulunuyor.
+              {isTechnician
+                ? `Atölyede şu an lifte ${activeWOCount} araç işlem görüyor. ${todayAppCount} kayıtlı randevu planlandı.`
+                : `Atölyede şu an lifte ${activeWOCount} araç işlem görüyor. ${criticalStock} adet kritik stok uyarısı ve ${todayAppCount} kayıtlı randevu bulunuyor.`}
             </p>
           </div>
 
@@ -97,7 +119,7 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Kayıtlı Randevular</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                  {appointments.length} Randevu
+                  {todayAppCount} Randevu
                 </p>
                 <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
                   <CheckCircle2 size={12} /> Takvim slotları aktif
@@ -117,10 +139,10 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Atölye (Lifte Araçlar)</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                  {inProgressWorkOrders.length} İş Emri
+                  {activeWOCount} İş Emri
                 </p>
                 <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
-                  <Clock size={12} /> {completedWorkOrders.length} araç teslime hazır
+                  <Clock size={12} /> {recentOrders.filter((w: any) => w.status === "COMPLETED").length} araç teslime hazır
                 </p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-105 transition-transform">
@@ -137,7 +159,7 @@ export default function DashboardPage() {
               <div className="space-y-1">
                 <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Kritik Stok Uyarısı</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                  {lowStockProducts.length} Parça
+                  {criticalStock} Parça
                 </p>
                 <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
                   <AlertCircle size={12} /> Sipariş eşiği aşıldı
@@ -150,25 +172,46 @@ export default function DashboardPage() {
           </Card>
         </Link>
 
-        {/* Receivables & Invoices Card */}
-        <Link href="/invoices" className="group">
-          <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full">
-            <CardContent className="p-5 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bekleyen Alacak</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                  {totalReceivables.toLocaleString("tr-TR")} ₺
-                </p>
-                <p className="text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1 font-medium">
-                  <TrendingUp size={12} /> {openInvoicesCount} açık fatura
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
-                <Receipt size={22} />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+        {/* 4th Card: Receivables for Owner / Finished Orders for Technician */}
+        {isTechnician ? (
+          <Link href="/work-orders" className="group">
+            <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tamamlanan İşler</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                    {recentOrders.filter((w: any) => w.status === "COMPLETED").length} Araç
+                  </p>
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                    <CheckCircle2 size={12} /> Teslimata hazır
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                  <CheckCircle2 size={22} />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        ) : (
+          <Link href="/invoices" className="group">
+            <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bekleyen Alacak</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                    {totalReceivables.toLocaleString("tr-TR")} ₺
+                  </p>
+                  <p className="text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1 font-medium">
+                    <TrendingUp size={12} /> {openInvoicesCount} açık fatura
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                  <Receipt size={22} />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
       </div>
 
       {/* Quick Launch & Active Work Orders Grid */}
@@ -194,10 +237,10 @@ export default function DashboardPage() {
           </div>
 
           <div className="space-y-3">
-            {workOrders.length === 0 ? (
+            {recentOrders.length === 0 ? (
               <p className="text-center py-8 text-xs text-slate-400">Kayıtlı aktif iş emri bulunamadı.</p>
             ) : (
-              workOrders.slice(0, 4).map((wo) => (
+              recentOrders.slice(0, 4).map((wo) => (
                 <Link key={wo.id} href={`/work-orders/${wo.id}`} className="block group">
                   <Card className="hover:border-sky-500/40 transition-all p-4">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -213,7 +256,7 @@ export default function DashboardPage() {
                             </span>
                           </div>
                           <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                            {wo.services.map((s) => s.name).join(", ") || "Genel Bakım ve Kontrol"}
+                            {wo.services.map((s: any) => s.name).join(", ") || "Genel Bakım ve Kontrol"}
                           </p>
                           <p className="text-[11px] text-slate-400 mt-0.5">
                             Müşteri: <strong className="text-slate-700 dark:text-slate-300">{wo.customerName}</strong> • Usta: {wo.assignedMechanicName || "Belirlenmedi"} ({wo.assignedLift || "Lift-"})

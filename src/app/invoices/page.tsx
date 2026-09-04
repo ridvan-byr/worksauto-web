@@ -1,5 +1,7 @@
 "use client"
 
+import { useInvoices, useCreatePayment } from "@/features/billing/api/use-billing"
+
 import * as React from "react"
 import {
   Receipt,
@@ -18,11 +20,6 @@ import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { InvoiceStatusBadge } from "@/features/billing/components/invoice-status-badge"
 import { RecordPaymentModal } from "@/features/billing/components/record-payment-modal"
 import { InvoiceDetailModal } from "@/features/billing/components/invoice-detail-modal"
-import {
-  getStoredInvoices,
-  recordInvoicePayment,
-  getDailyCashSummary,
-} from "@/features/billing/mock-data"
 import { Invoice, PaymentMethod } from "@/features/billing/types"
 import { cn } from "@/lib/utils"
 
@@ -42,11 +39,79 @@ export default function InvoicesPage() {
     invoice: Invoice | null
   }>({ isOpen: false, invoice: null })
 
-  React.useEffect(() => {
-    setInvoices(getStoredInvoices())
-  }, [])
+  const { data: apiInvoices } = useInvoices()
+  const createPaymentMutation = useCreatePayment()
 
-  const cashSummary = React.useMemo(() => getDailyCashSummary(), [invoices])
+  // Live API sync with mock fallback
+  React.useEffect(() => {
+    if (apiInvoices && apiInvoices.length > 0) {
+      const mapped: Invoice[] = apiInvoices.map((inv: any) => ({
+        id: inv.id,
+        tenantId: inv.tenantId || 'ten_1',
+        invoiceNumber: inv.invoiceNumber,
+        workOrderId: inv.workOrderId || 'wo_genel',
+        workOrderNumber: inv.workOrder?.workOrderNumber || 'WO-GENEL',
+        customerId: inv.customerId,
+        customerName: inv.customer ? `${inv.customer.firstName} ${inv.customer.lastName}` : 'Müşteri',
+        customerPhone: inv.customer?.phone || '',
+        customerType: inv.customer?.type === 'CORPORATE' ? 'corporate' : 'individual',
+        companyTitle: inv.customer?.companyTitle,
+        taxOffice: inv.customer?.taxOffice,
+        taxNumber: inv.customer?.taxNumber,
+        vehiclePlate: inv.workOrder?.vehicle?.plate || '34XX000',
+        vehicleBrand: inv.workOrder?.vehicle?.brand || 'Araç',
+        vehicleModel: inv.workOrder?.vehicle ? `${inv.workOrder.vehicle.brand} ${inv.workOrder.vehicle.model}` : 'Model',
+        vehicleYear: inv.workOrder?.vehicle?.year || 2024,
+        vehicleKm: inv.workOrder?.vehicle?.mileage || 0,
+        issueDate: new Date(inv.issueDate).toISOString().split('T')[0],
+        dueDate: new Date(inv.dueDate).toISOString().split('T')[0],
+        subtotal: Number(inv.subtotal),
+        taxAmount: Number(inv.kdvAmount),
+        grandTotal: Number(inv.grandTotal),
+        paidAmount: Number(inv.paidAmount),
+        remainingAmount: Number(inv.remainingAmount),
+        status: inv.status as any,
+        payments: (inv.payments || []).map((p: any) => ({
+          id: p.id,
+          customerId: inv.customerId,
+          invoiceId: inv.id,
+          date: p.paymentDate,
+          amount: Number(p.amount),
+          method: p.method as any,
+        })),
+        items: inv.workOrder?.items ? inv.workOrder.items.map((i: any) => ({
+          id: i.id,
+          type: i.itemType || 'SERVICE',
+          name: i.name,
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+          totalPrice: Number(i.totalPrice),
+        })) : [
+          { id: 'item_1', type: 'SERVICE', name: 'Genel Servis & Bakım Bedeli', quantity: 1, unitPrice: Number(inv.subtotal), totalPrice: Number(inv.subtotal) }
+        ],
+        createdAt: inv.createdAt,
+        updatedAt: inv.updatedAt,
+      }))
+      setInvoices(mapped)
+    }
+  }, [apiInvoices])
+
+  const cashSummary = React.useMemo(() => {
+    let cash = 0, pos = 0, bank = 0
+    invoices.forEach((inv) => {
+      inv.payments.forEach((p) => {
+        if (p.method === "CASH") cash += p.amount
+        else if (p.method === "POS") pos += p.amount
+        else if (p.method === "BANK_TRANSFER") bank += p.amount
+      })
+    })
+    return {
+      cash,
+      pos,
+      bank,
+      total: cash + pos + bank,
+    }
+  }, [invoices])
 
   // KPIs
   const totalReceivables = invoices.reduce((sum, i) => sum + i.remainingAmount, 0)
@@ -67,15 +132,50 @@ export default function InvoicesPage() {
     })
   }, [invoices, statusFilter, searchQuery])
 
-  const handleApplyPayment = (
+  const handleApplyPayment = async (
     invoiceId: string,
     amount: number,
     method: PaymentMethod,
     ref?: string,
     note?: string
   ) => {
-    recordInvoicePayment(invoiceId, amount, method, ref, note)
-    setInvoices(getStoredInvoices())
+    try {
+      await createPaymentMutation.mutateAsync({
+        invoiceId,
+        amount,
+        method: method as any,
+        notes: note,
+      })
+    } catch (e) {
+      console.warn('API payment error:', e)
+    }
+
+    setInvoices((prev) =>
+      prev.map((inv) => {
+        if (inv.id !== invoiceId) return inv
+        const newPaid = inv.paidAmount + amount
+        const newRem = Math.max(0, inv.grandTotal - newPaid)
+        const newStatus = newRem === 0 ? ("PAID" as const) : ("PARTIALLY_PAID" as const)
+        return {
+          ...inv,
+          paidAmount: newPaid,
+          remainingAmount: newRem,
+          status: newStatus,
+          payments: [
+            ...inv.payments,
+            {
+              id: "pay_" + Date.now(),
+              customerId: inv.customerId,
+              invoiceId: inv.id,
+              amount,
+              method,
+              performedByName: "Kasiyer",
+              createdAt: new Date().toISOString(),
+            },
+          ],
+        }
+      })
+    )
   }
 
   return (

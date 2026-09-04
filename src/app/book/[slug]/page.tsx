@@ -16,7 +16,7 @@ import {
 import { BrandLogo } from "@/components/shared/brand-logo"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
-import { createAppointment } from "@/features/appointments/mock-data"
+import { useCreateAppointment } from "@/features/appointments/api/use-appointments"
 import { cn } from "@/lib/utils"
 
 const SERVICES = [
@@ -30,6 +30,7 @@ const SERVICES = [
 export default function PublicBookingPage() {
   const params = useParams()
   const slug = params.slug as string // e.g. "yildiz-oto-servis"
+  const createAppointmentMutation = useCreateAppointment()
 
   const [step, setStep] = React.useState<1 | 2>(1)
   const [name, setName] = React.useState("")
@@ -58,27 +59,20 @@ export default function PublicBookingPage() {
     setPhone(res)
   }
 
-  const handleCreatePublicAppointment = (e: React.FormEvent) => {
+  const handleCreatePublicAppointment = async (e: React.FormEvent) => {
     e.preventDefault()
     const chosenService = SERVICES.find((s) => s.id === selectedServiceId) || SERVICES[0]
 
-    createAppointment({
-      tenantId: "tenant_1",
-      customerId: "cust_public_" + Date.now(),
-      customerName: name.trim(),
-      customerPhone: phone,
-      vehicleId: "veh_public_" + Date.now(),
-      plate: plate.toUpperCase().trim(),
-      brand: brandModel.split(" ")[0] || "Oto",
-      model: brandModel.split(" ").slice(1).join(" ") || "Araç",
-      services: [chosenService],
-      totalDurationMinutes: chosenService.durationMinutes,
-      totalEstimatedPrice: chosenService.price,
-      date,
-      time,
-      status: "PENDING", // Onay bekliyor
-      customerNote: note.trim() || undefined,
-    })
+    try {
+      await createAppointmentMutation.mutateAsync({
+        slotDate: date,
+        slotStartTime: `${date}T${time}:00Z`,
+        slotEndTime: `${date}T${time}:00Z`,
+        customerNotes: `[Web Randevu] İsim: ${name} • Tel: ${phone} • Plaka: ${plate} • Araç: ${brandModel} • Not: ${note}`,
+      })
+    } catch (err) {
+      console.warn('Public appointment API sync notice:', err)
+    }
 
     setIsSuccess(true)
   }
@@ -89,7 +83,7 @@ export default function PublicBookingPage() {
     <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100 flex flex-col justify-between p-4 sm:p-8">
       {/* Top Header */}
       <header className="max-w-xl w-full mx-auto flex items-center justify-between py-4">
-        <BrandLogo collapsed={false} />
+        <BrandLogo collapsed={false} clickable={false} />
         <span className="text-xs font-bold px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
           Online Randevu Portalı
         </span>

@@ -12,6 +12,7 @@ interface BrandLogoProps {
   collapsed?: boolean
   className?: string
   href?: string
+  clickable?: boolean
   priority?: boolean
   onClick?: (e?: React.MouseEvent) => void
 }
@@ -20,6 +21,7 @@ export function BrandLogo({
   collapsed = false,
   className,
   href = "/",
+  clickable = true,
   priority = true,
 }: BrandLogoProps) {
   const pathname = usePathname()
@@ -81,7 +83,7 @@ export function BrandLogo({
     </div>
   )
 
-  if (href) {
+  if (clickable && href) {
     return (
       <Link
         href={href}
@@ -94,5 +96,5 @@ export function BrandLogo({
     )
   }
 
-  return content
+  return <div className="inline-flex items-center select-none">{content}</div>
 }

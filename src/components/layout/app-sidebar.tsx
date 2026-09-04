@@ -31,6 +31,7 @@ interface NavItem {
   badge?: string
   badgeVariant?: "accent" | "warning"
   highlight?: boolean
+  roles?: string[]
 }
 
 interface AppSidebarProps {
@@ -80,16 +81,19 @@ const navItems: NavItem[] = [
     title: "Faturalar & Kasa",
     href: "/invoices",
     icon: Receipt,
+    roles: ["OWNER", "SERVICE_MANAGER", "CASHIER", "tenant_admin"],
   },
   {
     title: "Cari Hesaplar",
     href: "/current-accounts",
     icon: FileSpreadsheet,
+    roles: ["OWNER", "SERVICE_MANAGER", "CASHIER", "tenant_admin"],
   },
   {
     title: "Servis Ayarları",
     href: "/settings",
     icon: Settings,
+    roles: ["OWNER", "SERVICE_MANAGER", "tenant_admin"],
   },
 ]
 
@@ -109,17 +113,27 @@ export function AppSidebar({
     }
   }
 
+  const visibleNavItems = React.useMemo(() => {
+    if (!user?.role) return navItems
+    const r = (user.role || "").toUpperCase()
+    return navItems.filter((item) => {
+      if (!item.roles) return true
+      const upperAllowed = item.roles.map((x) => x.toUpperCase())
+      return upperAllowed.includes(r) || (r === "TENANT_ADMIN" && upperAllowed.includes("OWNER"))
+    })
+  }, [user?.role])
+
   return (
     <>
       {/* Mobile Backdrop */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-40 bg-slate-950/80 backdrop-blur-sm lg:hidden transition-opacity duration-300"
+          className="fixed inset-0 z-40 bg-slate-950/60 backdrop-blur-xs transition-opacity lg:hidden"
           onClick={onCloseMobile}
         />
       )}
 
-      {/* Sidebar Container */}
+      {/* Main Sidebar Shell */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-slate-200/80 bg-white/95 dark:border-slate-800/80 dark:bg-[#070b12]/95 backdrop-blur-xl transition-[width,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]",
@@ -146,7 +160,7 @@ export function AppSidebar({
 
         {/* Navigation Links */}
         <div className="flex-1 overflow-y-auto py-4 px-2.5 space-y-1.5 scrollbar-none">
-          {navItems.map((item) => {
+          {visibleNavItems.map((item) => {
             const isActive = pathname === item.href
             const Icon = item.icon
 

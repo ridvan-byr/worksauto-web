@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Appointment, AppointmentServiceItem } from "../types"
-import { getStoredCustomers } from "@/features/customers/mock-data"
+import { useCustomers } from "@/features/customers/api/use-customers"
 import { useAuth } from "@/features/auth/auth-context"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"
@@ -47,11 +47,40 @@ export function CreateAppointmentModal({
 }: CreateAppointmentModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const { tenant } = useAuth()
-  const customers = React.useMemo(() => getStoredCustomers(), [isOpen])
+  const { data: apiCustomers } = useCustomers()
+
+  const customers = React.useMemo(() => {
+    if (!apiCustomers) return []
+    return apiCustomers.map((c: any) => ({
+      id: c.id,
+      name: c.firstName,
+      surname: c.lastName,
+      phone: c.phone,
+      type: c.type === 'CORPORATE' ? 'corporate' : 'individual',
+      companyTitle: c.companyTitle,
+      vehicles: (c.vehicles || []).map((v: any) => ({
+        id: v.id,
+        plate: v.plate,
+        brand: v.brand,
+        model: v.model,
+        year: v.year,
+      })),
+    }))
+  }, [apiCustomers])
 
   // Form State
-  const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>(customers[0]?.id || "")
-  const [selectedVehicleId, setSelectedVehicleId] = React.useState<string>(customers[0]?.vehicles[0]?.id || "")
+  const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>("")
+  const [selectedVehicleId, setSelectedVehicleId] = React.useState<string>("")
+
+  React.useEffect(() => {
+    if (customers.length > 0 && !selectedCustomerId) {
+      setSelectedCustomerId(customers[0].id)
+      if (customers[0].vehicles.length > 0) {
+        setSelectedVehicleId(customers[0].vehicles[0].id)
+      }
+    }
+  }, [customers, selectedCustomerId])
+
   const [date, setDate] = React.useState<string>(initialDate || new Date().toISOString().split("T")[0])
   const [time, setTime] = React.useState<string>(initialTime || "10:00")
   const [selectedServices, setSelectedServices] = React.useState<AppointmentServiceItem[]>([DEFAULT_SERVICES[0]])
@@ -88,7 +117,7 @@ export function CreateAppointmentModal({
   if (!isOpen || !mounted) return null
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId)
-  const selectedVehicle = selectedCustomer?.vehicles.find((v) => v.id === selectedVehicleId)
+  const selectedVehicle = selectedCustomer?.vehicles.find((v: any) => v.id === selectedVehicleId)
 
   // Calculations
   const totalDuration = selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0)
@@ -179,7 +208,7 @@ export function CreateAppointmentModal({
               <select
                 value={selectedCustomerId}
                 onChange={(e) => setSelectedCustomerId(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
               >
                 {customers.map((c) => (
                   <option key={c.id} value={c.id}>
@@ -196,9 +225,9 @@ export function CreateAppointmentModal({
               <select
                 value={selectedVehicleId}
                 onChange={(e) => setSelectedVehicleId(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
               >
-                {selectedCustomer?.vehicles.map((v) => (
+                {selectedCustomer?.vehicles.map((v: any) => (
                   <option key={v.id} value={v.id}>
                     {v.plate} — {v.brand} {v.model}
                   </option>
@@ -237,7 +266,7 @@ export function CreateAppointmentModal({
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
 
@@ -250,7 +279,7 @@ export function CreateAppointmentModal({
                 value={time}
                 step={1800} // 30 dk
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
 
@@ -261,7 +290,7 @@ export function CreateAppointmentModal({
               <select
                 value={assignedStaff}
                 onChange={(e) => setAssignedStaff(e.target.value)}
-                className="w-full h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                className="w-full h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
               >
                 <option value="Ahmet Usta">Ahmet Usta (Motor & Mekanik)</option>
                 <option value="Mustafa Usta">Mustafa Usta (Oto Elektrik)</option>
@@ -288,10 +317,10 @@ export function CreateAppointmentModal({
                     type="button"
                     onClick={() => handleToggleService(srv)}
                     className={cn(
-                      "p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer text-xs",
+                      "p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer text-xs focus:outline-none focus:ring-0 select-none",
                       isSelected
-                        ? "bg-sky-500/10 border-sky-500 text-slate-900 dark:text-slate-100 shadow-2xs font-semibold"
-                        : "bg-slate-50/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
+                        ? "bg-sky-500/15 border-sky-500 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                        : "bg-slate-50/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-slate-200 active:bg-slate-200 dark:active:bg-slate-800"
                     )}
                   >
                     <div className="flex items-center gap-2 overflow-hidden">
@@ -326,7 +355,7 @@ export function CreateAppointmentModal({
               placeholder="Örn: Sabahları soğukken motordan tıkırtı geliyor."
               value={customerNote}
               onChange={(e) => setCustomerNote(e.target.value)}
-              className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+              className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
 

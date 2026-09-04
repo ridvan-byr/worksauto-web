@@ -17,12 +17,13 @@ import {
 } from "lucide-react"
 import { BrandLogo } from "@/components/shared/brand-logo"
 import { Button } from "@/components/ui/button"
+import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/features/auth/auth-context"
 import { cn } from "@/lib/utils"
 
 export default function SignInPage() {
   const router = useRouter()
-  const { login, isAuthenticated, tenant } = useAuth()
+  const { login, sendOtp, verifyOtp, isAuthenticated, tenant } = useAuth()
 
   // Steps: 1 = Phone Number, 2 = SMS OTP Verification
   const [step, setStep] = React.useState<1 | 2>(1)
@@ -80,49 +81,60 @@ export default function SignInPage() {
     setPhone(res)
   }
 
-  // Step 1 Submit: Check if phone exists and move to OTP step
-  const handlePhoneSubmit = (e: React.FormEvent) => {
+  // Step 1 Submit: Check if phone exists and send SMS OTP
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorStatus(null)
 
     const clean = phone.replace(/\D/g, "")
-    if (clean.length < 11) {
+    if (clean.length < 10) {
       setErrorStatus("INVALID_PHONE")
+      toast.warning("Lütfen geçerli bir cep telefonu numarası giriniz.")
       return
     }
 
     setIsLoading(true)
-    setTimeout(() => {
-      setIsLoading(false)
-      // Known demo numbers
-      if (clean === "05320000001" || clean === "05320000002") {
-        setStep(2)
-        setTimerSeconds(59)
-      } else {
-        // Unregistered phone number
-        setErrorStatus("NOT_FOUND")
+    const res = await sendOtp(phone)
+    setIsLoading(false)
+
+    if (res.success) {
+      setStep(2)
+      setTimerSeconds(59)
+      toast.success("Doğrulama kodu gönderildi.", {
+        description: `${phone} numarasına 6 haneli SMS kodu iletildi.`,
+      })
+      if (res.devCode) {
+        setOtpCode(res.devCode)
       }
-    }, 350)
+    } else {
+      setErrorStatus(res.error || "NOT_FOUND")
+      toast.error("Telefon numarası sistemde bulunamadı veya yetkisiz.")
+    }
   }
 
-  // Step 2 Submit: Verify OTP code and log in
-  const handleOtpSubmit = (e: React.FormEvent) => {
+  // Step 2 Submit: Verify OTP code and start 30-day session
+  const handleOtpSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorStatus(null)
 
     if (otpCode.length < 6) {
       setErrorStatus("INVALID_OTP")
+      toast.warning("Lütfen 6 haneli SMS kodunu eksiksiz giriniz.")
       return
     }
 
     setIsLoading(true)
-    setTimeout(() => {
-      const res = login(phone, otpCode)
-      setIsLoading(false)
-      if (!res.success) {
-        setErrorStatus(res.error || "AUTH_FAILED")
-      }
-    }, 400)
+    const res = await verifyOtp(phone, otpCode)
+    setIsLoading(false)
+
+    if (res.success) {
+      toast.success("Giriş başarılı!", {
+        description: "Atölye yönetim paneline yönlendiriliyorsunuz...",
+      })
+    } else {
+      setErrorStatus(res.error || "INVALID_OTP")
+      toast.error("Doğrulama kodu hatalı veya süresi dolmuş.")
+    }
   }
 
   // Quick fill test shortcut
@@ -144,7 +156,7 @@ export default function SignInPage() {
 
         {/* Top: Brand Logo */}
         <div className="relative z-10">
-          <BrandLogo collapsed={false} />
+          <BrandLogo collapsed={false} clickable={false} />
         </div>
 
         {/* Center: Value Propositions */}
@@ -200,7 +212,7 @@ export default function SignInPage() {
         <div className="w-full max-w-md space-y-7">
           {/* Mobile Header Brand Logo */}
           <div className="lg:hidden flex justify-center pb-2">
-            <BrandLogo collapsed={false} />
+            <BrandLogo collapsed={false} clickable={false} />
           </div>
 
           {/* STEP 1: PHONE NUMBER INPUT */}
@@ -408,34 +420,34 @@ export default function SignInPage() {
             </p>
           </div>
 
-          {/* Quick Demo Accounts Switcher (For Presentation and Testing) */}
+          {/* Quick Real DB Accounts Switcher (PostgreSQL Live Seed) */}
           <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800/80 space-y-2">
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">
-              Geliştirici & Test Giriş Kısayolları
+              Canlı Test & Hızlı Giriş Hesapları (PostgreSQL)
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
               <button
                 type="button"
-                onClick={() => handleQuickSelect("0 (532) 000 00 01")}
+                onClick={() => handleQuickSelect("0 (555) 111 22 33", "123456")}
                 className="p-2.5 rounded-xl border border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10 text-sky-600 dark:text-sky-400 text-left transition-all cursor-pointer"
               >
                 <p className="font-bold flex items-center gap-1">
                   <CheckCircle2 size={12} className="text-emerald-500" />
-                  <span>Yıldız Oto Servis</span>
+                  <span>Bayar Oto Servis</span>
                 </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">Kurulumu Tamamlanmış (Aktif Pano)</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Rıdvan Bayar (Patron / Yönetici)</p>
               </button>
 
               <button
                 type="button"
-                onClick={() => handleQuickSelect("0 (532) 000 00 02")}
+                onClick={() => handleQuickSelect("0 (555) 222 33 44", "123456")}
                 className="p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-left transition-all cursor-pointer"
               >
                 <p className="font-bold flex items-center gap-1">
                   <Sparkles size={12} className="text-amber-500" />
-                  <span>Ege Motor Servis</span>
+                  <span>Teknisyen Paneli</span>
                 </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">Yeni Kayıt (Onboarding Bekleyen)</p>
+                <p className="text-[10px] text-slate-500 dark:text-slate-400">Mehmet Usta (Atölye Teknisyeni)</p>
               </button>
             </div>
 
@@ -445,7 +457,7 @@ export default function SignInPage() {
                 onClick={() => {
                   setStep(1)
                   setErrorStatus(null)
-                  setPhone("0 (555) 999 88 77")
+                  setPhone("0 (555) 000 00 00")
                 }}
                 className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline cursor-pointer"
               >

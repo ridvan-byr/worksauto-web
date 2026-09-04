@@ -1,5 +1,7 @@
 "use client"
 
+import { useWorkOrders, useUpdateWorkOrderStatus } from "@/features/work-orders/api/use-work-orders"
+
 import * as React from "react"
 import {
   Wrench,
@@ -14,11 +16,6 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkOrder, WorkOrderStatus } from "@/features/work-orders/types"
-import {
-  getStoredWorkOrders,
-  saveStoredWorkOrders,
-  updateWorkOrderStatus,
-} from "@/features/work-orders/mock-data"
 import { KanbanBoard } from "@/features/work-orders/components/kanban-board"
 import { WorkOrderListView } from "@/features/work-orders/components/work-order-list-view"
 import { CreateWorkOrderModal } from "@/features/work-orders/components/create-work-order-modal"
@@ -30,19 +27,81 @@ export default function WorkOrdersPage() {
   const [selectedStaffFilter, setSelectedStaffFilter] = React.useState<string>("all")
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
 
-  React.useEffect(() => {
-    setOrders(getStoredWorkOrders())
-  }, [])
+  const { data: apiOrders } = useWorkOrders()
+  const updateStatusMutation = useUpdateWorkOrderStatus()
 
-  const handleStatusChange = (id: string, newStatus: WorkOrderStatus) => {
-    updateWorkOrderStatus(id, newStatus)
-    setOrders(getStoredWorkOrders())
+  // Live API sync with mock fallback
+  React.useEffect(() => {
+    if (apiOrders && apiOrders.length > 0) {
+      const mapped: WorkOrder[] = apiOrders.map((w: any) => ({
+        id: w.id,
+        tenantId: w.tenantId || 'ten_1',
+        workOrderNumber: w.workOrderNumber,
+        customerId: w.customerId,
+        customerName: w.customer ? `${w.customer.firstName} ${w.customer.lastName}` : 'Müşteri',
+        customerPhone: w.customer?.phone || '',
+        vehicleId: w.vehicleId,
+        plate: w.vehicle?.plate || '34XX000',
+        brand: w.vehicle?.brand || 'Araç',
+        model: w.vehicle?.model || '',
+        year: w.vehicle?.year || 2024,
+        kilometer: w.vehicle?.mileage || 0,
+        status: w.status,
+        priority: 'NORMAL',
+        assignedLift: w.assignedLift || 'Lift 1',
+        assignedMechanicName: w.assignedMechanic?.user ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname}` : 'Usta',
+        services: (w.items || []).filter((i: any) => i.itemType === 'SERVICE').map((i: any) => ({
+          id: i.id,
+          name: i.name,
+          durationMinutes: 60,
+          laborPrice: Number(i.unitPrice),
+          completed: true,
+        })),
+        parts: (w.items || []).filter((i: any) => i.itemType === 'PART').map((i: any) => ({
+          id: i.id,
+          name: i.name,
+          partNumber: i.itemId || 'YEDEK-PARCA',
+          quantity: i.quantity,
+          unitPrice: Number(i.unitPrice),
+          totalPrice: Number(i.totalPrice),
+        })),
+        notes: (w.notes || []).map((n: any) => ({
+          id: n.id,
+          authorName: n.authorName || 'Usta',
+          authorRole: 'TECHNICIAN',
+          note: n.note,
+          createdAt: n.createdAt,
+        })),
+        photos: (w.photos || []).map((p: any) => ({
+          id: p.id,
+          url: p.url,
+          caption: p.caption,
+          uploadedBy: p.uploadedBy,
+          createdAt: p.createdAt,
+        })),
+        laborTotal: Number(w.subtotal || 0),
+        partsTotal: 0,
+        taxRate: 0.20,
+        grandTotal: Number(w.grandTotal || 0),
+        estimatedCompletionTime: w.targetCompletionDate || '18:00',
+        createdAt: w.createdAt,
+        updatedAt: w.updatedAt,
+      }))
+      setOrders(mapped)
+    }
+  }, [apiOrders])
+
+  const handleStatusChange = async (id: string, newStatus: WorkOrderStatus) => {
+    try {
+      await updateStatusMutation.mutateAsync({ id, status: newStatus })
+      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)))
+    } catch (e) {
+      console.error('API status update error:', e)
+    }
   }
 
   const handleCreatedOrder = (newOrder: WorkOrder) => {
-    const next = [newOrder, ...orders]
-    setOrders(next)
-    saveStoredWorkOrders(next)
+    setOrders((prev) => [newOrder, ...prev])
   }
 
   // Filter by staff
