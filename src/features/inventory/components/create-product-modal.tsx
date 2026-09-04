@@ -78,7 +78,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }: CreateProduct
         {
           id: "mov_" + Date.now(),
           productId: "prod_" + Date.now(),
-          type: "PURCHASE",
+          type: "IN_PURCHASE",
           quantity: Number(currentStock) || 0,
           previousStock: 0,
           nextStock: Number(currentStock) || 0,

@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { BrandLogo } from "@/components/shared/brand-logo"
 import { useAuth } from "@/features/auth/auth-context"
+import { useDashboardSummary } from "@/features/dashboard/api/use-dashboard-summary"
 import { restartPageAnimation } from "@/lib/animation"
 import { cn } from "@/lib/utils"
 
@@ -29,7 +30,7 @@ interface NavItem {
   href: string
   icon: any
   badge?: string
-  badgeVariant?: "accent" | "warning"
+  badgeVariant?: "accent" | "warning" | "danger"
   highlight?: boolean
   roles?: string[]
 }
@@ -41,62 +42,6 @@ interface AppSidebarProps {
   onCloseMobile: () => void
 }
 
-const navItems: NavItem[] = [
-  {
-    title: "Ana Sayfa & Panel",
-    href: "/",
-    icon: LayoutDashboard,
-  },
-  {
-    title: "Müşteriler",
-    href: "/customers",
-    icon: Users,
-    badge: "24",
-  },
-  {
-    title: "Araçlar",
-    href: "/vehicles",
-    icon: Car,
-  },
-  {
-    title: "Randevu Takvimi",
-    href: "/appointments",
-    icon: Calendar,
-    badge: "5 Yeni",
-    badgeVariant: "accent",
-  },
-  {
-    title: "İş Emirleri (Atölye)",
-    href: "/work-orders",
-    icon: Wrench,
-    badge: "8 Lifte",
-    badgeVariant: "warning",
-  },
-  {
-    title: "Yedek Parça & Stok",
-    href: "/inventory",
-    icon: Package,
-  },
-  {
-    title: "Faturalar & Kasa",
-    href: "/invoices",
-    icon: Receipt,
-    roles: ["OWNER", "SERVICE_MANAGER", "CASHIER", "tenant_admin"],
-  },
-  {
-    title: "Cari Hesaplar",
-    href: "/current-accounts",
-    icon: FileSpreadsheet,
-    roles: ["OWNER", "SERVICE_MANAGER", "CASHIER", "tenant_admin"],
-  },
-  {
-    title: "Servis Ayarları",
-    href: "/settings",
-    icon: Settings,
-    roles: ["OWNER", "SERVICE_MANAGER", "tenant_admin"],
-  },
-]
-
 export function AppSidebar({
   collapsed,
   onToggleCollapse,
@@ -105,6 +50,7 @@ export function AppSidebar({
 }: AppSidebarProps) {
   const pathname = usePathname()
   const { tenant, user, logout } = useAuth()
+  const { data: summary } = useDashboardSummary()
 
   const handleNavClick = (href: string) => {
     onCloseMobile()
@@ -113,15 +59,96 @@ export function AppSidebar({
     }
   }
 
+  const dynamicNavItems: NavItem[] = React.useMemo(() => {
+    return [
+      {
+        title: "Ana Sayfa & Panel",
+        href: "/",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Müşteriler",
+        href: "/customers",
+        icon: Users,
+        badge:
+          summary?.totalCustomersCount !== undefined && summary.totalCustomersCount > 0
+            ? String(summary.totalCustomersCount)
+            : undefined,
+      },
+      {
+        title: "Araçlar",
+        href: "/vehicles",
+        icon: Car,
+        badge:
+          summary?.totalVehiclesCount !== undefined && summary.totalVehiclesCount > 0
+            ? String(summary.totalVehiclesCount)
+            : undefined,
+      },
+      {
+        title: "Randevu Takvimi",
+        href: "/appointments",
+        icon: Calendar,
+        badge:
+          summary?.todayAppointmentsCount && summary.todayAppointmentsCount > 0
+            ? `${summary.todayAppointmentsCount} Bugün`
+            : undefined,
+        badgeVariant: "accent",
+      },
+      {
+        title: "İş Emirleri (Atölye)",
+        href: "/work-orders",
+        icon: Wrench,
+        badge:
+          summary?.activeWorkOrdersCount && summary.activeWorkOrdersCount > 0
+            ? `${summary.activeWorkOrdersCount} Lifte`
+            : undefined,
+        badgeVariant: "warning",
+      },
+      {
+        title: "Yedek Parça & Stok",
+        href: "/inventory",
+        icon: Package,
+        badge:
+          summary?.criticalStockCount && summary.criticalStockCount > 0
+            ? `${summary.criticalStockCount} Kritik`
+            : undefined,
+        badgeVariant: "danger",
+      },
+      {
+        title: "Faturalar & Kasa",
+        href: "/invoices",
+        icon: Receipt,
+        badge:
+          summary?.unpaidInvoicesCount && summary.unpaidInvoicesCount > 0
+            ? `${summary.unpaidInvoicesCount} Bekleyen`
+            : undefined,
+        badgeVariant: "warning",
+        roles: ["OWNER", "SERVICE_MANAGER", "CASHIER", "tenant_admin"],
+      },
+      {
+        title: "Cari Hesaplar",
+        href: "/current-accounts",
+        icon: FileSpreadsheet,
+        roles: ["OWNER", "SERVICE_MANAGER", "CASHIER", "tenant_admin"],
+      },
+      {
+        title: "Servis Ayarları",
+        href: "/settings",
+        icon: Settings,
+        roles: ["OWNER", "SERVICE_MANAGER", "tenant_admin"],
+      },
+    ]
+  }, [summary])
+
   const visibleNavItems = React.useMemo(() => {
-    if (!user?.role) return navItems
+    if (!user?.role) return dynamicNavItems
     const r = (user.role || "").toUpperCase()
-    return navItems.filter((item) => {
+    return dynamicNavItems.filter((item) => {
       if (!item.roles) return true
       const upperAllowed = item.roles.map((x) => x.toUpperCase())
       return upperAllowed.includes(r) || (r === "TENANT_ADMIN" && upperAllowed.includes("OWNER"))
     })
-  }, [user?.role])
+  }, [user?.role, dynamicNavItems])
 
   return (
     <>
@@ -207,6 +234,8 @@ export function AppSidebar({
                         ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20"
                         : item.badgeVariant === "warning"
                         ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                        : item.badgeVariant === "danger"
+                        ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20"
                         : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
                     )}
                   >

@@ -63,6 +63,7 @@ export function useDeleteCustomer() {
     mutationFn: (id: string) => apiClient.delete(`/customers/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       toast.success('Müşteri kaydı silindi.');
     },
     onError: (err: any) => {

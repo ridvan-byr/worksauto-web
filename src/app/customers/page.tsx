@@ -1,6 +1,7 @@
 "use client"
 
 import { useCustomers, useCreateCustomer } from "@/features/customers/api/use-customers"
+import { useCreateVehicle } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
 import Link from "next/link"
@@ -31,6 +32,7 @@ export default function CustomersPage() {
 
   const { data: apiCustomers, isLoading } = useCustomers(searchQuery)
   const createCustomerMutation = useCreateCustomer()
+  const createVehicleMutation = useCreateVehicle()
 
   // Pure live API customers sync (100% PostgreSQL)
   React.useEffect(() => {
@@ -72,7 +74,7 @@ export default function CustomersPage() {
 
   const handleCustomerCreated = async (newCust: Customer) => {
     try {
-      await createCustomerMutation.mutateAsync({
+      const createdCustomer = await createCustomerMutation.mutateAsync({
         firstName: newCust.name,
         lastName: newCust.surname,
         phone: newCust.phone,
@@ -80,6 +82,20 @@ export default function CustomersPage() {
         companyTitle: newCust.companyTitle,
         creditLimit: 0,
       })
+
+      if (createdCustomer?.id && newCust.vehicles?.length > 0) {
+        const v = newCust.vehicles[0]
+        await createVehicleMutation.mutateAsync({
+          customerId: createdCustomer.id,
+          plate: v.plate,
+          brand: v.brand,
+          model: v.model,
+          year: v.year,
+          currentKm: v.kilometer,
+          fuelType: v.fuelType === "Benzin" ? "GASOLINE" : v.fuelType === "Dizel" ? "DIESEL" : v.fuelType === "LPG" ? "LPG" : v.fuelType === "Hibrit" ? "HYBRID" : "ELECTRIC",
+          transmission: v.transmission === "Otomatik" ? "AUTOMATIC" : "MANUAL",
+        })
+      }
     } catch (e) {
       console.warn('API sync fallback to local:', e)
     }

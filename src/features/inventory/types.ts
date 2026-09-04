@@ -9,10 +9,9 @@ export type ProductCategory =
 export type StockUnit = "ADET" | "LITRE" | "TAKIM" | "SET"
 
 export type StockMovementType =
-  | "PURCHASE" // Satın alma / İrsaliye girişi (+)
-  | "SALE" // Doğrudan tezgâh satışı (-)
-  | "WORK_ORDER_USAGE" // İş emrinde servis kullanımı (-)
-  | "MANUAL_ADJUSTMENT" // Sayım düzeltmesi / Fire (+/-)
+  | "IN_PURCHASE" // Satın alma / İrsaliye girişi (+)
+  | "OUT_WORK_ORDER" // İş emrinde servis kullanımı / Sarfiyat (-)
+  | "ADJUSTMENT" // Sayım düzeltmesi (+/-)
   | "RETURN" // İade / Müşteri iadesi (+)
 
 export interface StockMovement {

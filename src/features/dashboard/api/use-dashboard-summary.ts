@@ -5,6 +5,8 @@ export interface DashboardSummary {
   activeWorkOrdersCount: number;
   todayAppointmentsCount: number;
   criticalStockCount: number;
+  totalCustomersCount?: number;
+  totalVehiclesCount?: number;
   unpaidInvoicesCount: number;
   unpaidTotal: number;
   todayRevenue: number;

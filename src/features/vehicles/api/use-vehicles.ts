@@ -24,12 +24,29 @@ export function useCreateVehicle() {
     onSuccess: (data: any) => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       toast.success('Araç kaydı başarıyla eklendi.', {
         description: data?.plate ? `${data.plate} sisteme bağlandı.` : undefined,
       });
     },
     onError: (err: any) => {
       toast.error(err?.message || 'Araç kaydedilemedi. Bu plaka zaten kayıtlı olabilir.');
+    },
+  });
+}
+
+export function useDeleteVehicle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/vehicles/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      toast.success('Araç başarıyla silindi ve arşivlendi.');
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Araç silinemedi. Bağlı iş emirleri bulunuyor olabilir.');
     },
   });
 }

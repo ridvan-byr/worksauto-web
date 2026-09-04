@@ -84,11 +84,10 @@ export function MovementHistoryModal({ isOpen, product, onClose }: MovementHisto
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-slate-900 dark:text-slate-100">
-                          {mov.type === "PURCHASE" && "Toptancı Satın Alımı (+)"}
-                          {mov.type === "WORK_ORDER_USAGE" && "İş Emri Sarfiyatı (-)"}
-                          {mov.type === "MANUAL_ADJUSTMENT" && "Sayım Düzeltmesi"}
+                          {mov.type === "IN_PURCHASE" && "Toptancı Satın Alımı (+)"}
+                          {mov.type === "OUT_WORK_ORDER" && "İş Emri / Sarfiyat Çıkışı (-)"}
+                          {mov.type === "ADJUSTMENT" && "Sayım Düzeltmesi"}
                           {mov.type === "RETURN" && "İade Girişi (+)"}
-                          {mov.type === "SALE" && "Doğrudan Satış (-)"}
                         </span>
                         {mov.referenceNo && (
                           <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300">

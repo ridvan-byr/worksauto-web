@@ -51,11 +51,15 @@ async function refreshAccessToken(): Promise<string> {
 
   if (!response.ok) {
     if (typeof window !== 'undefined') {
+      const errData = await response.json().catch(() => ({}));
+      const errMsg = (errData.message || '').toLowerCase();
+      const isSuspended = errMsg.includes('askıya') || errMsg.includes('lisans') || errMsg.includes('aktif değil');
+
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem('worksauto_auth_session');
-      if (!window.location.pathname.startsWith('/admin')) {
-        window.location.href = '/sign-in';
+      if (!window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/sign-in')) {
+        window.location.href = isSuspended ? '/sign-in?suspended=true' : '/sign-in';
       }
     }
     throw new Error('Refresh token expired or invalid');
@@ -118,8 +122,26 @@ export async function apiRequest<T = any>(
       throw new ApiError(errData.message || 'Platform yöneticisi oturumu sonlandı.', 401, errData.errorCode, errData);
     }
 
-    // 401 Unauthorized -> Handle Token Refresh Rotation (Tenant only)
+    // 401 Unauthorized -> Handle Token Refresh Rotation or Evict Suspended Tenant
     if (response.status === 401 && !endpoint.includes('/auth/') && !endpoint.includes('/admin/')) {
+      const errClone = response.clone();
+      const errData = await errClone.json().catch(() => ({}));
+      const errMsg = (errData.message || '').toLowerCase();
+      const isSuspended = errMsg.includes('askıya') || errMsg.includes('lisans') || errMsg.includes('aktif değil');
+
+      if (isSuspended) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem(ACCESS_TOKEN_KEY);
+          localStorage.removeItem(REFRESH_TOKEN_KEY);
+          localStorage.removeItem('worksauto_auth_session');
+          window.dispatchEvent(new CustomEvent('worksauto:suspended', { detail: { message: errData.message } }));
+          if (!window.location.pathname.startsWith('/sign-in') && !window.location.pathname.startsWith('/admin')) {
+            window.location.href = '/sign-in?suspended=true';
+          }
+        }
+        throw new ApiError(errData.message || 'Servis lisansı askıya alınmıştır.', 401, 'TENANT_SUSPENDED', errData);
+      }
+
       if (!isRefreshing) {
         isRefreshing = true;
         try {

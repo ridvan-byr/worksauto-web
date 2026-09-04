@@ -18,6 +18,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Appointment, AppointmentServiceItem } from "../types"
 import { useCustomers } from "@/features/customers/api/use-customers"
+import { useCreateAppointment } from "@/features/appointments/api/use-appointments"
 import { useAuth } from "@/features/auth/auth-context"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"
@@ -48,6 +49,7 @@ export function CreateAppointmentModal({
   const [mounted, setMounted] = React.useState(false)
   const { tenant } = useAuth()
   const { data: apiCustomers } = useCustomers()
+  const createAppointmentMutation = useCreateAppointment()
 
   const customers = React.useMemo(() => {
     if (!apiCustomers) return []
@@ -64,6 +66,7 @@ export function CreateAppointmentModal({
         brand: v.brand,
         model: v.model,
         year: v.year,
+        kilometer: Number(v.currentKm ?? v.kilometer ?? v.mileage ?? 0),
       })),
     }))
   }, [apiCustomers])
@@ -137,37 +140,55 @@ export function CreateAppointmentModal({
     }
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedCustomer || !selectedVehicle) {
       setErrors({ customer: "Lütfen geçerli bir müşteri ve araç seçin." })
       return
     }
 
-    const newApp: Appointment = {
-      id: "app_" + Date.now(),
-      tenantId: tenant?.id || "tenant_1",
-      customerId: selectedCustomer.id,
-      customerName: selectedCustomer.type === "corporate" && selectedCustomer.companyTitle ? selectedCustomer.companyTitle : `${selectedCustomer.name} ${selectedCustomer.surname}`,
-      customerPhone: selectedCustomer.phone,
-      vehicleId: selectedVehicle.id,
-      plate: selectedVehicle.plate,
-      brand: selectedVehicle.brand,
-      model: selectedVehicle.model,
-      services: selectedServices,
-      totalDurationMinutes: totalDuration,
-      totalEstimatedPrice: totalPrice,
-      assignedStaffName: assignedStaff,
-      date,
-      time,
-      status: "APPROVED",
-      customerNote: customerNote.trim() || undefined,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }
+    const [hours, minutes] = time.split(":").map(Number)
+    const startDateTime = new Date(date)
+    startDateTime.setHours(hours || 10, minutes || 0, 0, 0)
+    const endDateTime = new Date(startDateTime.getTime() + (totalDuration || 60) * 60000)
 
-    onCreated(newApp)
-    onClose()
+    try {
+      const createdApp: any = await createAppointmentMutation.mutateAsync({
+        customerId: selectedCustomer.id,
+        vehicleId: selectedVehicle.id,
+        slotDate: date,
+        slotStartTime: startDateTime.toISOString(),
+        slotEndTime: endDateTime.toISOString(),
+        customerNotes: customerNote.trim() || undefined,
+      })
+
+      const newApp: Appointment = {
+        id: createdApp?.id || "app_" + Date.now(),
+        tenantId: tenant?.id || "tenant_1",
+        customerId: selectedCustomer.id,
+        customerName: selectedCustomer.type === "corporate" && selectedCustomer.companyTitle ? selectedCustomer.companyTitle : `${selectedCustomer.name} ${selectedCustomer.surname}`,
+        customerPhone: selectedCustomer.phone,
+        vehicleId: selectedVehicle.id,
+        plate: selectedVehicle.plate,
+        brand: selectedVehicle.brand,
+        model: selectedVehicle.model,
+        services: selectedServices,
+        totalDurationMinutes: totalDuration,
+        totalEstimatedPrice: totalPrice,
+        assignedStaffName: assignedStaff,
+        date,
+        time,
+        status: "CONFIRMED" as any,
+        customerNote: customerNote.trim() || undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+
+      onCreated(newApp)
+      onClose()
+    } catch (err: any) {
+      console.error("Appointment creation error:", err)
+    }
   }
 
   const modalContent = (
@@ -246,7 +267,7 @@ export function CreateAppointmentModal({
                     {selectedVehicle.brand} {selectedVehicle.model}
                   </p>
                   <p className="text-[10px] text-slate-500">
-                    {selectedVehicle.year} Model • {selectedVehicle.kilometer.toLocaleString("tr-TR")} KM
+                    {selectedVehicle.year ? `${selectedVehicle.year} Model • ` : ""}{(Number(selectedVehicle.kilometer ?? 0)).toLocaleString("tr-TR")} KM
                   </p>
                 </div>
               </div>

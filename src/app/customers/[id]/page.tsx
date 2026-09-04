@@ -1,7 +1,7 @@
 "use client"
 
 import { useCustomer, useCustomerStats } from "@/features/customers/api/use-customers"
-import { useCreateVehicle } from "@/features/vehicles/api/use-vehicles"
+import { useCreateVehicle, useDeleteVehicle } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
 import Link from "next/link"
@@ -24,11 +24,15 @@ import {
   AlertCircle,
   FileText,
   ShieldCheck,
+  Trash2,
+  AlertTriangle,
+  Edit3,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Customer, Vehicle } from "@/features/customers/types"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { AddVehicleModal } from "@/features/customers/components/add-vehicle-modal"
+import { EditCustomerModal } from "@/features/customers/components/edit-customer-modal"
 import { cn } from "@/lib/utils"
 
 export default function CustomerDetailPage() {
@@ -39,10 +43,13 @@ export default function CustomerDetailPage() {
   const [customer, setCustomer] = React.useState<Customer | null>(null)
   const [activeTab, setActiveTab] = React.useState<"appointments" | "workOrders" | "invoices" | "movements">("workOrders")
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = React.useState(false)
+  const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = React.useState(false)
+  const [vehicleToDelete, setVehicleToDelete] = React.useState<Vehicle | null>(null)
 
   const { data: apiCustomer } = useCustomer(customerId)
   const { data: customerStats } = useCustomerStats(customerId)
   const createVehicleMutation = useCreateVehicle()
+  const deleteVehicleMutation = useDeleteVehicle()
 
   // Load customer data with live API sync and mock fallback
   React.useEffect(() => {
@@ -71,23 +78,49 @@ export default function CustomerDetailPage() {
           fuelType: v.fuelType,
           transmission: v.transmission,
         })),
-        appointments: [],
+        appointments: (apiCustomer.appointments || []).map((app: any) => ({
+          id: app.id,
+          date: app.appointmentDate ? new Date(app.appointmentDate).toISOString().split('T')[0] : (app.date || '-'),
+          time: app.appointmentTime || app.time || '10:00',
+          serviceName: app.service?.name || app.serviceName || 'Genel Bakım',
+          plate: app.vehicle?.plate || app.plate || '34XX000',
+          status: app.status || 'CONFIRMED',
+          technicianName: app.technician ? `${app.technician.name} ${app.technician.surname || ''}` : (app.technicianName || 'Atölye Ustası'),
+        })),
         workOrders: (apiCustomer.workOrders || []).map((w: any) => ({
           id: w.id,
-          workOrderNumber: w.workOrderNumber,
-          date: new Date(w.createdAt).toISOString().split('T')[0],
-          status: w.status,
-          grandTotal: Number(w.grandTotal || 0),
-          vehiclePlate: w.vehicle?.plate || '34XX000',
+          orderNumber: w.workOrderNumber || w.orderNumber || 'İEM-000',
+          date: w.createdAt ? new Date(w.createdAt).toISOString().split('T')[0] : (w.date || '-'),
+          status: w.status || 'OPEN',
+          totalAmount: Number(w.grandTotal ?? w.totalAmount ?? 0),
+          kilometers: Number(w.kmIn ?? w.kilometers ?? w.vehicle?.mileage ?? 0),
+          plate: w.vehicle?.plate || w.plate || w.vehiclePlate || '34XX000',
+          itemsSummary: w.description || w.itemsSummary || (w.items?.length ? `${w.items.length} Kalem İşlem / Parça` : 'Periyodik Bakım & Kontrol'),
+          technician: w.technician ? `${w.technician.name} ${w.technician.surname || ''}` : (w.technicianName || w.technician || 'Atölye Ustası'),
         })),
         invoices: (apiCustomer.invoices || []).map((inv: any) => ({
           id: inv.id,
-          invoiceNumber: inv.invoiceNumber,
-          date: new Date(inv.issueDate).toISOString().split('T')[0],
-          grandTotal: Number(inv.grandTotal || 0),
-          status: inv.status,
+          invoiceNumber: inv.invoiceNumber || 'FTR-000',
+          date: inv.issueDate ? new Date(inv.issueDate).toISOString().split('T')[0] : (inv.date || '-'),
+          dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : (inv.date || '-'),
+          plate: inv.workOrder?.vehicle?.plate || inv.plate || '34XX000',
+          totalAmount: Number(inv.grandTotal ?? inv.totalAmount ?? 0),
+          paidAmount: Number(inv.paidAmount ?? (inv.status === 'PAID' ? inv.grandTotal ?? 0 : 0)),
+          status: inv.status || 'PAID',
         })),
-        movements: [],
+        movements: (apiCustomer.currentAccount?.movements || []).map((m: any) => ({
+          id: m.id,
+          date: m.date
+            ? typeof m.date === 'string' && m.date.includes('T')
+              ? m.date.split('T')[0]
+              : new Date(m.date).toLocaleDateString('tr-TR')
+            : '-',
+          type: (Number(m.debit || 0) > 0 ? 'DEBIT' : 'CREDIT') as 'DEBIT' | 'CREDIT',
+          amount: Number(m.debit || 0) > 0 ? Number(m.debit) : Number(m.credit),
+          balanceAfter: Number(m.balanceAfter || 0),
+          description: m.description || '-',
+          documentNo: m.referenceNo || '',
+        })),
         createdAt: apiCustomer.createdAt,
         updatedAt: apiCustomer.updatedAt || apiCustomer.createdAt,
       })
@@ -102,6 +135,15 @@ export default function CustomerDetailPage() {
       updatedAt: new Date().toISOString(),
     }
     setCustomer(updatedCustomer)
+  }
+
+  const handleCustomerUpdated = (updatedData: Partial<Customer>) => {
+    if (!customer) return
+    setCustomer({
+      ...customer,
+      ...updatedData,
+      updatedAt: new Date().toISOString(),
+    })
   }
 
   if (!customer) {
@@ -140,6 +182,17 @@ export default function CustomerDetailPage() {
           >
             {customer.type === "corporate" ? "Kurumsal Filo / Şirket" : "Bireysel Müşteri"}
           </span>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditCustomerModalOpen(true)}
+            className="h-8 px-3 rounded-xl gap-1.5 text-xs font-semibold cursor-pointer border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800"
+          >
+            <Edit3 size={13} />
+            <span>Bilgileri Düzenle</span>
+          </Button>
         </div>
       </div>
 
@@ -247,11 +300,21 @@ export default function CustomerDetailPage() {
                     {v.year} Model • {v.fuelType || "Benzin"} • {v.transmission || "Otomatik"}
                   </p>
                 </div>
-                {v.color && (
-                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
-                    {v.color}
-                  </span>
-                )}
+                <div className="flex items-center gap-1.5">
+                  {v.color && (
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                      {v.color}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setVehicleToDelete(v)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+                    title="Aracı Sil / Arşivle"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
               </div>
 
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800/70 grid grid-cols-2 gap-2 text-[11px]">
@@ -367,14 +430,14 @@ export default function CustomerDetailPage() {
                       {wo.itemsSummary}
                     </p>
                     <p className="text-[11px] text-slate-400">
-                      Tarih: {wo.date} • KM: {wo.kilometers.toLocaleString("tr-TR")} • Teknisyen: <strong>{wo.technician}</strong>
+                      Tarih: {wo.date} • KM: {(wo.kilometers ?? 0).toLocaleString("tr-TR")} • Teknisyen: <strong>{wo.technician}</strong>
                     </p>
                   </div>
 
                   <div className="text-right self-end sm:self-center">
                     <span className="text-xs text-slate-400 block">Toplam Tutar</span>
                     <span className="text-base font-bold font-mono text-slate-900 dark:text-slate-100">
-                      {wo.totalAmount.toLocaleString("tr-TR")} ₺
+                      {(wo.totalAmount ?? 0).toLocaleString("tr-TR")} ₺
                     </span>
                   </div>
                 </div>
@@ -450,11 +513,11 @@ export default function CustomerDetailPage() {
                   <div className="text-right flex items-center gap-4">
                     <div>
                       <p className="text-sm font-bold font-mono text-slate-900 dark:text-slate-100">
-                        {inv.totalAmount.toLocaleString("tr-TR")} ₺
+                        {(inv.totalAmount ?? 0).toLocaleString("tr-TR")} ₺
                       </p>
-                      {inv.paidAmount < inv.totalAmount && (
+                      {(inv.paidAmount ?? 0) < (inv.totalAmount ?? 0) && (
                         <p className="text-[10px] text-rose-500 font-medium">
-                          Kalan: {(inv.totalAmount - inv.paidAmount).toLocaleString("tr-TR")} ₺
+                          Kalan: {((inv.totalAmount ?? 0) - (inv.paidAmount ?? 0)).toLocaleString("tr-TR")} ₺
                         </p>
                       )}
                     </div>
@@ -528,6 +591,76 @@ export default function CustomerDetailPage() {
         onClose={() => setIsAddVehicleModalOpen(false)}
         onAdded={handleVehicleAdded}
       />
+
+      {/* Delete Vehicle Confirmation Modal */}
+      {vehicleToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Aracı Silmek İstiyor Musunuz?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <strong className="text-slate-700 dark:text-slate-200">{vehicleToDelete.plate}</strong> plakalı {vehicleToDelete.brand} {vehicleToDelete.model} aracı bu müşteriden arşivlenecektir.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 text-[11px] text-slate-500 dark:text-slate-400">
+              ℹ️ Geçmiş iş emirleri ve kesilmiş faturalar muhasebe mevzuatı gereği korunmaya devam eder.
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setVehicleToDelete(null)}
+                disabled={deleteVehicleMutation.isPending}
+                className="h-10 px-4 text-xs font-semibold cursor-pointer"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await deleteVehicleMutation.mutateAsync(vehicleToDelete.id)
+                    if (customer) {
+                      setCustomer({
+                        ...customer,
+                        vehicles: customer.vehicles.filter((veh) => veh.id !== vehicleToDelete.id),
+                      })
+                    }
+                    setVehicleToDelete(null)
+                  } catch {}
+                }}
+                disabled={deleteVehicleMutation.isPending}
+                className="h-10 px-4 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer shadow-md shadow-rose-600/20"
+              >
+                {deleteVehicleMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span>Evet, Aracı Sil</span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Customer Modal */}
+      {isEditCustomerModalOpen && customer && (
+        <EditCustomerModal
+          isOpen={isEditCustomerModalOpen}
+          customer={customer}
+          onClose={() => setIsEditCustomerModalOpen(false)}
+          onUpdated={handleCustomerUpdated}
+        />
+      )}
     </div>
   )
 }

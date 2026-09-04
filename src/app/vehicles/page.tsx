@@ -1,6 +1,6 @@
 "use client"
 
-import { useVehicles } from "@/features/vehicles/api/use-vehicles"
+import { useVehicles, useDeleteVehicle } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
 import Link from "next/link"
@@ -14,7 +14,11 @@ import {
   Fuel,
   Settings2,
   Users,
+  Trash2,
+  AlertTriangle,
+  X,
 } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"
 
@@ -22,8 +26,10 @@ export default function VehiclesPage() {
   const [vehicles, setVehicles] = React.useState<any[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
   const [brandFilter, setBrandFilter] = React.useState<string>("all")
+  const [vehicleToDelete, setVehicleToDelete] = React.useState<any | null>(null)
 
   const { data: apiVehicles } = useVehicles()
+  const deleteVehicleMutation = useDeleteVehicle()
 
   React.useEffect(() => {
     if (apiVehicles) {
@@ -219,13 +225,23 @@ export default function VehiclesPage() {
 
                     {/* Action */}
                     <td className="py-4 px-4 sm:px-6 text-right">
-                      <Link
-                        href={`/customers/${v.customerId}`}
-                        className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-                      >
-                        <span>Detayı Gör</span>
-                        <ArrowUpRight size={13} />
-                      </Link>
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Link
+                          href={`/customers/${v.customerId}`}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <span>Detayı Gör</span>
+                          <ArrowUpRight size={13} />
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setVehicleToDelete(v)}
+                          className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-400 hover:text-rose-600 hover:border-rose-200 dark:hover:border-rose-900/40 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors cursor-pointer"
+                          title="Aracı Sil / Arşivle"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -234,6 +250,60 @@ export default function VehiclesPage() {
           </table>
         </div>
       </div>
+
+      {/* Delete Vehicle Confirmation Modal */}
+      {vehicleToDelete && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <AlertTriangle size={20} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  Aracı Silmek İstiyor Musunuz?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <strong className="text-slate-700 dark:text-slate-200">{vehicleToDelete.plate}</strong> plakalı {vehicleToDelete.brand} {vehicleToDelete.model} aracı sistemden arşivlenecektir.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 text-[11px] text-slate-500 dark:text-slate-400">
+              ℹ️ Geçmiş iş emirleri ve kesilmiş faturalar muhasebe mevzuatı gereği korunmaya devam eder.
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setVehicleToDelete(null)}
+                disabled={deleteVehicleMutation.isPending}
+                className="h-10 px-4 text-xs font-semibold cursor-pointer"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await deleteVehicleMutation.mutateAsync(vehicleToDelete.id)
+                    setVehicleToDelete(null)
+                  } catch {}
+                }}
+                disabled={deleteVehicleMutation.isPending}
+                className="h-10 px-4 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer shadow-md shadow-rose-600/20"
+              >
+                {deleteVehicleMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span>Evet, Aracı Sil</span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

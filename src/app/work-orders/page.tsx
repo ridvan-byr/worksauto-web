@@ -46,7 +46,7 @@ export default function WorkOrdersPage() {
         model: w.vehicle?.model || '',
         year: w.vehicle?.year || 2024,
         kilometer: w.vehicle?.mileage || 0,
-        status: w.status,
+        status: w.status === 'QUEUE' ? 'PENDING' : w.status,
         priority: 'NORMAL',
         assignedLift: w.assignedLift || 'Lift 1',
         assignedMechanicName: w.assignedMechanic?.user ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname}` : 'Usta',
@@ -92,8 +92,9 @@ export default function WorkOrdersPage() {
   }, [apiOrders])
 
   const handleStatusChange = async (id: string, newStatus: WorkOrderStatus) => {
+    const backendStatus = (newStatus as string) === 'PENDING' ? 'QUEUE' : newStatus;
     try {
-      await updateStatusMutation.mutateAsync({ id, status: newStatus })
+      await updateStatusMutation.mutateAsync({ id, status: backendStatus })
       setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)))
     } catch (e) {
       console.error('API status update error:', e)

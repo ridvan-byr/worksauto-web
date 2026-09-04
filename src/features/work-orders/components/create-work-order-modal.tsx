@@ -35,7 +35,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
         brand: v.brand,
         model: v.model,
         year: v.year,
-        kilometer: v.mileage || 0,
+        kilometer: Number(v.currentKm ?? v.kilometer ?? v.mileage ?? 0),
         vin: v.vin,
       })),
     }))
@@ -205,7 +205,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
               >
                 {selectedCustomer?.vehicles.map((v: any) => (
                   <option key={v.id} value={v.id}>
-                    {v.plate} — {v.brand} {v.model} ({v.kilometer.toLocaleString("tr-TR")} KM)
+                    {v.plate} — {v.brand} {v.model} ({(Number(v.kilometer ?? 0)).toLocaleString("tr-TR")} KM)
                   </option>
                 ))}
               </select>
@@ -220,7 +220,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                       {selectedVehicle.brand} {selectedVehicle.model}
                     </p>
                     <p className="text-[10px] text-slate-400 font-mono">
-                      {selectedVehicle.kilometer.toLocaleString("tr-TR")} KM • {selectedCustomer?.phone}
+                      {(Number(selectedVehicle.kilometer ?? 0)).toLocaleString("tr-TR")} KM • {selectedCustomer?.phone}
                     </p>
                   </div>
                 </div>

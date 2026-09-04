@@ -24,7 +24,7 @@ export function StockMovementModal({
   const [mounted, setMounted] = React.useState(false)
   const [direction, setDirection] = React.useState<"IN" | "OUT">(initialType)
   const [quantity, setQuantity] = React.useState<number | "">(5)
-  const [movementType, setMovementType] = React.useState<StockMovementType>("PURCHASE")
+  const [movementType, setMovementType] = React.useState<StockMovementType>("IN_PURCHASE")
   const [referenceNo, setReferenceNo] = React.useState("")
   const [note, setNote] = React.useState("")
 
@@ -34,7 +34,7 @@ export function StockMovementModal({
 
   React.useEffect(() => {
     setDirection(initialType)
-    setMovementType(initialType === "IN" ? "PURCHASE" : "MANUAL_ADJUSTMENT")
+    setMovementType(initialType === "IN" ? "IN_PURCHASE" : "OUT_WORK_ORDER")
   }, [initialType, isOpen])
 
   React.useEffect(() => {
@@ -50,10 +50,9 @@ export function StockMovementModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!quantity || Number(quantity) <= 0) return
+    if (quantity === "" || Number(quantity) < 0) return
 
-    const finalQty = direction === "IN" ? Number(quantity) : -Number(quantity)
-    onSuccess(product.id, movementType, finalQty, referenceNo.trim() || undefined, note.trim() || undefined)
+    onSuccess(product.id, movementType, Number(quantity), referenceNo.trim() || undefined, note.trim() || undefined)
     onClose()
   }
 
@@ -113,14 +112,14 @@ export function StockMovementModal({
               >
                 {direction === "IN" ? (
                   <>
-                    <option value="PURCHASE">Satın Alma / Toptancı İrsaliyesi (+)</option>
-                    <option value="RETURN">Müşteri İadesi (+)</option>
-                    <option value="MANUAL_ADJUSTMENT">Sayım Fazlası / Düzeltme (+)</option>
+                    <option value="IN_PURCHASE">Satın Alma / Toptancı İrsaliyesi (+)</option>
+                    <option value="RETURN">Müşteri / Servis İadesi (+)</option>
+                    <option value="ADJUSTMENT">Sayım Fazlası / Düzeltme</option>
                   </>
                 ) : (
                   <>
-                    <option value="MANUAL_ADJUSTMENT">Sayım Eksiği / Fire Düşümü (-)</option>
-                    <option value="SALE">Tezgâh Doğrudan Satış (-)</option>
+                    <option value="OUT_WORK_ORDER">Stok Çıkışı / Sarfiyat / Fire (-)</option>
+                    <option value="ADJUSTMENT">Sayım Eksiği / Düzeltme</option>
                   </>
                 )}
               </select>
@@ -129,11 +128,11 @@ export function StockMovementModal({
             <div className="grid grid-cols-2 gap-2.5">
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                  Miktar ({product.unit}) <span className="text-rose-500">*</span>
+                  {movementType === "ADJUSTMENT" ? "Yeni Hedef Stok Miktarı" : `Miktar (${product.unit})`} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="number"
-                  min={1}
+                  min={movementType === "ADJUSTMENT" ? 0 : 1}
                   value={quantity}
                   onChange={(e) => setQuantity(e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"

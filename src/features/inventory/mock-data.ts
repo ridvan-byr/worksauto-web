@@ -19,7 +19,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       {
         id: "mov_1",
         productId: "prod_1",
-        type: "PURCHASE",
+        type: "IN_PURCHASE",
         quantity: 60,
         previousStock: 0,
         nextStock: 60,
@@ -31,7 +31,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       {
         id: "mov_2",
         productId: "prod_1",
-        type: "WORK_ORDER_USAGE",
+        type: "OUT_WORK_ORDER",
         quantity: -7,
         previousStock: 60,
         nextStock: 53,
@@ -43,7 +43,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       {
         id: "mov_3",
         productId: "prod_1",
-        type: "WORK_ORDER_USAGE",
+        type: "OUT_WORK_ORDER",
         quantity: -5,
         previousStock: 53,
         nextStock: 48,
@@ -74,7 +74,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       {
         id: "mov_4",
         productId: "prod_2",
-        type: "PURCHASE",
+        type: "IN_PURCHASE",
         quantity: 20,
         previousStock: 0,
         nextStock: 20,
@@ -85,7 +85,7 @@ export const INITIAL_PRODUCTS: Product[] = [
       {
         id: "mov_5",
         productId: "prod_2",
-        type: "WORK_ORDER_USAGE",
+        type: "OUT_WORK_ORDER",
         quantity: -14,
         previousStock: 20,
         nextStock: 6,

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import {
   Building2,
   Users,
@@ -53,6 +54,12 @@ import {
 } from "@/features/admin/api/use-admin"
 
 export default function AdminDashboardPage() {
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const { data: stats, isLoading: isStatsLoading } = useAdminStats()
   const [searchQuery, setSearchQuery] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL")
@@ -111,22 +118,30 @@ export default function AdminDashboardPage() {
   const [deleteConfirmInput, setDeleteConfirmInput] = React.useState("")
   const [deleteError, setDeleteError] = React.useState<string | null>(null)
 
-  const handleToggleStatus = async (tenantId: string, currentActive: boolean) => {
-    const nextStatus = !currentActive
-    const actionName = nextStatus ? "aktif etmek" : "dondurmak/askıya almak"
-    if (!confirm(`Bu servisi ${actionName} istediğinize emin misiniz?`)) return
+  // License Status Toggle Modal State
+  const [statusModalState, setStatusModalState] = React.useState<{
+    isOpen: boolean
+    tenantId: string
+    title: string
+    currentActive: boolean
+  } | null>(null)
+
+  const handleConfirmStatusToggle = async () => {
+    if (!statusModalState) return
+    const nextStatus = !statusModalState.currentActive
 
     try {
       await updateStatusMutation.mutateAsync({
-        id: tenantId,
+        id: statusModalState.tenantId,
         isActive: nextStatus,
         reason: nextStatus ? "Süper Yönetici lisans onayladı." : "Süper Yönetici servisi dondurdu.",
       })
       toast.success(
         nextStatus
-          ? "Servis lisansı başarıyla onaylandı ve erişime açıldı."
-          : "Servis lisansı geçici olarak askıya alındı."
+          ? `${statusModalState.title} lisansı onaylandı ve erişime açıldı.`
+          : `${statusModalState.title} lisansı başarıyla askıya alındı.`
       )
+      setStatusModalState(null)
     } catch (err: any) {
       console.error("Lisans durumu değiştirilemedi:", err)
       toast.error(err?.message || "Lisans durumu güncellenirken hata oluştu.")
@@ -280,14 +295,14 @@ export default function AdminDashboardPage() {
           </p>
         </div>
 
-        {/* Infrastructure Badge (Canlı PostgreSQL ve Redis Gecikmesi) */}
+        {/* Infrastructure Badge (PostgreSQL ve Redis Gecikmesi) */}
         <div
           className="flex items-center gap-3 p-2.5 rounded-2xl bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-300 shadow-xs"
           title="Bu değer doğrudan PostgreSQL veritabanı ile yapılan canlı 'SELECT 1' sorgusunun anlık gidiş-dönüş yanıt süresidir."
         >
           <Server size={14} className="text-sky-600 dark:text-sky-400" />
           <span>
-            Veritabanı Gecikmesi: <strong className="text-emerald-500 dark:text-emerald-400 font-mono">{health?.database?.latencyMs ?? 1} ms</strong> (Canlı)
+            Veritabanı Gecikmesi: <strong className="text-emerald-500 dark:text-emerald-400 font-mono">{health?.database?.latencyMs ?? 1} ms</strong>
           </span>
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
         </div>
@@ -504,7 +519,7 @@ export default function AdminDashboardPage() {
                         {t.isActive ? (
                           <Button
                             size="sm"
-                            onClick={() => handleToggleStatus(t.id, true)}
+                            onClick={() => setStatusModalState({ isOpen: true, tenantId: t.id, title: t.title, currentActive: true })}
                             disabled={updateStatusMutation.isPending}
                             className="h-8 text-xs bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 border border-rose-500/30 gap-1 cursor-pointer"
                           >
@@ -514,7 +529,7 @@ export default function AdminDashboardPage() {
                         ) : (
                           <Button
                             size="sm"
-                            onClick={() => handleToggleStatus(t.id, false)}
+                            onClick={() => setStatusModalState({ isOpen: true, tenantId: t.id, title: t.title, currentActive: false })}
                             disabled={updateStatusMutation.isPending}
                             className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold gap-1 shadow-sm shadow-emerald-500/25 cursor-pointer"
                           >
@@ -551,9 +566,9 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* CREATE NEW TENANT MODAL */}
-      {isCreateModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      {isCreateModalOpen && mounted && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-6 sm:p-8 space-y-6 shadow-2xl relative max-h-[88vh] overflow-y-auto">
             <button
               onClick={() => setIsCreateModalOpen(false)}
               className="absolute top-5 right-5 p-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-colors"
@@ -754,12 +769,13 @@ export default function AdminDashboardPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* DELETE CONFIRMATION MODAL */}
-      {tenantToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+      {tenantToDelete && mounted && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
           <div className="bg-white dark:bg-[#0f111a] border border-rose-500/30 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl relative">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 dark:text-rose-400 flex items-center justify-center border border-rose-500/20">
               <Trash2 size={24} />
@@ -817,72 +833,87 @@ export default function AdminDashboardPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Tenant Inspection Modal */}
-      {selectedTenantId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-6 space-y-6 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-            <button
-              onClick={() => setSelectedTenantId(null)}
-              className="absolute top-5 right-5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-colors"
-            >
-              <X size={16} />
-            </button>
+      {selectedTenantId && mounted && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-2xl p-6 space-y-6 shadow-2xl relative max-h-[88vh] overflow-y-auto">
+            {/* Header: Title on Left, Close Button on Right */}
+            <div className="flex items-start justify-between gap-4 border-b border-slate-200 dark:border-slate-800/80 pb-4">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">
+                    {selectedTenantDetail?.title || "Servis Detayı"}
+                  </h3>
+                  {selectedTenantDetail && (
+                    <Badge
+                      variant="outline"
+                      className={
+                        selectedTenantDetail.isActive
+                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs"
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-xs"
+                      }
+                    >
+                      {selectedTenantDetail.isActive ? "Aktif Lisans" : "Onay Bekliyor / Askıda"}
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  {selectedTenantDetail?.legalName || "Ticari ünvan girilmemiş"}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedTenantId(null)}
+                className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-colors shrink-0"
+                title="Pencereyi Kapat"
+              >
+                <X size={18} />
+              </button>
+            </div>
 
             {isDetailLoading ? (
-              <div className="py-12 text-center text-xs text-slate-400 font-mono">
+              <div className="py-16 text-center text-xs text-slate-400 font-mono">
                 Servis detayları yükleniyor...
               </div>
             ) : selectedTenantDetail ? (
               <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-black text-slate-900 dark:text-white">{selectedTenantDetail.title}</h3>
-                      <Badge variant="outline" className={selectedTenantDetail.isActive ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 text-xs" : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30 text-xs"}>
-                        {selectedTenantDetail.isActive ? "Aktif Lisans" : "Onay Bekliyor"}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{selectedTenantDetail.legalName || "Ticari ünvan girilmemiş"}</p>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setTenantToDelete({ id: selectedTenantDetail.id, title: selectedTenantDetail.title })
-                    }}
-                    className="border-rose-500/30 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs gap-1.5"
-                  >
-                    <Trash2 size={13} />
-                    <span>Servisi Sil</span>
-                  </Button>
-                </div>
-
+                {/* 4 Stats Cards */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">Kayıtlı Usta</p>
-                    <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">{selectedTenantDetail.users?.length ?? 0}</p>
+                    <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">
+                      {selectedTenantDetail.users?.length ?? 0}
+                    </p>
                   </div>
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">İş Emri</p>
-                    <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">{selectedTenantDetail._count?.workOrders ?? 0}</p>
+                    <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">
+                      {selectedTenantDetail._count?.workOrders ?? 0}
+                    </p>
                   </div>
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">Müşteri</p>
-                    <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">{selectedTenantDetail._count?.customers ?? 0}</p>
+                    <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">
+                      {selectedTenantDetail._count?.customers ?? 0}
+                    </p>
                   </div>
-                  <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
+                  <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
                     <p className="text-[10px] text-slate-500 dark:text-slate-400">Araç</p>
-                    <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">{selectedTenantDetail._count?.vehicles ?? 0}</p>
+                    <p className="text-lg font-bold text-slate-900 dark:text-white font-mono">
+                      {selectedTenantDetail._count?.vehicles ?? 0}
+                    </p>
                   </div>
                 </div>
 
+                {/* Contact & Tax Info */}
                 <div className="space-y-2 text-xs">
                   <h4 className="font-bold text-slate-800 dark:text-slate-300">İletişim & Vergi Bilgileri</h4>
-                  <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1.5 text-slate-700 dark:text-slate-300">
+                  <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-2 text-slate-700 dark:text-slate-300">
                     <p><strong>Telefon:</strong> {selectedTenantDetail.phone || "-"}</p>
                     <p><strong>E-Posta:</strong> {selectedTenantDetail.email || "-"}</p>
                     <p><strong>Adres:</strong> {selectedTenantDetail.address || "-"} ({selectedTenantDetail.city} / {selectedTenantDetail.district})</p>
@@ -890,16 +921,25 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
+                {/* Staff List */}
                 <div className="space-y-2 text-xs">
                   <h4 className="font-bold text-slate-800 dark:text-slate-300">Kayıtlı Servis Personelleri</h4>
-                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
                     {(selectedTenantDetail.users || []).map((u: any) => (
-                      <div key={u.id} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+                      <div
+                        key={u.id}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800"
+                      >
                         <div>
-                          <p className="font-semibold text-slate-900 dark:text-white">{u.name} {u.surname}</p>
+                          <p className="font-semibold text-slate-900 dark:text-white">
+                            {u.name} {u.surname}
+                          </p>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400">{u.phone}</p>
                         </div>
-                        <Badge variant="outline" className="text-[10px] border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                        >
                           {u.role}
                         </Badge>
                       </div>
@@ -907,15 +947,135 @@ export default function AdminDashboardPage() {
                   </div>
                 </div>
 
-                <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
-                  <Button size="sm" variant="outline" onClick={() => setSelectedTenantId(null)} className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800">
+                {/* Footer: Delete Button on Left, Close on Right */}
+                <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={() => {
+                      setTenantToDelete({ id: selectedTenantDetail.id, title: selectedTenantDetail.title })
+                    }}
+                    className="border-rose-500/30 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs gap-1.5 cursor-pointer"
+                  >
+                    <Trash2 size={13} />
+                    <span>Servisi Sil</span>
+                  </Button>
+
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    type="button"
+                    onClick={() => setSelectedTenantId(null)}
+                    className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                  >
                     Kapat
                   </Button>
                 </div>
               </div>
             ) : null}
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {/* CUSTOM LICENSE ACTIVATION / SUSPENSION CONFIRMATION MODAL */}
+      {statusModalState && mounted && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+          <div className="bg-white dark:bg-[#0c121e] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-md p-6 space-y-5 shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => setStatusModalState(null)}
+              className="absolute top-5 right-5 p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-colors"
+            >
+              <X size={16} />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center border shrink-0 ${
+                  statusModalState.currentActive
+                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
+                    : "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                }`}
+              >
+                {statusModalState.currentActive ? <Pause size={22} /> : <CheckCircle2 size={22} />}
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                  {statusModalState.currentActive ? "Lisansı Askıya Al" : "Lisansı Aktif Et"}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {statusModalState.title}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                {statusModalState.currentActive ? (
+                  <>
+                    <strong className="text-slate-900 dark:text-white">{statusModalState.title}</strong> servisinin lisansını askıya almak üzeresiniz.
+                  </>
+                ) : (
+                  <>
+                    <strong className="text-slate-900 dark:text-white">{statusModalState.title}</strong> servisine tam erişim yetkisi verilecek ve lisansı onaylanacaktır.
+                  </>
+                )}
+              </p>
+
+              <div
+                className={`p-3 rounded-2xl text-[11px] leading-relaxed border ${
+                  statusModalState.currentActive
+                    ? "bg-amber-500/10 border-amber-500/20 text-amber-800 dark:text-amber-200"
+                    : "bg-emerald-500/10 border-emerald-500/20 text-emerald-800 dark:text-emerald-200"
+                }`}
+              >
+                {statusModalState.currentActive
+                  ? "⚠️ Lisans askıya alındığı anda, servise bağlı tüm yönetici ve usta oturumları anında geçersiz kılınır. Servis çalışanları sisteme giriş yapamaz ve hiçbir veriye erişemez."
+                  : "✓ Lisans aktif edildiğinde yetkili ve ustalar sisteme SMS OTP ile giriş yapabilir, randevu ve iş emri oluşturabilirler."}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200 dark:border-slate-800">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setStatusModalState(null)}
+                className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={updateStatusMutation.isPending}
+                onClick={handleConfirmStatusToggle}
+                className={`font-bold gap-1.5 shadow-md cursor-pointer ${
+                  statusModalState.currentActive
+                    ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30"
+                    : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30"
+                }`}
+              >
+                {updateStatusMutation.isPending ? (
+                  <span>İşleniyor...</span>
+                ) : statusModalState.currentActive ? (
+                  <>
+                    <Pause size={14} />
+                    <span>Evet, Lisansı Askıya Al</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span>Evet, Lisansı Onayla</span>
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       {/* ENTERPRISE AUDIT LOG CONSOLE (WITH SEARCH, FILTER & PAGINATION) */}
@@ -1041,12 +1201,14 @@ export default function AdminDashboardPage() {
                     </td>
 
                     <td className="p-3.5">
-                      <div className="space-y-0.5">
-                        <span className="font-mono text-xs text-sky-600 dark:text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20">
-                          {log.ipAddress || "127.0.0.1"}
-                        </span>
+                      <div className="flex flex-col gap-1.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono text-xs font-semibold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20 inline-block w-fit">
+                            {log.ipAddress === "::1" ? "127.0.0.1 (Yerel)" : log.ipAddress || "127.0.0.1"}
+                          </span>
+                        </div>
                         {log.userAgent && (
-                          <div className="text-[10px] text-slate-500 truncate max-w-[180px]" title={log.userAgent}>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate max-w-[200px]" title={log.userAgent}>
                             {log.userAgent}
                           </div>
                         )}
@@ -1092,9 +1254,13 @@ export default function AdminDashboardPage() {
               <Button
                 size="sm"
                 variant="outline"
+                type="button"
                 disabled={auditMeta.page <= 1}
-                onClick={() => setAuditPage((prev) => Math.max(1, prev - 1))}
-                className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setAuditPage((prev) => Math.max(1, prev - 1))
+                }}
+                className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
               >
                 <ChevronLeft size={13} />
                 <span>Önceki</span>
@@ -1106,10 +1272,14 @@ export default function AdminDashboardPage() {
                 return (
                   <button
                     key={pageNum}
-                    onClick={() => setAuditPage(pageNum)}
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      setAuditPage(pageNum)
+                    }}
                     className={`w-7 h-7 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
                       auditMeta.page === pageNum
-                        ? "bg-sky-500 text-white font-bold"
+                        ? "bg-sky-500 text-white font-bold shadow-xs"
                         : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
                     }`}
                   >
@@ -1121,9 +1291,13 @@ export default function AdminDashboardPage() {
               <Button
                 size="sm"
                 variant="outline"
+                type="button"
                 disabled={auditMeta.page >= auditMeta.totalPages}
-                onClick={() => setAuditPage((prev) => Math.min(auditMeta.totalPages, prev + 1))}
-                className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30"
+                onClick={(e) => {
+                  e.preventDefault()
+                  setAuditPage((prev) => Math.min(auditMeta.totalPages, prev + 1))
+                }}
+                className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
               >
                 <span>Sonraki</span>
                 <ChevronRight size={13} />
@@ -1134,8 +1308,8 @@ export default function AdminDashboardPage() {
       </div>
 
       {/* AUDIT LOG PAYLOAD DETAIL MODAL */}
-      {selectedLogForDetail && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
+      {selectedLogForDetail && mounted && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-in fade-in">
           <div className="bg-white dark:bg-[#0b101a] border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl p-6 space-y-5 shadow-2xl relative max-h-[85vh] overflow-y-auto">
             <button
               onClick={() => setSelectedLogForDetail(null)}
@@ -1156,13 +1330,17 @@ export default function AdminDashboardPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">İstemci IP Adresi</span>
-                <p className="font-mono text-sky-600 dark:text-sky-400 font-bold">{selectedLogForDetail.ipAddress || "127.0.0.1"}</p>
+                <p className="font-mono text-sky-600 dark:text-sky-400 font-bold">
+                  {selectedLogForDetail.ipAddress === "::1"
+                    ? "127.0.0.1 (Yerel İstemci / Localhost)"
+                    : selectedLogForDetail.ipAddress || "127.0.0.1"}
+                </p>
               </div>
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Kayıt Tarihi</span>
-                <p className="font-mono text-slate-700 dark:text-slate-300">{new Date(selectedLogForDetail.createdAt).toLocaleString("tr-TR")}</p>
+                <p className="font-mono text-slate-700 dark:text-slate-300 font-semibold">{new Date(selectedLogForDetail.createdAt).toLocaleString("tr-TR")}</p>
               </div>
             </div>
 
@@ -1197,7 +1375,8 @@ export default function AdminDashboardPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

@@ -174,35 +174,50 @@ export function CariHistoryModal({ isOpen, account, onClose }: CariHistoryModalP
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-                {account.movements.map((m) => {
-                  const isDebit = m.debit > 0
-                  return (
-                    <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
-                      <td className="py-3 px-3 font-mono text-slate-500 text-xs">{m.date}</td>
-                      <td className="py-3 px-3 font-medium text-slate-900 dark:text-slate-100 text-xs">
-                        {m.description}
-                      </td>
-                      <td className="py-3 px-3 text-center">
-                        {m.referenceNo ? (
-                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-                            {m.referenceNo}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400">-</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
-                        {isDebit ? `${m.debit.toLocaleString("tr-TR")} ₺` : "-"}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        {!isDebit ? `${m.credit.toLocaleString("tr-TR")} ₺` : "-"}
-                      </td>
-                      <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-slate-100">
-                        {m.balanceAfter.toLocaleString("tr-TR")} ₺
-                      </td>
-                    </tr>
-                  )
-                })}
+                {!account.movements || account.movements.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400 text-xs">
+                      Bu cari hesaba ait kayıtlı ekstre / hareket bulunmuyor.
+                    </td>
+                  </tr>
+                ) : (
+                  account.movements.map((m) => {
+                    const debitNum = Number(m.debit || 0)
+                    const creditNum = Number(m.credit || 0)
+                    const balanceNum = Number(m.balanceAfter || 0)
+                    const isDebit = debitNum > 0
+                    const displayDate = typeof m.date === 'string' && m.date.includes('T')
+                      ? m.date.split('T')[0]
+                      : m.date || '-'
+
+                    return (
+                      <tr key={m.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/30">
+                        <td className="py-3 px-3 font-mono text-slate-500 text-xs">{displayDate}</td>
+                        <td className="py-3 px-3 font-medium text-slate-900 dark:text-slate-100 text-xs">
+                          {m.description}
+                        </td>
+                        <td className="py-3 px-3 text-center">
+                          {m.referenceNo ? (
+                            <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                              {m.referenceNo}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">-</span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-bold text-rose-600 dark:text-rose-400">
+                          {isDebit ? `${debitNum.toLocaleString("tr-TR")} ₺` : "-"}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {!isDebit ? `${creditNum.toLocaleString("tr-TR")} ₺` : "-"}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono font-bold text-slate-900 dark:text-slate-100">
+                          {balanceNum.toLocaleString("tr-TR")} ₺
+                        </td>
+                      </tr>
+                    )
+                  })
+                )}
               </tbody>
             </table>
           </div>

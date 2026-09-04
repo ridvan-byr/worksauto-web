@@ -39,6 +39,20 @@ export function useUpdateService() {
   });
 }
 
+export function useDeleteService() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/services/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['services'] });
+      toast.success('Hizmet başarıyla kaldırıldı.');
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Hizmet kaldırılamadı.');
+    },
+  });
+}
+
 export function useStaff() {
   return useQuery({
     queryKey: ['staff'],
@@ -72,6 +86,20 @@ export function useUpdateStaff() {
     },
     onError: (err: any) => {
       toast.error(err?.message || 'Personel güncellenemedi.');
+    },
+  });
+}
+
+export function useDeleteStaff() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/staff/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff'] });
+      toast.success('Personel kaydı başarıyla silindi.');
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Personel silinemedi.');
     },
   });
 }

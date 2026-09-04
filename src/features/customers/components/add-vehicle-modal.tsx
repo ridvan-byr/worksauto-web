@@ -6,6 +6,7 @@ import { X, Car, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Vehicle } from "../types"
 import { PlateBadge } from "./plate-badge"
+import { useCreateVehicle } from "@/features/vehicles/api/use-vehicles"
 
 interface AddVehicleModalProps {
   isOpen: boolean
@@ -23,16 +24,21 @@ export function AddVehicleModal({
   onAdded,
 }: AddVehicleModalProps) {
   const [mounted, setMounted] = React.useState(false)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+  const currentYear = new Date().getFullYear()
+  const maxYear = currentYear + 1 // 2026 yılı için en fazla 2027
+
   const [plate, setPlate] = React.useState("")
   const [brand, setBrand] = React.useState("")
   const [model, setModel] = React.useState("")
-  const [year, setYear] = React.useState(new Date().getFullYear())
+  const [year, setYear] = React.useState(currentYear)
   const [kilometer, setKilometer] = React.useState<number | "">(50000)
   const [vin, setVin] = React.useState("")
   const [fuelType, setFuelType] = React.useState<"Benzin" | "Dizel" | "LPG" | "Hibrit" | "Elektrik">("Benzin")
   const [transmission, setTransmission] = React.useState<"Manuel" | "Otomatik">("Otomatik")
 
   const [errors, setErrors] = React.useState<Record<string, string>>({})
+  const createVehicleMutation = useCreateVehicle()
 
   React.useEffect(() => {
     setMounted(true)
@@ -49,34 +55,62 @@ export function AddVehicleModal({
 
   if (!isOpen || !mounted) return null
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const errs: Record<string, string> = {}
 
     if (!plate.trim()) errs.plate = "Plaka zorunludur."
     if (!brand.trim()) errs.brand = "Marka zorunludur."
     if (!model.trim()) errs.model = "Model zorunludur."
+    if (Number(year) < 1950 || Number(year) > maxYear) {
+      errs.year = `Model yılı 1950 ile ${maxYear} arasında olmalıdır.`
+    }
+    if (kilometer !== "" && Number(kilometer) < 0) {
+      errs.kilometer = "Kilometre negatif olamaz."
+    }
+    if (vin.trim() && vin.trim().length !== 17) {
+      errs.vin = "Şasi numarası (VIN) 17 karakter olmalıdır."
+    }
 
     setErrors(errs)
     if (Object.keys(errs).length > 0) return
 
-    const newVehicle: Vehicle = {
-      id: "veh_" + Date.now(),
-      tenantId: "tenant_1",
-      customerId,
-      plate: plate.toUpperCase().trim(),
-      brand: brand.trim(),
-      model: model.trim(),
-      year: Number(year) || new Date().getFullYear(),
-      kilometer: Number(kilometer) || 0,
-      vin: vin.trim().toUpperCase() || undefined,
-      fuelType,
-      transmission,
-      lastServiceDate: new Date().toISOString().split("T")[0],
-    }
+    setIsSubmitting(true)
+    try {
+      const created = await createVehicleMutation.mutateAsync({
+        customerId,
+        plate: plate.toUpperCase().trim(),
+        brand: brand.trim(),
+        model: model.trim(),
+        year: Number(year) || currentYear,
+        currentKm: Number(kilometer) || 0,
+        vin: vin.trim().toUpperCase() || undefined,
+        fuelType: fuelType === "Benzin" ? "GASOLINE" : fuelType === "Dizel" ? "DIESEL" : fuelType === "LPG" ? "LPG" : fuelType === "Hibrit" ? "HYBRID" : "ELECTRIC",
+        transmission: transmission === "Otomatik" ? "AUTOMATIC" : "MANUAL",
+      })
 
-    onAdded(newVehicle)
-    onClose()
+      const newVehicle: Vehicle = {
+        id: created.id,
+        tenantId: created.tenantId || "tenant_1",
+        customerId: created.customerId,
+        plate: created.plate,
+        brand: created.brand,
+        model: created.model,
+        year: created.year,
+        kilometer: created.currentKm || 0,
+        vin: created.vin,
+        fuelType,
+        transmission,
+        lastServiceDate: new Date().toISOString().split("T")[0],
+      }
+
+      onAdded(newVehicle)
+      onClose()
+    } catch {
+      // Handled by react-query mutation toast
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const modalContent = (
@@ -158,19 +192,24 @@ export function AddVehicleModal({
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Model Yılı</label>
                 <input
                   type="number"
+                  min={1950}
+                  max={maxYear}
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value))}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
+                {errors.year && <p className="text-[10px] text-rose-500">{errors.year}</p>}
               </div>
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Mevcut KM</label>
                 <input
                   type="number"
+                  min={0}
                   value={kilometer}
                   onChange={(e) => setKilometer(e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
+                {errors.kilometer && <p className="text-[10px] text-rose-500">{errors.kilometer}</p>}
               </div>
             </div>
           </div>
@@ -180,16 +219,24 @@ export function AddVehicleModal({
               type="button"
               variant="outline"
               onClick={onClose}
+              disabled={isSubmitting}
               className="h-10 px-4 text-xs font-semibold cursor-pointer"
             >
               Vazgeç
             </Button>
             <Button
               type="submit"
+              disabled={isSubmitting}
               className="h-10 px-5 text-xs font-semibold gap-1.5 cursor-pointer shadow-md shadow-sky-500/20"
             >
-              <CheckCircle2 size={14} />
-              <span>Aracı Kaydet</span>
+              {isSubmitting ? (
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <CheckCircle2 size={14} />
+                  <span>Aracı Kaydet</span>
+                </>
+              )}
             </Button>
           </div>
         </form>

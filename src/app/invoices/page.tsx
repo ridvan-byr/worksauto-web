@@ -139,15 +139,18 @@ export default function InvoicesPage() {
     ref?: string,
     note?: string
   ) => {
+    const targetInvoice = invoices.find((inv) => inv.id === invoiceId);
     try {
       await createPaymentMutation.mutateAsync({
         invoiceId,
+        customerId: targetInvoice?.customerId,
         amount,
+        paymentMethod: method as any,
         method: method as any,
         notes: note,
       })
     } catch (e) {
-      console.warn('API payment error:', e)
+      console.error('API payment error:', e)
     }
 
     setInvoices((prev) =>

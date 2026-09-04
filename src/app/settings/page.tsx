@@ -8,16 +8,15 @@ import {
   Shield,
   Save,
   Plus,
-  CheckCircle2,
-  AlertCircle,
   Clock,
-  Coins,
-  MapPin,
   Phone,
   Mail,
-  FileText,
-  UserCheck,
   Check,
+  Pencil,
+  Trash2,
+  AlertTriangle,
+  X,
+  Briefcase,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -28,8 +27,12 @@ import {
   useUpdateTenantSettings,
   useServices,
   useCreateService,
+  useUpdateService,
+  useDeleteService,
   useStaff,
   useCreateStaff,
+  useUpdateStaff,
+  useDeleteStaff,
 } from "@/features/settings/api/use-settings"
 
 export default function SettingsPage() {
@@ -43,9 +46,13 @@ export default function SettingsPage() {
 
   const { data: servicesData, isLoading: isServicesLoading } = useServices()
   const createServiceMutation = useCreateService()
+  const updateServiceMutation = useUpdateService()
+  const deleteServiceMutation = useDeleteService()
 
   const { data: staffData, isLoading: isStaffLoading } = useStaff()
   const createStaffMutation = useCreateStaff()
+  const updateStaffMutation = useUpdateStaff()
+  const deleteStaffMutation = useDeleteStaff()
 
   // Tab State
   const [activeTab, setActiveTab] = React.useState<"profile" | "services" | "staff">("profile")
@@ -63,19 +70,47 @@ export default function SettingsPage() {
   const [autoInvoice, setAutoInvoice] = React.useState(false)
   const [saveSuccess, setSaveSuccess] = React.useState(false)
 
-  // Modals
+  // Service Modals State
   const [isNewServiceModalOpen, setIsNewServiceModalOpen] = React.useState(false)
   const [newServiceName, setNewServiceName] = React.useState("")
   const [newServiceCategory, setNewServiceCategory] = React.useState("Genel Bakım")
   const [newServicePrice, setNewServicePrice] = React.useState(1500)
   const [newServiceDuration, setNewServiceDuration] = React.useState(60)
 
+  const [editingService, setEditingService] = React.useState<any | null>(null)
+  const [editServiceName, setEditServiceName] = React.useState("")
+  const [editServiceCategory, setEditServiceCategory] = React.useState("")
+  const [editServicePrice, setEditServicePrice] = React.useState(0)
+  const [editServiceDuration, setEditServiceDuration] = React.useState(60)
+  const [editServiceActive, setEditServiceActive] = React.useState(true)
+
+  const [deletingService, setDeletingService] = React.useState<any | null>(null)
+  const [deletedServiceIds, setDeletedServiceIds] = React.useState<string[]>([])
+  const [serviceView, setServiceView] = React.useState<"active" | "all">("active")
+
+  // Staff Modals State
   const [isNewStaffModalOpen, setIsNewStaffModalOpen] = React.useState(false)
   const [newStaffName, setNewStaffName] = React.useState("")
   const [newStaffSurname, setNewStaffSurname] = React.useState("")
   const [newStaffPhone, setNewStaffPhone] = React.useState("")
+  const [newStaffEmail, setNewStaffEmail] = React.useState("")
   const [newStaffRole, setNewStaffRole] = React.useState("TECHNICIAN")
   const [newStaffLift, setNewStaffLift] = React.useState("Lift-1")
+  const [newStaffSpecialty, setNewStaffSpecialty] = React.useState("Genel Mekanik")
+
+  const [editingStaff, setEditingStaff] = React.useState<any | null>(null)
+  const [editStaffName, setEditStaffName] = React.useState("")
+  const [editStaffSurname, setEditStaffSurname] = React.useState("")
+  const [editStaffPhone, setEditStaffPhone] = React.useState("")
+  const [editStaffEmail, setEditStaffEmail] = React.useState("")
+  const [editStaffRole, setEditStaffRole] = React.useState("TECHNICIAN")
+  const [editStaffLift, setEditStaffLift] = React.useState("Lift-1")
+  const [editStaffSpecialty, setEditStaffSpecialty] = React.useState("")
+  const [editStaffActive, setEditStaffActive] = React.useState(true)
+
+  const [deletingStaff, setDeletingStaff] = React.useState<any | null>(null)
+  const [deletedStaffIds, setDeletedStaffIds] = React.useState<string[]>([])
+  const [staffView, setStaffView] = React.useState<"active" | "all">("active")
 
   // Hydrate tenant state from backend
   React.useEffect(() => {
@@ -115,6 +150,7 @@ export default function SettingsPage() {
     }
   }
 
+  // Service Handlers
   const handleCreateService = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newServiceName) return
@@ -133,6 +169,61 @@ export default function SettingsPage() {
     }
   }
 
+  const handleOpenEditService = (srv: any) => {
+    setEditingService(srv)
+    setEditServiceName(srv.name || "")
+    setEditServiceCategory(srv.category || "Genel Bakım")
+    setEditServicePrice(Number(srv.basePrice || 0))
+    setEditServiceDuration(Number(srv.defaultDurationMin || srv.estimatedMinutes || 60))
+    setEditServiceActive(srv.isActive !== false)
+  }
+
+  const handleUpdateService = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingService || !editServiceName) return
+    try {
+      await updateServiceMutation.mutateAsync({
+        id: editingService.id,
+        data: {
+          name: editServiceName,
+          category: editServiceCategory,
+          basePrice: Number(editServicePrice),
+          defaultDurationMin: Number(editServiceDuration),
+          isActive: editServiceActive,
+        },
+      })
+      setEditingService(null)
+    } catch (err) {
+      console.error("Hizmet güncelleme hatası:", err)
+    }
+  }
+
+  const handleDeleteService = async () => {
+    if (!deletingService) return
+    const id = deletingService.id
+    setDeletedServiceIds((prev) => [...prev, id])
+    setDeletingService(null)
+    try {
+      await deleteServiceMutation.mutateAsync(id)
+    } catch (err) {
+      console.error("Hizmet silme hatası:", err)
+      setDeletedServiceIds((prev) => prev.filter((item) => item !== id))
+    }
+  }
+
+  const handleReactivateService = async (srv: any) => {
+    setDeletedServiceIds((prev) => prev.filter((id) => id !== srv.id))
+    try {
+      await updateServiceMutation.mutateAsync({
+        id: srv.id,
+        data: { isActive: true },
+      })
+    } catch (err) {
+      console.error("Hizmet aktifleştirme hatası:", err)
+    }
+  }
+
+  // Staff Handlers
   const handleCreateStaff = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newStaffName || !newStaffPhone) return
@@ -141,17 +232,114 @@ export default function SettingsPage() {
         name: newStaffName,
         surname: newStaffSurname,
         phone: newStaffPhone,
+        email: newStaffEmail || undefined,
         role: newStaffRole,
         assignedLift: newStaffLift,
+        specialty: newStaffSpecialty || "Genel Mekanik",
       })
       setIsNewStaffModalOpen(false)
       setNewStaffName("")
       setNewStaffSurname("")
       setNewStaffPhone("")
+      setNewStaffEmail("")
+      setNewStaffLift("Lift-1")
+      setNewStaffSpecialty("Genel Mekanik")
     } catch (err) {
       console.error("Personel ekleme hatası:", err)
     }
   }
+
+  const handleOpenEditStaff = (st: any) => {
+    const u = st.user || st
+    const mechanic = st.mechanic || u.mechanic
+    setEditingStaff(st)
+    setEditStaffName(u.name || "")
+    setEditStaffSurname(u.surname || "")
+    setEditStaffPhone(u.phone || "")
+    setEditStaffEmail(u.email || "")
+    setEditStaffRole(u.role || "TECHNICIAN")
+    setEditStaffLift(mechanic?.assignedLift || st.assignedLift || "Lift-1")
+    setEditStaffSpecialty(mechanic?.specialty || st.specialty || "Genel Mekanik")
+    setEditStaffActive(u.isActive !== false)
+  }
+
+  const handleUpdateStaff = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingStaff || !editStaffName) return
+    const u = editingStaff.user || editingStaff
+    try {
+      await updateStaffMutation.mutateAsync({
+        id: u.id,
+        data: {
+          name: editStaffName,
+          surname: editStaffSurname,
+          phone: editStaffPhone,
+          email: editStaffEmail || undefined,
+          role: editStaffRole,
+          assignedLift: editStaffLift,
+          specialty: editStaffSpecialty,
+          isActive: editStaffActive,
+        },
+      })
+      setEditingStaff(null)
+    } catch (err) {
+      console.error("Personel güncelleme hatası:", err)
+    }
+  }
+
+  const handleDeleteStaff = async () => {
+    if (!deletingStaff) return
+    const u = deletingStaff.user || deletingStaff
+    const id = u.id
+    setDeletedStaffIds((prev) => [...prev, id])
+    setDeletingStaff(null)
+    try {
+      await deleteStaffMutation.mutateAsync(id)
+    } catch (err) {
+      console.error("Personel silme hatası:", err)
+      setDeletedStaffIds((prev) => prev.filter((item) => item !== id))
+    }
+  }
+
+  const handleReactivateStaff = async (st: any) => {
+    const u = st.user || st
+    setDeletedStaffIds((prev) => prev.filter((id) => id !== u.id))
+    try {
+      await updateStaffMutation.mutateAsync({
+        id: u.id,
+        data: { isActive: true },
+      })
+    } catch (err) {
+      console.error("Personel aktifleştirme hatası:", err)
+    }
+  }
+
+  // Filtered lists
+  const activeServices = React.useMemo(() => {
+    return (servicesData || []).filter(
+      (srv: any) => srv.isActive !== false && !deletedServiceIds.includes(srv.id)
+    )
+  }, [servicesData, deletedServiceIds])
+
+  const displayedServices = React.useMemo(() => {
+    if (serviceView === "active") return activeServices
+    return (servicesData || []).filter((s: any) => !deletedServiceIds.includes(s.id))
+  }, [servicesData, activeServices, serviceView, deletedServiceIds])
+
+  const activeStaff = React.useMemo(() => {
+    return (staffData || []).filter((st: any) => {
+      const u = st.user || st
+      return u.isActive !== false && !deletedStaffIds.includes(u.id)
+    })
+  }, [staffData, deletedStaffIds])
+
+  const displayedStaff = React.useMemo(() => {
+    if (staffView === "active") return activeStaff
+    return (staffData || []).filter((st: any) => {
+      const u = st.user || st
+      return !deletedStaffIds.includes(u.id)
+    })
+  }, [staffData, activeStaff, staffView, deletedStaffIds])
 
   if (!isOwner) {
     return (
@@ -298,27 +486,29 @@ export default function SettingsPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500"
-                    placeholder="Örn: info@bayaroto.com"
+                    placeholder="info@bayaroto.com"
                   />
                 </div>
               </div>
 
-              <div className="space-y-1.5 pt-2">
+              <div className="space-y-1.5">
                 <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                  Açık Servis & Atölye Adresi
+                  Açık Servis Adresi
                 </label>
                 <textarea
                   rows={2}
                   value={address}
                   onChange={(e) => setAddress(e.target.value)}
-                  className="w-full p-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500 resize-none"
-                  placeholder="Sanayi Sitesi, Ada, Parsel ve Kapı No..."
+                  className="w-full p-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500"
+                  placeholder="Maslak Oto Sanayi Sitesi 2. Kısım 34. Sokak No: 12 Sarıyer / İstanbul"
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Şehir</label>
+                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Şehir / İl
+                  </label>
                   <input
                     type="text"
                     value={city}
@@ -329,24 +519,25 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">İlçe</label>
+                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    İlçe / Semt
+                  </label>
                   <input
                     type="text"
                     value={district}
                     onChange={(e) => setDistrict(e.target.value)}
                     className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500"
-                    placeholder="Başakşehir"
+                    placeholder="Sarıyer"
                   />
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Tax & Financial Defaults */}
           <Card>
             <CardHeader className="p-6">
               <CardTitle className="text-base font-bold flex items-center gap-2">
-                <FileText size={18} className="text-emerald-500" />
+                <Building2 size={18} className="text-sky-500" />
                 <span>Maliye, Vergi & Otomasyon Ayarları</span>
               </CardTitle>
               <CardDescription className="text-xs">
@@ -417,7 +608,7 @@ export default function SettingsPage() {
       {/* TAB 2: HIZMET & ISCILIK KATALOGU */}
       {activeTab === "services" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Kayıtlı Standart Hizmetler & İşçilikler
@@ -426,54 +617,138 @@ export default function SettingsPage() {
                 İş emirlerinde ve randevu formlarında seçilebilecek hazır işçilik tanımları
               </p>
             </div>
-            <Button
-              size="sm"
-              onClick={() => setIsNewServiceModalOpen(true)}
-              className="gap-1.5 cursor-pointer shadow-sky-500/25"
-            >
-              <Plus size={15} />
-              <span>Yeni Hizmet Ekle</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setServiceView("active")}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    serviceView === "active"
+                      ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
+                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+                >
+                  Aktif ({activeServices.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setServiceView("all")}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    serviceView === "all"
+                      ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
+                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+                >
+                  Tümü ({(servicesData || []).length - deletedServiceIds.length})
+                </button>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setIsNewServiceModalOpen(true)}
+                className="gap-1.5 cursor-pointer shadow-sky-500/25"
+              >
+                <Plus size={15} />
+                <span>Yeni Hizmet Ekle</span>
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(servicesData || []).map((srv: any) => (
-              <Card key={srv.id} className="hover:border-sky-500/30 transition-all">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        {srv.name}
-                      </h3>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                        Kategori: {srv.category || "Genel Bakım"}
-                      </p>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
-                      Aktif
-                    </Badge>
-                  </div>
+          {displayedServices.length === 0 ? (
+            <div className="p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+              <Wrench size={32} className="mx-auto text-slate-400 opacity-50" />
+              <p className="text-xs font-semibold text-slate-500">
+                {serviceView === "active"
+                  ? "Kayıtlı aktif hizmet bulunamadı. Yeni bir hizmet tanımlayabilirsiniz."
+                  : "Gösterilebilecek hizmet kaydı bulunamadı."}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {displayedServices.map((srv: any) => {
+                const isActive = srv.isActive !== false && !deletedServiceIds.includes(srv.id)
+                return (
+                  <Card key={srv.id} className="hover:border-sky-500/30 transition-all group">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {srv.name}
+                          </h3>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                            Kategori: {srv.category || "Genel Bakım"}
+                          </p>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] ${
+                            isActive
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                              : "bg-slate-500/10 text-slate-500 border-slate-500/20"
+                          }`}
+                        >
+                          {isActive ? "Aktif" : "Pasif"}
+                        </Badge>
+                      </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
-                    <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
-                      <Clock size={12} />
-                      <span>{srv.estimatedMinutes || 60} Dk</span>
-                    </div>
-                    <div className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                      {Number(srv.basePrice || 0).toLocaleString("tr-TR")} ₺
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
+                        <div className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                          <Clock size={12} />
+                          <span>{srv.defaultDurationMin || srv.estimatedMinutes || 60} Dk</span>
+                        </div>
+                        <div className="font-mono font-bold text-slate-900 dark:text-slate-100">
+                          {Number(srv.basePrice || 0).toLocaleString("tr-TR")} ₺
+                        </div>
+                      </div>
+
+                      {/* Actions: Edit & Delete / Reactivate */}
+                      <div className="flex items-center justify-end gap-1.5 pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEditService(srv)}
+                          className="h-7 px-2 text-[11px] text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 gap-1 cursor-pointer"
+                        >
+                          <Pencil size={12} />
+                          <span>Düzenle</span>
+                        </Button>
+                        {isActive ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingService(srv)}
+                            className="h-7 px-2 text-[11px] text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 gap-1 cursor-pointer"
+                          >
+                            <Trash2 size={12} />
+                            <span>Kaldır</span>
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleReactivateService(srv)}
+                            className="h-7 px-2 text-[11px] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1 cursor-pointer"
+                          >
+                            <Check size={12} />
+                            <span>Aktifleştir</span>
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {/* TAB 3: PERSONEL & ATOLYE USTALARI */}
       {activeTab === "staff" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Atölye Ustaları & Servis Personeli
@@ -482,64 +757,212 @@ export default function SettingsPage() {
                 İş emirlerine atanan teknisyenler ve yetkilendirmeleri
               </p>
             </div>
-            <Button
-              size="sm"
-              onClick={() => setIsNewStaffModalOpen(true)}
-              className="gap-1.5 cursor-pointer shadow-sky-500/25"
-            >
-              <Plus size={15} />
-              <span>Yeni Personel Ekle</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setStaffView("active")}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    staffView === "active"
+                      ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
+                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+                >
+                  Aktif ({activeStaff.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStaffView("all")}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer ${
+                    staffView === "all"
+                      ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
+                      : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  }`}
+                >
+                  Tümü ({(staffData || []).length - deletedStaffIds.length})
+                </button>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setIsNewStaffModalOpen(true)}
+                className="gap-1.5 cursor-pointer shadow-sky-500/25"
+              >
+                <Plus size={15} />
+                <span>Yeni Personel Ekle</span>
+              </Button>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {(staffData || []).map((st: any) => (
-              <Card key={st.id} className="hover:border-amber-500/30 transition-all">
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-xs border border-amber-500/20">
-                        {st.user?.name?.charAt(0) || "U"}
-                      </div>
-                      <div>
-                        <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                          {st.user ? `${st.user.name} ${st.user.surname || ""}` : "Personel"}
-                        </h3>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                          {st.user?.phone || "-"}
-                        </p>
-                      </div>
-                    </div>
-                    <Badge variant="outline" className="text-[10px] bg-sky-500/10 text-sky-600 border-sky-500/20">
-                      {st.user?.role === "OWNER" ? "Yönetici" : "Usta"}
-                    </Badge>
-                  </div>
+          {displayedStaff.length === 0 ? (
+            <div className="p-12 text-center border border-dashed border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+              <Users size={32} className="mx-auto text-slate-400 opacity-50" />
+              <p className="text-xs font-semibold text-slate-500">
+                {staffView === "active"
+                  ? "Kayıtlı aktif personel bulunamadı. Yeni bir personel ekleyebilirsiniz."
+                  : "Gösterilebilecek personel kaydı bulunamadı."}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {displayedStaff.map((st: any) => {
+                const u = st.user || st
+                const fullName = u.name ? `${u.name} ${u.surname || ""}`.trim() : "Personel"
+                const initial = (u.name?.charAt(0) || "U").toUpperCase()
+                const phone = u.phone || "-"
+                const role = u.role || "TECHNICIAN"
+                const mechanic = st.mechanic || u.mechanic
+                const lift = mechanic?.assignedLift || st.assignedLift || "Lift-1"
+                const specialty = mechanic?.specialty || st.specialty || "Genel Mekanik"
+                const isActive = u.isActive !== false && !deletedStaffIds.includes(u.id)
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Atanmış Lift: <strong className="text-slate-800 dark:text-slate-200">{st.assignedLift || "Lift-1"}</strong>
-                    </span>
-                    <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
-                      ● Aktif Görevde
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                const roleLabel =
+                  role === "OWNER"
+                    ? "İşletme Sahibi"
+                    : role === "SERVICE_MANAGER"
+                    ? "Servis Müdürü"
+                    : role === "CASHIER"
+                    ? "Kasa & Muhasebe"
+                    : "Usta / Teknisyen"
+
+                const roleBadgeColor =
+                  role === "OWNER"
+                    ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20"
+                    : role === "SERVICE_MANAGER"
+                    ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
+                    : role === "CASHIER"
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+
+                const isCurrentUser = user?.id === u.id || user?.phone === u.phone
+
+                return (
+                  <Card key={st.id || u.id} className="hover:border-amber-500/30 transition-all">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-sm border border-amber-500/20 shadow-xs">
+                            {initial}
+                          </div>
+                          <div>
+                            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                              <span>{fullName}</span>
+                              {isCurrentUser && (
+                                <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500">
+                                  Sen
+                                </span>
+                              )}
+                            </h3>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-0.5">
+                              <Phone size={10} className="text-slate-400" />
+                              <span>{phone}</span>
+                            </p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className={`text-[10px] ${roleBadgeColor}`}>
+                          {roleLabel}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-1.5 py-2 border-y border-slate-100 dark:border-slate-800/80 text-[11px]">
+                        <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                          <span className="flex items-center gap-1">
+                            <Briefcase size={11} className="text-slate-400" />
+                            <span>Uzmanlık:</span>
+                          </span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200">{specialty}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                          <span>Atanmış Lift:</span>
+                          <span className="font-bold font-mono text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px]">
+                            {lift}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
+                          <span>Durum:</span>
+                          {isActive ? (
+                            <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Aktif Görevde
+                            </span>
+                          ) : (
+                            <span className="text-[10px] font-medium text-slate-400 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                              Pasif / İzinli
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Actions: Edit & Delete / Reactivate */}
+                      <div className="flex items-center justify-end gap-1.5 pt-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenEditStaff(st)}
+                          className="h-7 px-2.5 text-[11px] text-slate-600 dark:text-slate-300 hover:text-sky-600 dark:hover:text-sky-400 gap-1 cursor-pointer"
+                        >
+                          <Pencil size={12} />
+                          <span>Düzenle</span>
+                        </Button>
+                        {!isCurrentUser && (
+                          isActive ? (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setDeletingStaff(st)}
+                              className="h-7 px-2.5 text-[11px] text-rose-500 hover:text-rose-600 hover:bg-rose-500/10 gap-1 cursor-pointer"
+                            >
+                              <Trash2 size={12} />
+                              <span>Sil</span>
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleReactivateStaff(st)}
+                              className="h-7 px-2.5 text-[11px] text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10 gap-1 cursor-pointer"
+                            >
+                              <Check size={12} />
+                              <span>Aktifleştir</span>
+                            </Button>
+                          )
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Modal: Yeni Hizmet Ekle */}
+      {/* ======================================================== */}
+      {/* MODALS */}
+      {/* ======================================================== */}
+
+      {/* Modal 1: Yeni Hizmet Ekle */}
       {isNewServiceModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              Yeni Standart Hizmet Tanımla
-            </h3>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                Yeni Standart Hizmet Tanımla
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsNewServiceModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X size={16} />
+              </button>
+            </div>
             <form onSubmit={handleCreateService} className="space-y-3">
               <div className="space-y-1">
-                <label className="text-xs font-medium">Hizmet Adı *</label>
+                <label className="text-xs font-medium">Hizmet / İşçilik Adı *</label>
                 <input
                   type="text"
                   required
@@ -550,11 +973,23 @@ export default function SettingsPage() {
                 />
               </div>
 
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Kategori</label>
+                <input
+                  type="text"
+                  value={newServiceCategory}
+                  onChange={(e) => setNewServiceCategory(e.target.value)}
+                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                  placeholder="Genel Bakım, Mekanik, Elektrik vb."
+                />
+              </div>
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-xs font-medium">Taban İşçilik (₺)</label>
                   <input
                     type="number"
+                    min={0}
                     value={newServicePrice}
                     onChange={(e) => setNewServicePrice(Number(e.target.value))}
                     className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono"
@@ -565,6 +1000,7 @@ export default function SettingsPage() {
                   <label className="text-xs font-medium">Tahmini Süre (Dk)</label>
                   <input
                     type="number"
+                    min={5}
                     value={newServiceDuration}
                     onChange={(e) => setNewServiceDuration(Number(e.target.value))}
                     className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono"
@@ -581,8 +1017,13 @@ export default function SettingsPage() {
                 >
                   İptal
                 </Button>
-                <Button type="submit" size="sm" className="shadow-sky-500/25">
-                  Hizmeti Kaydet
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={createServiceMutation.isPending}
+                  className="shadow-sky-500/25"
+                >
+                  {createServiceMutation.isPending ? "Kaydediliyor..." : "Hizmeti Kaydet"}
                 </Button>
               </div>
             </form>
@@ -590,13 +1031,155 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Modal: Yeni Personel Ekle */}
+      {/* Modal 2: Hizmeti Düzenle */}
+      {editingService && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                Hizmeti Düzenle
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingService(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateService} className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Hizmet / İşçilik Adı *</label>
+                <input
+                  type="text"
+                  required
+                  value={editServiceName}
+                  onChange={(e) => setEditServiceName(e.target.value)}
+                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Kategori</label>
+                <input
+                  type="text"
+                  value={editServiceCategory}
+                  onChange={(e) => setEditServiceCategory(e.target.value)}
+                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Taban İşçilik (₺)</label>
+                  <input
+                    type="number"
+                    min={0}
+                    value={editServicePrice}
+                    onChange={(e) => setEditServicePrice(Number(e.target.value))}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Tahmini Süre (Dk)</label>
+                  <input
+                    type="number"
+                    min={5}
+                    value={editServiceDuration}
+                    onChange={(e) => setEditServiceDuration(Number(e.target.value))}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+                <span className="text-xs font-medium">Katalogda Aktif Olarak Göster</span>
+                <input
+                  type="checkbox"
+                  checked={editServiceActive}
+                  onChange={(e) => setEditServiceActive(e.target.checked)}
+                  className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingService(null)}
+                >
+                  İptal
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={updateServiceMutation.isPending}
+                  className="shadow-sky-500/25"
+                >
+                  {updateServiceMutation.isPending ? "Kaydediliyor..." : "Güncellemeleri Kaydet"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 3: Hizmeti Silme Onayı */}
+      {deletingService && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl animate-in zoom-in-95 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center">
+              <Trash2 size={24} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                Hizmeti Kaldır
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                <strong>{deletingService.name}</strong> hizmetini servis kataloğundan kaldırmak istediğinize emin misiniz?
+              </p>
+            </div>
+            <div className="flex justify-center gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setDeletingService(null)}
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={deleteServiceMutation.isPending}
+                onClick={handleDeleteService}
+                className="bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/25"
+              >
+                {deleteServiceMutation.isPending ? "Kaldırılıyor..." : "Evet, Kaldır"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 4: Yeni Personel Ekle */}
       {isNewStaffModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-              Yeni Personel & Usta Kaydı
-            </h3>
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                Yeni Personel & Usta Kaydı
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsNewStaffModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X size={16} />
+              </button>
+            </div>
             <form onSubmit={handleCreateStaff} className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -623,16 +1206,29 @@ export default function SettingsPage() {
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-medium">Cep Telefonu *</label>
-                <input
-                  type="text"
-                  required
-                  value={newStaffPhone}
-                  onChange={(e) => setNewStaffPhone(e.target.value)}
-                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                  placeholder="05551234567"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Cep Telefonu *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newStaffPhone}
+                    onChange={(e) => setNewStaffPhone(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                    placeholder="05551234567"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">E-Posta (İsteğe bağlı)</label>
+                  <input
+                    type="email"
+                    value={newStaffEmail}
+                    onChange={(e) => setNewStaffEmail(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                    placeholder="usta@servis.com"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -646,6 +1242,7 @@ export default function SettingsPage() {
                     <option value="TECHNICIAN">Atölye Teknisyeni / Usta</option>
                     <option value="SERVICE_MANAGER">Servis Müdürü</option>
                     <option value="CASHIER">Kasa / Ön Muhasebe</option>
+                    <option value="OWNER">Yönetici / Ortak</option>
                   </select>
                 </div>
 
@@ -661,6 +1258,17 @@ export default function SettingsPage() {
                 </div>
               </div>
 
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Uzmanlık Alanı</label>
+                <input
+                  type="text"
+                  value={newStaffSpecialty}
+                  onChange={(e) => setNewStaffSpecialty(e.target.value)}
+                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                  placeholder="Motor Mekanik, Fren, Elektrik-Elektronik vb."
+                />
+              </div>
+
               <div className="flex justify-end gap-2 pt-3">
                 <Button
                   type="button"
@@ -670,11 +1278,191 @@ export default function SettingsPage() {
                 >
                   İptal
                 </Button>
-                <Button type="submit" size="sm" className="shadow-sky-500/25">
-                  Personeli Kaydet
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={createStaffMutation.isPending}
+                  className="shadow-sky-500/25"
+                >
+                  {createStaffMutation.isPending ? "Kaydediliyor..." : "Personeli Kaydet"}
                 </Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 5: Personeli Düzenle */}
+      {editingStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                Personel Bilgilerini Düzenle
+              </h3>
+              <button
+                type="button"
+                onClick={() => setEditingStaff(null)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateStaff} className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Ad *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStaffName}
+                    onChange={(e) => setEditStaffName(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Soyad</label>
+                  <input
+                    type="text"
+                    value={editStaffSurname}
+                    onChange={(e) => setEditStaffSurname(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Cep Telefonu *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStaffPhone}
+                    onChange={(e) => setEditStaffPhone(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">E-Posta</label>
+                  <input
+                    type="email"
+                    value={editStaffEmail}
+                    onChange={(e) => setEditStaffEmail(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Sistem Rolü</label>
+                  <select
+                    value={editStaffRole}
+                    onChange={(e) => setEditStaffRole(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                  >
+                    <option value="TECHNICIAN">Atölye Teknisyeni / Usta</option>
+                    <option value="SERVICE_MANAGER">Servis Müdürü</option>
+                    <option value="CASHIER">Kasa / Ön Muhasebe</option>
+                    <option value="OWNER">Yönetici / Ortak</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-medium">Varsayılan Lift</label>
+                  <input
+                    type="text"
+                    value={editStaffLift}
+                    onChange={(e) => setEditStaffLift(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                    placeholder="Lift-1"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Uzmanlık Alanı</label>
+                <input
+                  type="text"
+                  value={editStaffSpecialty}
+                  onChange={(e) => setEditStaffSpecialty(e.target.value)}
+                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+                  placeholder="Motor Mekanik, Şanzıman, Fren vb."
+                />
+              </div>
+
+              <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+                <span className="text-xs font-medium">Aktif Çalışan Durumu</span>
+                <input
+                  type="checkbox"
+                  checked={editStaffActive}
+                  onChange={(e) => setEditStaffActive(e.target.checked)}
+                  className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 cursor-pointer"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingStaff(null)}
+                >
+                  İptal
+                </Button>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={updateStaffMutation.isPending}
+                  className="shadow-sky-500/25"
+                >
+                  {updateStaffMutation.isPending ? "Kaydediliyor..." : "Değişiklikleri Kaydet"}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal 6: Personeli Silme Onayı */}
+      {deletingStaff && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl animate-in zoom-in-95 text-center">
+            <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center">
+              <AlertTriangle size={24} />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                Personeli Sil / Pasife Al
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                <strong>
+                  {(deletingStaff.user || deletingStaff).name} {(deletingStaff.user || deletingStaff).surname || ""}
+                </strong>{" "}
+                adlı personeli kadrodan çıkarmak istediğinize emin misiniz?
+              </p>
+            </div>
+            <div className="flex justify-center gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setDeletingStaff(null)}
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                disabled={deleteStaffMutation.isPending}
+                onClick={handleDeleteStaff}
+                className="bg-rose-600 hover:bg-rose-700 text-white shadow-rose-500/25"
+              >
+                {deleteStaffMutation.isPending ? "Siliniyor..." : "Evet, Çıkar"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

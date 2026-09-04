@@ -95,6 +95,9 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
     } else {
       if (!companyTitle.trim()) errs.companyTitle = "Şirket ünvanı zorunludur."
       if (!name.trim()) errs.name = "Yetkili adı zorunludur."
+      if (!taxNumber.trim() || taxNumber.trim().length < 10) {
+        errs.taxNumber = "Kurumsal müşteriler için 10 haneli Vergi Numarası zorunludur."
+      }
     }
     if (!phone.trim() || phone.length < 17) {
       errs.phone = "Geçerli bir telefon numarası giriniz."
@@ -110,10 +113,18 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     const errs: Record<string, string> = {}
+    const currentYear = new Date().getFullYear()
+    const maxYear = currentYear + 1 // 2026 yılı için en fazla 2027
 
     if (!plate.trim()) errs.plate = "Plaka zorunludur."
     if (!brand.trim()) errs.brand = "Marka zorunludur."
     if (!model.trim()) errs.model = "Model zorunludur."
+    if (Number(year) < 1950 || Number(year) > maxYear) {
+      errs.year = `Model yılı 1950 ile ${maxYear} arasında olmalıdır.`
+    }
+    if (kilometer !== "" && Number(kilometer) < 0) {
+      errs.kilometer = "Kilometre negatif olamaz."
+    }
 
     setErrors(errs)
     if (Object.keys(errs).length > 0) return
@@ -128,7 +139,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
       plate: plate.toUpperCase().trim(),
       brand: brand.trim(),
       model: model.trim(),
-      year: Number(year) || new Date().getFullYear(),
+      year: Number(year) || currentYear,
       kilometer: Number(kilometer) || 0,
       fuelType,
       transmission,
@@ -415,22 +426,25 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Model Yılı</label>
                 <input
                   type="number"
-                  min={1990}
-                  max={2027}
+                  min={1950}
+                  max={new Date().getFullYear() + 1}
                   value={year}
                   onChange={(e) => setYear(Number(e.target.value))}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
+                {errors.year && <p className="text-[10px] text-rose-500">{errors.year}</p>}
               </div>
 
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Mevcut KM</label>
                 <input
                   type="number"
+                  min={0}
                   value={kilometer}
                   onChange={(e) => setKilometer(e.target.value === "" ? "" : Number(e.target.value))}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
+                {errors.kilometer && <p className="text-[10px] text-rose-500">{errors.kilometer}</p>}
               </div>
 
               <div className="space-y-1">

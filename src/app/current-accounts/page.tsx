@@ -58,12 +58,18 @@ export default function CurrentAccountsPage() {
         lastActivityDate: a.updatedAt || a.createdAt,
         movements: (a.movements || []).map((m: any) => ({
           id: m.id,
-          date: m.date,
-          type: m.debit > 0 ? 'DEBIT_INVOICE' : 'CREDIT_PAYMENT',
-          description: m.description,
-          amount: m.debit > 0 ? Number(m.debit) : Number(m.credit),
-          balanceAfter: Number(m.balanceAfter),
-          referenceNumber: m.referenceNo || 'REF',
+          customerId: a.customerId,
+          date: m.date
+            ? typeof m.date === 'string' && m.date.includes('T')
+              ? m.date.split('T')[0]
+              : new Date(m.date).toLocaleDateString('tr-TR')
+            : '-',
+          type: (Number(m.debit) > 0 ? 'INVOICE' : 'PAYMENT') as 'INVOICE' | 'PAYMENT',
+          description: m.description || '-',
+          referenceNo: m.referenceNo || '-',
+          debit: Number(m.debit || 0),
+          credit: Number(m.credit || 0),
+          balanceAfter: Number(m.balanceAfter || 0),
         })),
       }))
       setAccounts(mapped)

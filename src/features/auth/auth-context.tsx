@@ -64,6 +64,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  // Proactive live session verification & auto-kick on license suspension
+  React.useEffect(() => {
+    const verifyLiveSession = async () => {
+      const token = typeof window !== "undefined" ? localStorage.getItem(ACCESS_TOKEN_KEY) : null
+      if (!token) return
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          const errMsg = (data.message || "").toLowerCase()
+          if (res.status === 401 && (errMsg.includes("askıya") || errMsg.includes("lisans") || errMsg.includes("aktif değil"))) {
+            setUser(null)
+            setTenant(null)
+            localStorage.removeItem(AUTH_STORAGE_KEY)
+            localStorage.removeItem(ACCESS_TOKEN_KEY)
+            localStorage.removeItem(REFRESH_TOKEN_KEY)
+            router.replace("/sign-in?suspended=true")
+          }
+        }
+      } catch {
+        // Network error, keep existing state
+      }
+    }
+
+    // Verify on mount
+    verifyLiveSession()
+
+    // Verify when user switches back to this tab
+    window.addEventListener("focus", verifyLiveSession)
+
+    // Listen to immediate custom event from api-client
+    const handleSuspended = (e: any) => {
+      setUser(null)
+      setTenant(null)
+      try {
+        localStorage.removeItem(AUTH_STORAGE_KEY)
+        localStorage.removeItem(ACCESS_TOKEN_KEY)
+        localStorage.removeItem(REFRESH_TOKEN_KEY)
+      } catch {}
+      router.replace("/sign-in?suspended=true")
+    }
+    window.addEventListener("worksauto:suspended", handleSuspended)
+
+    return () => {
+      window.removeEventListener("focus", verifyLiveSession)
+      window.removeEventListener("worksauto:suspended", handleSuspended)
+    }
+  }, [router])
+
   // Route Guard: strictly enforce authentication and onboarding
   React.useEffect(() => {
     if (isLoading) return

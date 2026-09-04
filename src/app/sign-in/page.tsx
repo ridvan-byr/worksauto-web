@@ -33,17 +33,28 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = React.useState(false)
   const [timerSeconds, setTimerSeconds] = React.useState(59)
   const [showSupportModal, setShowSupportModal] = React.useState(false)
+  const [isSuspendedParam, setIsSuspendedParam] = React.useState(false)
 
-  // Auto-redirect if already logged in
+  // Detect suspended query parameter
   React.useEffect(() => {
-    if (isAuthenticated && tenant) {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search)
+      if (params.get("suspended") === "true") {
+        setIsSuspendedParam(true)
+      }
+    }
+  }, [])
+
+  // Auto-redirect if already logged in (only if not suspended)
+  React.useEffect(() => {
+    if (isAuthenticated && tenant && !isSuspendedParam) {
       if (tenant.onboardingCompleted) {
         router.push("/")
       } else {
         router.push("/onboarding")
       }
     }
-  }, [isAuthenticated, tenant, router])
+  }, [isAuthenticated, tenant, isSuspendedParam, router])
 
   // Timer countdown for resending code
   React.useEffect(() => {
@@ -107,8 +118,9 @@ export default function SignInPage() {
         setOtpCode(res.devCode)
       }
     } else {
-      setErrorStatus(res.error || "NOT_FOUND")
-      toast.error("Telefon numarası sistemde bulunamadı veya yetkisiz.")
+      const err = res.error || "Telefon numarası sistemde bulunamadı veya yetkisiz."
+      setErrorStatus(err)
+      toast.error(err)
     }
   }
 
@@ -132,8 +144,9 @@ export default function SignInPage() {
         description: "Atölye yönetim paneline yönlendiriliyorsunuz...",
       })
     } else {
-      setErrorStatus(res.error || "INVALID_OTP")
-      toast.error("Doğrulama kodu hatalı veya süresi dolmuş.")
+      const err = res.error || "Doğrulama kodu hatalı veya süresi dolmuş."
+      setErrorStatus(err)
+      toast.error(err)
     }
   }
 
@@ -226,6 +239,43 @@ export default function SignInPage() {
                   Sisteme kayıtlı yetkili cep telefonu numaranızı girin. Size bir doğrulama kodu göndereceğiz.
                 </p>
               </div>
+
+              {/* Alert: Tenant License Suspended */}
+              {isSuspendedParam && (
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-900 dark:text-rose-200 space-y-2 animate-in fade-in duration-200">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle size={18} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                    <div className="text-xs space-y-1">
+                      <p className="font-bold">Erişim Askıya Alındı</p>
+                      <p className="text-[11px] leading-relaxed opacity-90">
+                        Bağlı olduğunuz oto servisinin abonelik veya kullanım lisansı sistem yöneticisi tarafından askıya alınmıştır. Oturumunuz sonlandırıldı. Bilgi almak için servis yöneticiniz veya platform destek ekibi ile iletişime geçiniz.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Error Alert: License Suspended */}
+              {errorStatus && (errorStatus.toLowerCase().includes("lisans") || errorStatus.toLowerCase().includes("askıya")) && (
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-900 dark:text-rose-200 space-y-2.5 animate-in fade-in duration-200">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle size={18} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                    <div className="text-xs space-y-1">
+                      <p className="font-bold">Erişim Yetkisi Askıya Alındı</p>
+                      <p className="text-[11px] leading-relaxed opacity-90">{errorStatus}</p>
+                    </div>
+                  </div>
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowSupportModal(true)}
+                      className="w-full text-xs font-semibold py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white cursor-pointer transition-colors shadow-sm text-center"
+                    >
+                      Platform Desteği ile Görüşün
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Error Alert: Unregistered Phone */}
               {errorStatus === "NOT_FOUND" && (
@@ -325,12 +375,37 @@ export default function SignInPage() {
                 </p>
               </div>
 
-              {errorStatus === "INVALID_OTP" && (
+              {/* Step 2 Error Alerts */}
+              {errorStatus && (errorStatus.toLowerCase().includes("lisans") || errorStatus.toLowerCase().includes("askıya")) ? (
+                <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-900 dark:text-rose-200 space-y-2.5 animate-in fade-in duration-200">
+                  <div className="flex items-start gap-2.5">
+                    <AlertCircle size={18} className="text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+                    <div className="text-xs space-y-1">
+                      <p className="font-bold">Erişim Yetkisi Askıya Alındı</p>
+                      <p className="text-[11px] leading-relaxed opacity-90">{errorStatus}</p>
+                    </div>
+                  </div>
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowSupportModal(true)}
+                      className="w-full text-xs font-semibold py-2 px-3 rounded-xl bg-rose-600 hover:bg-rose-700 text-white cursor-pointer transition-colors shadow-sm text-center"
+                    >
+                      Platform Desteği ile Görüşün
+                    </button>
+                  </div>
+                </div>
+              ) : errorStatus === "INVALID_OTP" ? (
                 <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
                   <AlertCircle size={15} />
                   <span>Lütfen 6 haneli doğrulama kodunu eksiksiz girin.</span>
                 </div>
-              )}
+              ) : errorStatus ? (
+                <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+                  <AlertCircle size={15} />
+                  <span>{errorStatus}</span>
+                </div>
+              ) : null}
 
               <form onSubmit={handleOtpSubmit} className="space-y-4">
                 <div className="space-y-1.5">

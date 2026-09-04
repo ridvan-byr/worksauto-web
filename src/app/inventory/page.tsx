@@ -47,7 +47,7 @@ export default function InventoryPage() {
         id: p.id,
         tenantId: p.tenantId || 'ten_1',
         name: p.name,
-        sku: p.oemNumber || p.id.substring(0, 8),
+        sku: p.oemCode || p.oemNumber || p.id.substring(0, 8),
         barcode: p.barcode || '',
         category: p.category as any,
         unit: 'ADET',
@@ -55,7 +55,7 @@ export default function InventoryPage() {
         purchasePrice: Number(p.purchasePrice || 0),
         salePrice: Number(p.salePrice || 0),
         currentStock: Number(p.stockQuantity || 0),
-        minimumStock: Number(p.minStockThreshold || 5),
+        minimumStock: Number(p.minStockLevel ?? p.minStockThreshold ?? 5),
         active: true,
         movements: [],
         createdAt: p.createdAt,
@@ -76,14 +76,15 @@ export default function InventoryPage() {
     try {
       await createProductMutation.mutateAsync({
         name: newProd.name,
-        oemNumber: newProd.sku,
+        oemCode: newProd.sku,
         barcode: newProd.barcode,
         category: newProd.category.toUpperCase(),
+        brand: "Genel",
         purchasePrice: newProd.purchasePrice,
         salePrice: newProd.salePrice,
         kdvRate: 20,
         stockQuantity: newProd.currentStock,
-        minStockThreshold: newProd.minimumStock,
+        minStockLevel: newProd.minimumStock,
         shelfLocation: newProd.shelfLocation,
       })
     } catch (e) {
@@ -102,32 +103,29 @@ export default function InventoryPage() {
 
   const handleApplyMovement = async (
     productId: string,
-    type: StockMovementType,
+    movementType: StockMovementType,
     qty: number,
     ref?: string,
     note?: string
   ) => {
     try {
-      await stockMovementMutation.mutateAsync({
+      const updated: any = await stockMovementMutation.mutateAsync({
         productId,
         data: {
-          type,
+          movementType,
           quantity: qty,
-          documentNumber: ref,
+          referenceId: ref,
           note,
         },
       })
+      if (updated?.stockQuantity !== undefined) {
+        setProducts((prev) =>
+          prev.map((p) => (p.id === productId ? { ...p, currentStock: updated.stockQuantity } : p))
+        )
+      }
     } catch (e) {
-      console.warn('API movement error:', e)
+      console.error('API movement error:', e)
     }
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id !== productId) return p
-        const isAddition = type === "PURCHASE" || type === "MANUAL_ADJUSTMENT" || type === "RETURN"
-        const nextStock = isAddition ? p.currentStock + qty : Math.max(0, p.currentStock - qty)
-        return { ...p, currentStock: nextStock }
-      })
-    )
   }
 
   return (
