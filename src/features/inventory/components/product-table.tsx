@@ -36,10 +36,12 @@ export function ProductTable({ products, onOpenMovement, onOpenHistory }: Produc
 
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase().trim()
+      const cleanQ = q.replace(/[\s\-\.]/g, "")
       const matchName = p.name.toLowerCase().includes(q)
-      const matchSku = p.sku.toLowerCase().includes(q)
+      const cleanSku = (p.sku || "").toLowerCase().replace(/[\s\-\.]/g, "")
+      const matchSku = p.sku.toLowerCase().includes(q) || (cleanQ.length > 1 && cleanSku.includes(cleanQ))
       const matchShelf = p.shelfLocation?.toLowerCase().includes(q) || false
-      const matchBarcode = p.barcode?.includes(q) || false
+      const matchBarcode = p.barcode?.toLowerCase().includes(q) || false
       return matchName || matchSku || matchShelf || matchBarcode
     })
   }, [products, categoryFilter, searchQuery])

@@ -62,7 +62,7 @@ export function CalendarGrid({
   return (
     <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden">
       <div className="overflow-x-auto">
-        <div className="min-w-[960px]">
+        <div className="min-w-[1040px]">
           {/* Weekday Columns Header */}
           <div className="grid grid-cols-8 border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/60">
             {/* Time column header */}
@@ -139,7 +139,7 @@ export function CalendarGrid({
                             onSelectAppointment(app)
                           }}
                           className={cn(
-                            "p-2 rounded-xl border text-left shadow-2xs transition-all cursor-pointer space-y-1.5",
+                            "p-2 rounded-xl border text-left shadow-2xs transition-all cursor-pointer space-y-1.5 overflow-hidden",
                             app.status === "APPROVED"
                               ? "bg-sky-500/10 border-sky-500/30 hover:border-sky-500 text-sky-950 dark:text-sky-100"
                               : app.status === "PENDING"
@@ -151,11 +151,26 @@ export function CalendarGrid({
                               : "bg-rose-500/10 border-rose-500/30 hover:border-rose-500 text-rose-950 dark:text-rose-100"
                           )}
                         >
-                          <div className="flex items-center justify-between gap-1.5 overflow-hidden">
-                            <PlateBadge plate={app.plate} size="xs" />
-                            <span className="text-[10px] font-mono font-bold opacity-80 shrink-0">
+                          {/* Top Header: Time and Status Dot */}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-mono font-bold flex items-center gap-1 opacity-90 tabular-nums">
+                              <Clock size={10} className="opacity-70" />
                               {app.time}
                             </span>
+                            <span
+                              className={cn(
+                                "w-1.5 h-1.5 rounded-full shrink-0",
+                                app.status === "APPROVED" && "bg-sky-500",
+                                app.status === "PENDING" && "bg-amber-500",
+                                app.status === "COMPLETED" && "bg-emerald-500",
+                                app.status === "CANCELLED" && "bg-slate-400"
+                              )}
+                            />
+                          </div>
+
+                          {/* Plate Badge - Dedicated row so it never clips */}
+                          <div className="overflow-hidden">
+                            <PlateBadge plate={app.plate} size="xs" />
                           </div>
 
                           <div className="overflow-hidden">

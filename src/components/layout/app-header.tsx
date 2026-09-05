@@ -82,7 +82,8 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
       const matchPlate = v.plate.toLowerCase().replace(/\s/g, "").includes(cleanPlateQ)
       const matchModel = `${v.brand} ${v.model}`.toLowerCase().includes(q)
       const matchCustomer = v.customerName.toLowerCase().includes(q)
-      const matchPhone = v.customerPhone.replace(/\D/g, "").includes(q.replace(/\D/g, ""))
+      const cleanDigits = q.replace(/\D/g, "")
+      const matchPhone = cleanDigits.length >= 3 && v.customerPhone.replace(/\D/g, "").includes(cleanDigits)
 
       return matchPlate || matchModel || matchCustomer || matchPhone
     }).slice(0, 5) // Top 5 matches

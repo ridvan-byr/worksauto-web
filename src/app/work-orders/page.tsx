@@ -13,6 +13,7 @@ import {
   Clock,
   Filter,
   Sparkles,
+  Search,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkOrder, WorkOrderStatus } from "@/features/work-orders/types"
@@ -25,6 +26,7 @@ export default function WorkOrdersPage() {
   const [orders, setOrders] = React.useState<WorkOrder[]>([])
   const [viewMode, setViewMode] = React.useState<"kanban" | "list">("kanban")
   const [selectedStaffFilter, setSelectedStaffFilter] = React.useState<string>("all")
+  const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
 
   const { data: apiOrders } = useWorkOrders()
@@ -105,11 +107,21 @@ export default function WorkOrdersPage() {
     setOrders((prev) => [newOrder, ...prev])
   }
 
-  // Filter by staff
+  // Filter by staff & live search
   const displayedOrders = React.useMemo(() => {
-    if (selectedStaffFilter === "all") return orders
-    return orders.filter((o) => o.assignedMechanicName === selectedStaffFilter)
-  }, [orders, selectedStaffFilter])
+    return orders.filter((o) => {
+      if (selectedStaffFilter !== "all" && o.assignedMechanicName !== selectedStaffFilter) return false
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase().trim()
+      const cleanPlateQ = q.replace(/\s/g, "")
+      const matchPlate = o.plate.toLowerCase().replace(/\s/g, "").includes(cleanPlateQ)
+      const matchNumber = o.workOrderNumber.toLowerCase().includes(q)
+      const matchCustomer = o.customerName.toLowerCase().includes(q)
+      const cleanDigits = q.replace(/\D/g, "")
+      const matchPhone = cleanDigits.length >= 3 && o.customerPhone.replace(/\D/g, "").includes(cleanDigits)
+      return matchPlate || matchNumber || matchCustomer || matchPhone
+    })
+  }, [orders, selectedStaffFilter, searchQuery])
 
   // KPIs
   const inProgressCount = orders.filter((o) => o.status === "IN_PROGRESS").length
@@ -188,22 +200,36 @@ export default function WorkOrdersPage() {
         </div>
       </div>
 
-      {/* Control Bar: Staff Filter & Kanban/List Toggle */}
+      {/* Control Bar: Live Search, Staff Filter & Kanban/List Toggle */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-        {/* Staff Filter */}
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <Filter size={14} />
-          <span className="font-medium">Usta Filtresi:</span>
-          <select
-            value={selectedStaffFilter}
-            onChange={(e) => setSelectedStaffFilter(e.target.value)}
-            className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-          >
-            <option value="all">Tüm Ustalar</option>
-            <option value="Ahmet Usta">Ahmet Usta (Mekanik)</option>
-            <option value="Mustafa Usta">Mustafa Usta (Elektrik & Diagnostik)</option>
-            <option value="Ali Usta">Ali Usta (Ön Takım)</option>
-          </select>
+        <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Live Search Bar */}
+          <div className="relative flex-1 max-w-sm">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              type="text"
+              placeholder="Plaka, iş emri no veya müşteri ara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-9 pl-9 pr-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+            />
+          </div>
+
+          {/* Staff Filter */}
+          <div className="flex items-center gap-2 text-xs text-slate-500 shrink-0">
+            <Filter size={14} />
+            <span className="font-medium shrink-0">Usta:</span>
+            <select
+              value={selectedStaffFilter}
+              onChange={(e) => setSelectedStaffFilter(e.target.value)}
+              className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+            >
+              <option value="all">Tüm Ustalar</option>
+              <option value="Ahmet Usta">Ahmet Usta (Mekanik)</option>
+              <option value="Mustafa Usta">Mustafa Usta (Elektrik & Diagnostik)</option>
+              <option value="Ali Usta">Ali Usta (Ön Takım)</option>
+            </select>
+          </div>
         </div>
 
         {/* View Toggle */}

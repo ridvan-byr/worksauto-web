@@ -36,6 +36,12 @@ import {
   ChevronRight,
   Copy,
   Filter,
+  Cpu,
+  Clock,
+  CreditCard,
+  Tag,
+  ArrowRight,
+  RefreshCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -52,6 +58,7 @@ import {
   useAdminHealth,
   CreateTenantInput,
 } from "@/features/admin/api/use-admin"
+import { formatStatus } from "@/lib/audit-formatters"
 
 export default function AdminDashboardPage() {
   const [mounted, setMounted] = React.useState(false)
@@ -75,7 +82,7 @@ export default function AdminDashboardPage() {
 
   // Audit Logs State (Pagination & Filters)
   const [auditPage, setAuditPage] = React.useState(1)
-  const [auditActionFilter, setAuditActionFilter] = React.useState("ALL")
+  const [auditActionFilter, setAuditActionFilter] = React.useState("PLATFORM")
   const [auditSearchQuery, setAuditSearchQuery] = React.useState("")
   const [selectedLogForDetail, setSelectedLogForDetail] = React.useState<any | null>(null)
   const [copiedState, setCopiedState] = React.useState(false)
@@ -83,7 +90,7 @@ export default function AdminDashboardPage() {
   const { data: auditResponse, isLoading: isAuditLoading } = useAdminAuditLogs({
     page: auditPage,
     limit: 10,
-    action: auditActionFilter === "ALL" ? undefined : auditActionFilter,
+    action: auditActionFilter,
     search: auditSearchQuery || undefined,
   })
 
@@ -218,60 +225,179 @@ export default function AdminDashboardPage() {
     }
   }
 
+  const formatIpAddress = (ip: string | null | undefined) => {
+    if (!ip || ip === "::1" || ip === "127.0.0.1" || ip.toLowerCase() === "localhost") {
+      return "127.0.0.1 (Yerel)"
+    }
+    return ip
+  }
+
+  const formatRoleName = (role: string | undefined) => {
+    if (!role) return "Kullanıcı"
+    switch (role) {
+      case "SUPER_ADMIN": return "Platform Yöneticisi"
+      case "OWNER": return "Servis Sahibi"
+      case "SERVICE_MANAGER": return "Servis Yöneticisi"
+      case "TECHNICIAN": return "Atölye Ustası"
+      case "CASHIER": return "Kasa & Muhasebe"
+      default: return role
+    }
+  }
+
+  const getActionTitle = (action: string) => {
+    switch (action) {
+      case "SECURITY_LOGIN_SUCCESS": return "Platform Girişi Başarılı"
+      case "SECURITY_LOGIN_FAILED": return "Yetkisiz veya Hatalı Giriş Denemesi"
+      case "TENANT_CREATED": return "Yeni Servis (Tenant) Kaydı Açıldı"
+      case "TENANT_DELETED": return "Servis Kaydı ve Verileri Silindi"
+      case "TENANT_ACTIVATED": return "Servis Lisansı Onaylandı ve Aktifleştirildi"
+      case "TENANT_SUSPENDED": return "Servis Hesabı Donduruldu / Askıya Alındı"
+      case "service.deactivated": return "Standart Hizmet Pasife Alındı"
+      case "service.deleted": return "Hizmet Kataloğundan Silindi"
+      case "service.created": return "Yeni Standart Hizmet Tanımlandı"
+      case "service.updated": return "Hizmet Bilgileri Güncellendi"
+      case "appointment.created": return "Yeni Servis Randevusu Oluşturuldu"
+      case "appointment.status_changed": return "Randevu Durumu Güncellendi"
+      case "appointment.cancelled": return "Servis Randevusu İptal Edildi"
+      case "work_order.status_changed": return "İş Emri Süreç / Aşama Değişikliği"
+      case "work_order.created": return "Yeni Araç Kabul ve İş Emri Açıldı"
+      case "invoice.auto_created_on_wo_complete": return "İş Emri Tamamlanması Sonrası Otomatik Fatura"
+      case "invoice.created": return "Servis Faturası Düzenlendi"
+      case "payment.created": return "Tahsilat / Ödeme Kaydı Alındı"
+      default: return action.replace(/_/g, " ").replace(/\./g, " › ")
+    }
+  }
+
   const getActionBadge = (action: string) => {
-    if (action === "SECURITY_LOGIN_SUCCESS") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-          <ShieldCheck size={12} />
-          <span>Başarılı Giriş</span>
-        </span>
-      )
+    switch (action) {
+      case "SECURITY_LOGIN_SUCCESS":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+            <ShieldCheck size={12} />
+            <span>Başarılı Giriş</span>
+          </span>
+        )
+      case "SECURITY_LOGIN_FAILED":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-500 dark:text-rose-300 border border-rose-500/30">
+            <ShieldAlert size={12} />
+            <span>Yetkisiz / Hatalı Giriş</span>
+          </span>
+        )
+      case "TENANT_CREATED":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+            <Building2 size={12} />
+            <span>Yeni Servis Eklendi</span>
+          </span>
+        )
+      case "TENANT_DELETED":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/30">
+            <Trash2 size={12} />
+            <span>Servis Silindi</span>
+          </span>
+        )
+      case "TENANT_ACTIVATED":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+            <CheckCircle2 size={12} />
+            <span>Lisans Onaylandı</span>
+          </span>
+        )
+      case "TENANT_SUSPENDED":
+        return (
+          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+            <Pause size={12} />
+            <span>Servis Askıya Alındı</span>
+          </span>
+        )
+      case "service.deactivated":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+            <Pause size={12} />
+            <span>Hizmet Pasife Alındı</span>
+          </span>
+        )
+      case "service.deleted":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+            <Trash2 size={12} />
+            <span>Hizmet Silindi</span>
+          </span>
+        )
+      case "service.created":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+            <Plus size={12} />
+            <span>Hizmet Tanımlandı</span>
+          </span>
+        )
+      case "service.updated":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+            <Wrench size={12} />
+            <span>Hizmet Güncellendi</span>
+          </span>
+        )
+      case "appointment.created":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+            <Calendar size={12} />
+            <span>Randevu Oluşturuldu</span>
+          </span>
+        )
+      case "appointment.status_changed":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+            <Clock size={12} />
+            <span>Randevu Durumu Değişti</span>
+          </span>
+        )
+      case "appointment.cancelled":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+            <AlertCircle size={12} />
+            <span>Randevu İptal Edildi</span>
+          </span>
+        )
+      case "work_order.status_changed":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+            <RefreshCw size={12} />
+            <span>İş Emri Aşaması Değişti</span>
+          </span>
+        )
+      case "work_order.created":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30">
+            <Wrench size={12} />
+            <span>Yeni İş Emri Açıldı</span>
+          </span>
+        )
+      case "invoice.auto_created_on_wo_complete":
+      case "invoice.created":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+            <FileText size={12} />
+            <span>Fatura Kesildi</span>
+          </span>
+        )
+      case "payment.created":
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+            <CreditCard size={12} />
+            <span>Tahsilat Alındı</span>
+          </span>
+        )
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            <Tag size={10} />
+            <span className="capitalize">{action.replace(/_/g, " ").replace(/\./g, " › ")}</span>
+          </span>
+        )
     }
-    if (action === "SECURITY_LOGIN_FAILED") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-300 border border-rose-500/30">
-          <ShieldAlert size={12} />
-          <span>Yetkisiz / Hatalı Giriş</span>
-        </span>
-      )
-    }
-    if (action === "TENANT_CREATED") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
-          <Building2 size={12} />
-          <span>Yeni Servis Eklendi</span>
-        </span>
-      )
-    }
-    if (action === "TENANT_DELETED") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-500 dark:text-rose-400 border border-rose-500/30">
-          <Trash2 size={12} />
-          <span>Servis Silindi</span>
-        </span>
-      )
-    }
-    if (action === "TENANT_ACTIVATED") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
-          <CheckCircle2 size={12} />
-          <span>Lisans Onaylandı</span>
-        </span>
-      )
-    }
-    if (action === "TENANT_SUSPENDED") {
-      return (
-        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
-          <Pause size={12} />
-          <span>Servis Askıya Alındı</span>
-        </span>
-      )
-    }
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-        <span>{action}</span>
-      </span>
-    )
   }
 
   const auditLogs = auditResponse?.data || []
@@ -519,9 +645,10 @@ export default function AdminDashboardPage() {
                         {t.isActive ? (
                           <Button
                             size="sm"
+                            variant="outline"
                             onClick={() => setStatusModalState({ isOpen: true, tenantId: t.id, title: t.title, currentActive: true })}
                             disabled={updateStatusMutation.isPending}
-                            className="h-8 text-xs bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-300 border border-rose-500/30 gap-1 cursor-pointer"
+                            className="h-8 text-xs border-amber-500/30 dark:border-amber-500/30 text-amber-600 dark:text-amber-400 bg-amber-500/10 dark:bg-amber-500/15 hover:bg-amber-500/20 hover:text-amber-700 dark:hover:text-amber-300 gap-1.5 cursor-pointer font-medium"
                           >
                             <Pause size={13} />
                             <span>Askıya Al</span>
@@ -529,9 +656,10 @@ export default function AdminDashboardPage() {
                         ) : (
                           <Button
                             size="sm"
+                            variant="outline"
                             onClick={() => setStatusModalState({ isOpen: true, tenantId: t.id, title: t.title, currentActive: false })}
                             disabled={updateStatusMutation.isPending}
-                            className="h-8 text-xs bg-emerald-600 hover:bg-emerald-500 text-white font-semibold gap-1 shadow-sm shadow-emerald-500/25 cursor-pointer"
+                            className="h-8 text-xs border-emerald-500/30 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/15 hover:bg-emerald-500/20 hover:text-emerald-700 dark:hover:text-emerald-300 gap-1.5 cursor-pointer font-medium"
                           >
                             <Check size={13} />
                             <span>Lisansı Aktif Et</span>
@@ -1054,8 +1182,8 @@ export default function AdminDashboardPage() {
                 onClick={handleConfirmStatusToggle}
                 className={`font-bold gap-1.5 shadow-md cursor-pointer ${
                   statusModalState.currentActive
-                    ? "bg-amber-600 hover:bg-amber-500 text-white shadow-amber-600/30"
-                    : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30"
+                    ? "bg-amber-600 hover:bg-amber-500 dark:bg-amber-600 dark:hover:bg-amber-500 text-white dark:text-white shadow-amber-600/30"
+                    : "bg-emerald-600 hover:bg-emerald-500 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white dark:text-white shadow-emerald-600/30"
                 }`}
               >
                 {updateStatusMutation.isPending ? (
@@ -1094,6 +1222,50 @@ export default function AdminDashboardPage() {
           {/* Audit Action Filters */}
           <div className="flex flex-wrap items-center gap-1.5">
             <button
+              onClick={() => { setAuditActionFilter("PLATFORM"); setAuditPage(1); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                auditActionFilter === "PLATFORM"
+                  ? "bg-sky-500 text-white font-semibold shadow-xs"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
+              }`}
+            >
+              <ShieldCheck size={12} />
+              <span>Platform & Güvenlik</span>
+            </button>
+            <button
+              onClick={() => { setAuditActionFilter("TENANT"); setAuditPage(1); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                auditActionFilter === "TENANT"
+                  ? "bg-sky-500 text-white font-semibold shadow-xs"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
+              }`}
+            >
+              <Building2 size={12} />
+              <span>Servis & Lisans</span>
+            </button>
+            <button
+              onClick={() => { setAuditActionFilter("SECURITY"); setAuditPage(1); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                auditActionFilter === "SECURITY"
+                  ? "bg-sky-500 text-white font-semibold shadow-xs"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
+              }`}
+            >
+              <ShieldAlert size={12} />
+              <span>Giriş Denemeleri</span>
+            </button>
+            <button
+              onClick={() => { setAuditActionFilter("OPERATIONS"); setAuditPage(1); }}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                auditActionFilter === "OPERATIONS"
+                  ? "bg-sky-500 text-white font-semibold shadow-xs"
+                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
+              }`}
+            >
+              <Wrench size={12} />
+              <span>Servis Operasyonları</span>
+            </button>
+            <button
               onClick={() => { setAuditActionFilter("ALL"); setAuditPage(1); }}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 auditActionFilter === "ALL"
@@ -1101,37 +1273,7 @@ export default function AdminDashboardPage() {
                   : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
               }`}
             >
-              Tümü
-            </button>
-            <button
-              onClick={() => { setAuditActionFilter("SECURITY"); setAuditPage(1); }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                auditActionFilter === "SECURITY"
-                  ? "bg-sky-500 text-white font-semibold shadow-xs"
-                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-              }`}
-            >
-              Güvenlik & Girişler
-            </button>
-            <button
-              onClick={() => { setAuditActionFilter("TENANT"); setAuditPage(1); }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                auditActionFilter === "TENANT"
-                  ? "bg-sky-500 text-white font-semibold shadow-xs"
-                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-              }`}
-            >
-              Servis & Lisans
-            </button>
-            <button
-              onClick={() => { setAuditActionFilter("work_order"); setAuditPage(1); }}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-                auditActionFilter === "work_order"
-                  ? "bg-sky-500 text-white font-semibold shadow-xs"
-                  : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-              }`}
-            >
-              İş Emirleri
+              Tüm Kayıtlar
             </button>
           </div>
         </div>
@@ -1144,7 +1286,7 @@ export default function AdminDashboardPage() {
               type="text"
               value={auditSearchQuery}
               onChange={(e) => { setAuditSearchQuery(e.target.value); setAuditPage(1); }}
-              placeholder="IP adresi, işlem kodu veya detay ara..."
+              placeholder="Aktör, servis adı, işlem türü (fatura, randevu...), IP veya ID ara..."
               className="w-full h-8 pl-8 pr-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
             />
           </div>
@@ -1152,7 +1294,7 @@ export default function AdminDashboardPage() {
 
         {/* Audit Table Card */}
         <Card className="border-slate-200 dark:border-slate-800/80 bg-white/90 dark:bg-[#0e1524]/60 backdrop-blur-xl overflow-hidden shadow-xs">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto min-h-[520px]">
             <table className="w-full text-left text-xs">
               <thead className="border-b border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-950/40 text-slate-500 dark:text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
                 <tr>
@@ -1174,16 +1316,18 @@ export default function AdminDashboardPage() {
                     <td className="p-3.5">
                       {log.user ? (
                         <div>
-                          <div className="font-semibold text-slate-900 dark:text-white">
+                          <div className="font-semibold text-slate-900 dark:text-white text-xs">
                             {log.user.name} {log.user.surname}
                           </div>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                            {log.user.role}
-                          </span>
+                          {`${log.user.name || ""} ${log.user.surname || ""}`.trim().toLowerCase() !== formatRoleName(log.user.role).toLowerCase() && (
+                            <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
+                              {formatRoleName(log.user.role)}
+                            </span>
+                          )}
                         </div>
                       ) : (
                         <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">
-                          Dış İstemci / Sistem
+                          Sistem
                         </span>
                       )}
                     </td>
@@ -1204,7 +1348,7 @@ export default function AdminDashboardPage() {
                       <div className="flex flex-col gap-1.5">
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono text-xs font-semibold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-2 py-0.5 rounded-md border border-sky-500/20 inline-block w-fit">
-                            {log.ipAddress === "::1" ? "127.0.0.1 (Yerel)" : log.ipAddress || "127.0.0.1"}
+                            {formatIpAddress(log.ipAddress)}
                           </span>
                         </div>
                         {log.userAgent && (
@@ -1318,14 +1462,19 @@ export default function AdminDashboardPage() {
               <X size={16} />
             </button>
 
-            <div className="space-y-1">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-[11px] font-semibold">
-                <Terminal size={12} />
-                <span>Olay Güvenlik İncelemesi</span>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-[11px] font-semibold">
+                  <Terminal size={12} />
+                  <span>Olay Güvenlik İncelemesi</span>
+                </div>
+                {getActionBadge(selectedLogForDetail.action)}
               </div>
-              <h3 className="text-lg font-black text-slate-900 dark:text-white">{selectedLogForDetail.action}</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
-                {selectedLogForDetail.id}
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                {getActionTitle(selectedLogForDetail.action)}
+              </h3>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                Log ID: {selectedLogForDetail.id}
               </p>
             </div>
 
@@ -1333,15 +1482,36 @@ export default function AdminDashboardPage() {
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">İstemci IP Adresi</span>
                 <p className="font-mono text-sky-600 dark:text-sky-400 font-bold">
-                  {selectedLogForDetail.ipAddress === "::1"
-                    ? "127.0.0.1 (Yerel İstemci / Localhost)"
-                    : selectedLogForDetail.ipAddress || "127.0.0.1"}
+                  {formatIpAddress(selectedLogForDetail.ipAddress)}
                 </p>
               </div>
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 space-y-1">
                 <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">Kayıt Tarihi</span>
-                <p className="font-mono text-slate-700 dark:text-slate-300 font-semibold">{new Date(selectedLogForDetail.createdAt).toLocaleString("tr-TR")}</p>
+                <p className="font-mono text-slate-700 dark:text-slate-300 font-semibold">
+                  {new Date(selectedLogForDetail.createdAt).toLocaleString("tr-TR")}
+                </p>
               </div>
+            </div>
+
+            {/* İşlemi Yapan Aktör / Kullanıcı Kartı */}
+            <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs">
+              <span className="text-[10px] text-slate-500 uppercase tracking-wider font-semibold">İşlemi Yapan Aktör</span>
+              {selectedLogForDetail.user ? (
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-slate-900 dark:text-white">
+                    {selectedLogForDetail.user.name} {selectedLogForDetail.user.surname}
+                  </span>
+                  {`${selectedLogForDetail.user.name || ""} ${selectedLogForDetail.user.surname || ""}`.trim().toLowerCase() !== formatRoleName(selectedLogForDetail.user.role).toLowerCase() && (
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-mono">
+                      {formatRoleName(selectedLogForDetail.user.role)}
+                    </span>
+                  )}
+                </div>
+              ) : (
+                <span className="text-slate-400 dark:text-slate-500 italic text-[11px]">
+                  Sistem
+                </span>
+              )}
             </div>
 
             {selectedLogForDetail.userAgent && (
@@ -1351,10 +1521,80 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
+            {/* Structured Visual Summary if changesBefore / changesAfter has values */}
+            {(() => {
+              const before = selectedLogForDetail.changesBefore || {}
+              const after = selectedLogForDetail.changesAfter || {}
+              const hasDiff = Object.keys(before).length > 0 || Object.keys(after).length > 0
+              if (!hasDiff) return null
+
+              return (
+                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
+                  <div className="font-semibold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-amber-500" />
+                    <span>Özet Değişiklik Bilgileri</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 text-[11px]">
+                    {(before.name || after.name || after.serviceName) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">Hizmet Tanımı</span>
+                        <span className="font-medium text-slate-900 dark:text-white">{before.name || after.name || after.serviceName}</span>
+                      </div>
+                    )}
+                    {(before.plate || after.plate) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">İlgili Araç Plaka</span>
+                        <span className="font-mono font-bold text-sky-600 dark:text-sky-400">{before.plate || after.plate}</span>
+                      </div>
+                    )}
+                    {(before.customerName || after.customerName) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">Müşteri</span>
+                        <span className="font-medium text-slate-900 dark:text-white">{before.customerName || after.customerName}</span>
+                      </div>
+                    )}
+                    {(before.workOrderNumber || after.workOrderNumber) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">İş Emri No</span>
+                        <span className="font-mono font-bold text-slate-900 dark:text-white">{before.workOrderNumber || after.workOrderNumber}</span>
+                      </div>
+                    )}
+                    {(before.status || after.status) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 sm:col-span-2 flex items-center justify-between">
+                        <div>
+                          <span className="text-slate-500 block text-[10px]">Aşama / Durum Değişimi</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            {before.status && (
+                              <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px] line-through">
+                                {formatStatus(before.status)}
+                              </span>
+                            )}
+                            {before.status && after.status && <ArrowRight size={12} className="text-slate-400" />}
+                            {after.status && (
+                              <span className="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono text-[10px] font-bold">
+                                {formatStatus(after.status)}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    {after.reason && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60 sm:col-span-2">
+                        <span className="text-slate-500 block text-[10px]">İşlem Sebebi / Notu</span>
+                        <span className="text-slate-700 dark:text-slate-300 italic">{after.reason}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
+
             {/* Changes / Payload Data */}
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-800 dark:text-slate-300">Olay Değişiklik Verisi (Payload)</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-300">Olay Değişiklik Verisi (Tam JSON)</span>
                 <button
                   onClick={() => handleCopyJson(selectedLogForDetail.changesAfter || selectedLogForDetail.changesBefore)}
                   className="text-[11px] text-sky-600 dark:text-sky-400 hover:text-sky-500 dark:hover:text-sky-300 flex items-center gap-1 cursor-pointer"
@@ -1364,7 +1604,7 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-emerald-400 overflow-x-auto max-h-56">
+              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-emerald-400 overflow-x-auto max-h-48">
                 <pre>{JSON.stringify(selectedLogForDetail.changesAfter || selectedLogForDetail.changesBefore || { info: "Ek detay verisi bulunmuyor" }, null, 2)}</pre>
               </div>
             </div>

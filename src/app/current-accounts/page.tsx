@@ -89,9 +89,10 @@ export default function CurrentAccountsPage() {
 
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase().trim()
+      const cleanDigits = q.replace(/\D/g, "")
       const matchName = a.customerName.toLowerCase().includes(q)
       const matchCompany = a.companyTitle?.toLowerCase().includes(q) || false
-      const matchPhone = a.customerPhone.includes(q)
+      const matchPhone = a.customerPhone.toLowerCase().includes(q) || (cleanDigits.length >= 3 && a.customerPhone.replace(/\D/g, "").includes(cleanDigits))
       return matchName || matchCompany || matchPhone
     })
   }, [accounts, filterType, searchQuery])

@@ -124,9 +124,11 @@ export default function InvoicesPage() {
       if (statusFilter !== "all" && inv.status !== statusFilter) return false
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase().trim()
+      const cleanPlateQ = q.replace(/\s/g, "")
       const matchNum = inv.invoiceNumber.toLowerCase().includes(q)
       const matchCust = inv.customerName.toLowerCase().includes(q) || (inv.companyTitle?.toLowerCase().includes(q) || false)
-      const matchPlate = inv.vehiclePlate.toLowerCase().includes(q)
+      const cleanPlate = (inv.vehiclePlate || "").toLowerCase().replace(/\s/g, "")
+      const matchPlate = cleanPlate.includes(cleanPlateQ) || inv.vehiclePlate.toLowerCase().includes(q)
       const matchWO = inv.workOrderNumber?.toLowerCase().includes(q) || false
       return matchNum || matchCust || matchPlate || matchWO
     })

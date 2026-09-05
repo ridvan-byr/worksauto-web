@@ -70,8 +70,10 @@ export default function VehiclesPage() {
       const matchPlate = v.plate.toLowerCase().replace(/\s/g, "").includes(q.replace(/\s/g, ""))
       const matchModel = `${v.brand} ${v.model}`.toLowerCase().includes(q)
       const matchCustomer = v.customerName.toLowerCase().includes(q)
+      const cleanDigits = q.replace(/\D/g, "")
+      const matchPhone = cleanDigits.length >= 3 && v.customerPhone.replace(/\D/g, "").includes(cleanDigits)
 
-      return matchPlate || matchModel || matchCustomer
+      return matchPlate || matchModel || matchCustomer || matchPhone
     })
   }, [vehicles, brandFilter, searchQuery])
 

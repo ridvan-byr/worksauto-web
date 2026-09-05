@@ -132,6 +132,12 @@ export function AppSidebar({
         roles: ["OWNER", "SERVICE_MANAGER", "CASHIER", "tenant_admin"],
       },
       {
+        title: "İşlem Geçmişi & Denetim",
+        href: "/audit-logs",
+        icon: ShieldCheck,
+        roles: ["OWNER", "SERVICE_MANAGER", "tenant_admin"],
+      },
+      {
         title: "Servis Ayarları",
         href: "/settings",
         icon: Settings,

@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 
 const ADMIN_TOKEN_KEY = 'worksauto_admin_token';
@@ -172,6 +172,7 @@ export function useAdminAuditLogs(params?: {
         headers: { Authorization: `Bearer ${token}` },
       }),
     enabled: !!token,
+    placeholderData: keepPreviousData,
     refetchInterval: 10000,
   });
 }

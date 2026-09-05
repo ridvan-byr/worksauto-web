@@ -116,11 +116,14 @@ export default function CustomersPage() {
       const q = searchQuery.toLowerCase().trim()
       const matchName = `${c.name} ${c.surname}`.toLowerCase().includes(q)
       const matchCompany = c.companyTitle?.toLowerCase().includes(q) || false
-      const matchPhone = c.phone.replace(/\D/g, "").includes(q.replace(/\D/g, ""))
+      const cleanDigits = q.replace(/\D/g, "")
+      const matchPhone = cleanDigits.length >= 3 && c.phone.replace(/\D/g, "").includes(cleanDigits)
       const matchPlates = c.vehicles.some((v) => v.plate.toLowerCase().replace(/\s/g, "").includes(q.replace(/\s/g, "")))
       const matchModels = c.vehicles.some((v) => `${v.brand} ${v.model}`.toLowerCase().includes(q))
+      const matchEmail = c.email?.toLowerCase().includes(q) || false
+      const matchTax = c.taxNumber?.includes(q) || false
 
-      return matchName || matchCompany || matchPhone || matchPlates || matchModels
+      return matchName || matchCompany || matchPhone || matchPlates || matchModels || matchEmail || matchTax
     })
   }, [customers, filterType, searchQuery])
 

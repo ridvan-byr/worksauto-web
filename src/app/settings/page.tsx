@@ -17,6 +17,20 @@ import {
   AlertTriangle,
   X,
   Briefcase,
+  Eye,
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Terminal,
+  Sparkles,
+  ArrowRight,
+  Tag,
+  RefreshCw,
+  Calendar,
+  FileText,
+  CreditCard,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -34,8 +48,15 @@ import {
   useUpdateStaff,
   useDeleteStaff,
 } from "@/features/settings/api/use-settings"
+import { DEFAULT_LIFTS, SERVICE_CATEGORIES, formatServiceCategory } from "@/lib/workshop-constants"
+import { createPortal } from "react-dom"
 
 export default function SettingsPage() {
+  const [mounted, setMounted] = React.useState(false)
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   const { user } = useAuth()
   const userRole = (user?.role || "").toUpperCase()
   const isOwner = userRole === "OWNER" || userRole === "SERVICE_MANAGER" || userRole === "TENANT_ADMIN"
@@ -73,13 +94,13 @@ export default function SettingsPage() {
   // Service Modals State
   const [isNewServiceModalOpen, setIsNewServiceModalOpen] = React.useState(false)
   const [newServiceName, setNewServiceName] = React.useState("")
-  const [newServiceCategory, setNewServiceCategory] = React.useState("Genel Bakım")
+  const [newServiceCategory, setNewServiceCategory] = React.useState("PERIYODIK_BAKIM")
   const [newServicePrice, setNewServicePrice] = React.useState(1500)
   const [newServiceDuration, setNewServiceDuration] = React.useState(60)
 
   const [editingService, setEditingService] = React.useState<any | null>(null)
   const [editServiceName, setEditServiceName] = React.useState("")
-  const [editServiceCategory, setEditServiceCategory] = React.useState("")
+  const [editServiceCategory, setEditServiceCategory] = React.useState("PERIYODIK_BAKIM")
   const [editServicePrice, setEditServicePrice] = React.useState(0)
   const [editServiceDuration, setEditServiceDuration] = React.useState(60)
   const [editServiceActive, setEditServiceActive] = React.useState(true)
@@ -95,7 +116,7 @@ export default function SettingsPage() {
   const [newStaffPhone, setNewStaffPhone] = React.useState("")
   const [newStaffEmail, setNewStaffEmail] = React.useState("")
   const [newStaffRole, setNewStaffRole] = React.useState("TECHNICIAN")
-  const [newStaffLift, setNewStaffLift] = React.useState("Lift-1")
+  const [newStaffLift, setNewStaffLift] = React.useState("Lift 1")
   const [newStaffSpecialty, setNewStaffSpecialty] = React.useState("Genel Mekanik")
 
   const [editingStaff, setEditingStaff] = React.useState<any | null>(null)
@@ -104,7 +125,7 @@ export default function SettingsPage() {
   const [editStaffPhone, setEditStaffPhone] = React.useState("")
   const [editStaffEmail, setEditStaffEmail] = React.useState("")
   const [editStaffRole, setEditStaffRole] = React.useState("TECHNICIAN")
-  const [editStaffLift, setEditStaffLift] = React.useState("Lift-1")
+  const [editStaffLift, setEditStaffLift] = React.useState("Lift 1")
   const [editStaffSpecialty, setEditStaffSpecialty] = React.useState("")
   const [editStaffActive, setEditStaffActive] = React.useState(true)
 
@@ -172,7 +193,7 @@ export default function SettingsPage() {
   const handleOpenEditService = (srv: any) => {
     setEditingService(srv)
     setEditServiceName(srv.name || "")
-    setEditServiceCategory(srv.category || "Genel Bakım")
+    setEditServiceCategory(srv.category || "PERIYODIK_BAKIM")
     setEditServicePrice(Number(srv.basePrice || 0))
     setEditServiceDuration(Number(srv.defaultDurationMin || srv.estimatedMinutes || 60))
     setEditServiceActive(srv.isActive !== false)
@@ -234,15 +255,15 @@ export default function SettingsPage() {
         phone: newStaffPhone,
         email: newStaffEmail || undefined,
         role: newStaffRole,
-        assignedLift: newStaffLift,
-        specialty: newStaffSpecialty || "Genel Mekanik",
+        assignedLift: newStaffRole === "TECHNICIAN" ? newStaffLift : undefined,
+        specialty: newStaffSpecialty || (newStaffRole === "TECHNICIAN" ? "Genel Mekanik" : "Ofis / Yönetim"),
       })
       setIsNewStaffModalOpen(false)
       setNewStaffName("")
       setNewStaffSurname("")
       setNewStaffPhone("")
       setNewStaffEmail("")
-      setNewStaffLift("Lift-1")
+      setNewStaffLift("Lift 1")
       setNewStaffSpecialty("Genel Mekanik")
     } catch (err) {
       console.error("Personel ekleme hatası:", err)
@@ -258,7 +279,7 @@ export default function SettingsPage() {
     setEditStaffPhone(u.phone || "")
     setEditStaffEmail(u.email || "")
     setEditStaffRole(u.role || "TECHNICIAN")
-    setEditStaffLift(mechanic?.assignedLift || st.assignedLift || "Lift-1")
+    setEditStaffLift(mechanic?.assignedLift || st.assignedLift || "Lift 1")
     setEditStaffSpecialty(mechanic?.specialty || st.specialty || "Genel Mekanik")
     setEditStaffActive(u.isActive !== false)
   }
@@ -276,7 +297,7 @@ export default function SettingsPage() {
           phone: editStaffPhone,
           email: editStaffEmail || undefined,
           role: editStaffRole,
-          assignedLift: editStaffLift,
+          assignedLift: editStaffRole === "TECHNICIAN" ? editStaffLift : null,
           specialty: editStaffSpecialty,
           isActive: editStaffActive,
         },
@@ -674,9 +695,17 @@ export default function SettingsPage() {
                           <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">
                             {srv.name}
                           </h3>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                            Kategori: {srv.category || "Genel Bakım"}
-                          </p>
+                          <div className="mt-1 flex items-center">
+                            {(() => {
+                              const cat = formatServiceCategory(srv.category)
+                              return (
+                                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border ${cat.badgeClass}`}>
+                                  <span>{cat.icon}</span>
+                                  <span>{cat.label}</span>
+                                </span>
+                              )
+                            })()}
+                          </div>
                         </div>
                         <Badge
                           variant="outline"
@@ -872,9 +901,9 @@ export default function SettingsPage() {
                           <span className="font-semibold text-slate-800 dark:text-slate-200">{specialty}</span>
                         </div>
                         <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
-                          <span>Atanmış Lift:</span>
-                          <span className="font-bold font-mono text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px]">
-                            {lift}
+                          <span>{role === "TECHNICIAN" ? "Atanmış Lift:" : "Çalışma Alanı:"}</span>
+                          <span className="font-semibold text-slate-800 dark:text-slate-200 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px]">
+                            {role === "TECHNICIAN" ? lift : "Ofis / Danışma"}
                           </span>
                         </div>
                         <div className="flex items-center justify-between text-slate-600 dark:text-slate-400">
@@ -945,9 +974,12 @@ export default function SettingsPage() {
       {/* ======================================================== */}
 
       {/* Modal 1: Yeni Hizmet Ekle */}
-      {isNewServiceModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+      {mounted && isNewServiceModalOpen && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
+          onClick={(e) => { if (e.target === e.currentTarget) setIsNewServiceModalOpen(false) }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 my-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Yeni Standart Hizmet Tanımla
@@ -974,14 +1006,20 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium">Kategori</label>
-                <input
-                  type="text"
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Hizmet Kategorisi *
+                </label>
+                <select
                   value={newServiceCategory}
                   onChange={(e) => setNewServiceCategory(e.target.value)}
-                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                  placeholder="Genel Bakım, Mekanik, Elektrik vb."
-                />
+                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                >
+                  {SERVICE_CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1028,13 +1066,17 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal 2: Hizmeti Düzenle */}
-      {editingService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+      {mounted && editingService && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
+          onClick={(e) => { if (e.target === e.currentTarget) setEditingService(null) }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 my-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Hizmeti Düzenle
@@ -1060,13 +1102,25 @@ export default function SettingsPage() {
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-medium">Kategori</label>
-                <input
-                  type="text"
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                  Hizmet Kategorisi *
+                </label>
+                <select
                   value={editServiceCategory}
                   onChange={(e) => setEditServiceCategory(e.target.value)}
-                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                />
+                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                >
+                  {editServiceCategory && !SERVICE_CATEGORIES.some((c) => c.id === editServiceCategory || c.label === editServiceCategory) && (
+                    <option value={editServiceCategory}>
+                      🏷️ {editServiceCategory} (Mevcut Kategori)
+                    </option>
+                  )}
+                  {SERVICE_CATEGORIES.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1123,13 +1177,17 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal 3: Hizmeti Silme Onayı */}
-      {deletingService && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl animate-in zoom-in-95 text-center">
+      {mounted && deletingService && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeletingService(null) }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 text-center my-auto">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center">
               <Trash2 size={24} />
             </div>
@@ -1161,13 +1219,17 @@ export default function SettingsPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal 4: Yeni Personel Ekle */}
-      {isNewStaffModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+      {mounted && isNewStaffModalOpen && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
+          onClick={(e) => { if (e.target === e.currentTarget) setIsNewStaffModalOpen(false) }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 my-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Yeni Personel & Usta Kaydı
@@ -1247,14 +1309,26 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium">Varsayılan Lift</label>
-                  <input
-                    type="text"
-                    value={newStaffLift}
-                    onChange={(e) => setNewStaffLift(e.target.value)}
-                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                    placeholder="Lift-1"
-                  />
+                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Varsayılan Lift
+                  </label>
+                  {newStaffRole === "TECHNICIAN" ? (
+                    <select
+                      value={newStaffLift}
+                      onChange={(e) => setNewStaffLift(e.target.value)}
+                      className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                    >
+                      {DEFAULT_LIFTS.map((lift) => (
+                        <option key={lift.id} value={lift.id}>
+                          {lift.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full h-9 px-3 flex items-center text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/60 text-slate-400 italic select-none">
+                      Gerekmez (Ofis/Yönetim)
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1289,13 +1363,17 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal 5: Personeli Düzenle */}
-      {editingStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95">
+      {mounted && editingStaff && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
+          onClick={(e) => { if (e.target === e.currentTarget) setEditingStaff(null) }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 my-auto">
             <div className="flex items-center justify-between">
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
                 Personel Bilgilerini Düzenle
@@ -1371,14 +1449,31 @@ export default function SettingsPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-xs font-medium">Varsayılan Lift</label>
-                  <input
-                    type="text"
-                    value={editStaffLift}
-                    onChange={(e) => setEditStaffLift(e.target.value)}
-                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                    placeholder="Lift-1"
-                  />
+                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    Varsayılan Lift
+                  </label>
+                  {editStaffRole === "TECHNICIAN" ? (
+                    <select
+                      value={editStaffLift}
+                      onChange={(e) => setEditStaffLift(e.target.value)}
+                      className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                    >
+                      {editStaffLift && !DEFAULT_LIFTS.some((l) => l.id === editStaffLift || l.label.startsWith(editStaffLift)) && (
+                        <option value={editStaffLift}>
+                          {editStaffLift} (Mevcut)
+                        </option>
+                      )}
+                      {DEFAULT_LIFTS.map((lift) => (
+                        <option key={lift.id} value={lift.id}>
+                          {lift.label}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="w-full h-9 px-3 flex items-center text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/60 text-slate-400 italic select-none">
+                      Gerekmez (Ofis/Yönetim)
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -1423,13 +1518,17 @@ export default function SettingsPage() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Modal 6: Personeli Silme Onayı */}
-      {deletingStaff && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-xs p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl animate-in zoom-in-95 text-center">
+      {mounted && deletingStaff && createPortal(
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200"
+          onClick={(e) => { if (e.target === e.currentTarget) setDeletingStaff(null) }}
+        >
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 text-center my-auto">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center">
               <AlertTriangle size={24} />
             </div>
@@ -1464,7 +1563,8 @@ export default function SettingsPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

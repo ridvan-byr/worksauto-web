@@ -16,6 +16,7 @@ import {
   Wrench,
   AlertCircle,
   Sparkles,
+  Search,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Appointment, CancellationReason } from "@/features/appointments/types"
@@ -29,6 +30,7 @@ export default function AppointmentsPage() {
   const [appointments, setAppointments] = React.useState<Appointment[]>([])
   const [viewMode, setViewMode] = React.useState<"calendar" | "list">("calendar")
   const [selectedStaffFilter, setSelectedStaffFilter] = React.useState<string>("all")
+  const [searchQuery, setSearchQuery] = React.useState("")
 
   // Date Navigation State: Start of current week (Monday)
   const [currentWeekStart, setCurrentWeekStart] = React.useState<Date>(() => {
@@ -117,11 +119,21 @@ export default function AppointmentsPage() {
     return `${startDay} - ${endDay} ${month} ${year}`
   }, [currentWeekStart])
 
-  // Filtered by staff
+  // Filtered by staff & live search
   const displayedAppointments = React.useMemo(() => {
-    if (selectedStaffFilter === "all") return appointments
-    return appointments.filter((a) => a.assignedStaffName === selectedStaffFilter)
-  }, [appointments, selectedStaffFilter])
+    return appointments.filter((a) => {
+      if (selectedStaffFilter !== "all" && a.assignedStaffName !== selectedStaffFilter) return false
+      if (!searchQuery.trim()) return true
+      const q = searchQuery.toLowerCase().trim()
+      const cleanPlateQ = q.replace(/\s/g, "")
+      const matchPlate = a.plate.toLowerCase().replace(/\s/g, "").includes(cleanPlateQ)
+      const matchCustomer = a.customerName.toLowerCase().includes(q)
+      const cleanDigits = q.replace(/\D/g, "")
+      const matchPhone = cleanDigits.length >= 3 && a.customerPhone.replace(/\D/g, "").includes(cleanDigits)
+      const matchModel = `${a.brand} ${a.model}`.toLowerCase().includes(q)
+      return matchPlate || matchCustomer || matchPhone || matchModel
+    })
+  }, [appointments, selectedStaffFilter, searchQuery])
 
   // KPI Calculations
   const now = new Date()
@@ -287,8 +299,20 @@ export default function AppointmentsPage() {
           </span>
         </div>
 
-        {/* View Mode Switch & Staff Filter */}
+        {/* View Mode Switch, Search & Staff Filter */}
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Live Search Bar */}
+          <div className="relative w-48 sm:w-56">
+            <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+            <input
+              type="text"
+              placeholder="Plaka veya müşteri ara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full h-9 pl-8 pr-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+            />
+          </div>
+
           {/* Mechanic / Staff Filter */}
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
             <Filter size={13} />

@@ -1,6 +1,20 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { toast } from '@/components/ui/sonner';
+
+export function useTenantAuditLogs(params?: {
+  page?: number;
+  limit?: number;
+  action?: string;
+  entityName?: string;
+  search?: string;
+}) {
+  return useQuery({
+    queryKey: ['tenant-audit-logs', params],
+    queryFn: () => apiClient.get<any>('/audit-logs', { params }),
+    placeholderData: keepPreviousData,
+  });
+}
 
 export function useServices(params?: { search?: string; category?: string; isActive?: boolean }) {
   return useQuery({
