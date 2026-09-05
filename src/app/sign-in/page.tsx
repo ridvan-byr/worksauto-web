@@ -236,7 +236,7 @@ export default function SignInPage() {
                   Servis Paneline Giriş Yap
                 </h2>
                 <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                  Sisteme kayıtlı yetkili cep telefonu numaranızı girin. Size bir doğrulama kodu göndereceğiz.
+                  Sisteme kayıtlı yetkili cep telefonu numaranızı girerek devam edin.
                 </p>
               </div>
 
@@ -337,7 +337,7 @@ export default function SignInPage() {
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                   ) : (
                     <>
-                      <span>Doğrulama Kodu Gönder</span>
+                      <span>Giriş Yap</span>
                       <ArrowRight size={16} />
                     </>
                   )}
