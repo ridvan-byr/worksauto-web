@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
+import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@/components/ui/sonner"
 import { User, Tenant } from "./types"
 
@@ -27,6 +28,7 @@ const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const pathname = usePathname()
+  const queryClient = useQueryClient()
 
   const [user, setUser] = React.useState<User | null>(null)
   const [tenant, setTenant] = React.useState<Tenant | null>(null)
@@ -280,12 +282,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem(AUTH_STORAGE_KEY)
       localStorage.removeItem(ACCESS_TOKEN_KEY)
       localStorage.removeItem(REFRESH_TOKEN_KEY)
+      queryClient.clear()
     } catch {
       // ignore
     }
     toast.info("Oturum güvenli şekilde kapatıldı. Tekrar görüşmek üzere!")
     router.push("/sign-in")
-  }, [router])
+  }, [router, queryClient])
 
   const completeOnboarding = React.useCallback((data: Partial<Tenant>) => {
     setTenant((prev) => {

@@ -35,6 +35,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/features/auth/auth-context"
 import {
   useTenantSettings,
@@ -302,9 +303,11 @@ export default function SettingsPage() {
           isActive: editStaffActive,
         },
       })
+      toast.success("Personel bilgileri başarıyla güncellendi")
       setEditingStaff(null)
-    } catch (err) {
+    } catch (err: any) {
       console.error("Personel güncelleme hatası:", err)
+      toast.error(err.message || "Personel güncellenirken bir hata oluştu")
     }
   }
 
@@ -700,7 +703,7 @@ export default function SettingsPage() {
                               const cat = formatServiceCategory(srv.category)
                               return (
                                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium border ${cat.badgeClass}`}>
-                                  <span>{cat.icon}</span>
+                                  {cat.icon && <span>{cat.icon}</span>}
                                   <span>{cat.label}</span>
                                 </span>
                               )
@@ -1016,7 +1019,7 @@ export default function SettingsPage() {
                 >
                   {SERVICE_CATEGORIES.map((cat) => (
                     <option key={cat.id} value={cat.id}>
-                      {cat.icon} {cat.label}
+                      {cat.label}
                     </option>
                   ))}
                 </select>
@@ -1112,12 +1115,12 @@ export default function SettingsPage() {
                 >
                   {editServiceCategory && !SERVICE_CATEGORIES.some((c) => c.id === editServiceCategory || c.label === editServiceCategory) && (
                     <option value={editServiceCategory}>
-                      🏷️ {editServiceCategory} (Mevcut Kategori)
+                      {editServiceCategory} (Mevcut Kategori)
                     </option>
                   )}
                   {SERVICE_CATEGORIES.map((cat) => (
                     <option key={cat.id} value={cat.id}>
-                      {cat.icon} {cat.label}
+                      {cat.label}
                     </option>
                   ))}
                 </select>

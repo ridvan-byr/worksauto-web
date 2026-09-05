@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@/components/theme-provider"
 import { QueryProvider } from "@/components/query-provider"
 import { AuthProvider } from "@/features/auth/auth-context"
+import { SocketProvider } from "@/features/notifications/context/socket-context"
 import { AppShell } from "@/components/layout/app-shell"
 import { DynamicFavicon } from "@/components/dynamic-favicon"
 import { Toaster } from "@/components/ui/sonner"
@@ -55,7 +56,9 @@ export default async function RootLayout({
           <DynamicFavicon />
           <QueryProvider>
             <AuthProvider>
-              <AppShell defaultCollapsed={defaultCollapsed}>{children}</AppShell>
+              <SocketProvider>
+                <AppShell defaultCollapsed={defaultCollapsed}>{children}</AppShell>
+              </SocketProvider>
             </AuthProvider>
           </QueryProvider>
           <Toaster />

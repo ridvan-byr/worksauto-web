@@ -21,6 +21,7 @@ import { useAuth } from "@/features/auth/auth-context"
 import { useVehicles } from "@/features/vehicles/api/use-vehicles"
 import { restartPageAnimation } from "@/lib/animation"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
+import { NotificationPopover } from "@/features/notifications/components/notification-popover"
 import { cn } from "@/lib/utils"
 
 interface AppHeaderProps {
@@ -213,13 +214,7 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
           <span>Hızlı Kabul</span>
         </Link>
 
-        <button
-          className="relative flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-          aria-label="Bildirimler"
-        >
-          <Bell size={18} />
-          <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900" />
-        </button>
+        <NotificationPopover />
 
         <ThemeToggle />
 
