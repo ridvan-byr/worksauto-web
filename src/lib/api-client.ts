@@ -38,15 +38,13 @@ export class ApiError extends Error {
 }
 
 async function refreshAccessToken(): Promise<string> {
-  const refreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
-  if (!refreshToken) {
-    throw new Error('No refresh token available');
-  }
+  const legacyRefreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
 
   const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
+    credentials: 'include',
+    body: JSON.stringify(legacyRefreshToken ? { refreshToken: legacyRefreshToken } : {}),
   });
 
   if (!response.ok) {
@@ -68,9 +66,8 @@ async function refreshAccessToken(): Promise<string> {
   const data = await response.json();
   if (typeof window !== 'undefined') {
     localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-    if (data.refreshToken) {
-      localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
-    }
+    // Refresh token is now stored securely in httpOnly cookie; clean legacy key from localStorage
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
   }
 
   return data.accessToken;
@@ -108,6 +105,7 @@ export async function apiRequest<T = any>(
   try {
     const response = await fetch(url, {
       headers: requestHeaders,
+      credentials: 'include',
       ...rest,
     });
 
@@ -156,6 +154,7 @@ export async function apiRequest<T = any>(
           };
           const retryRes = await fetch(url, {
             headers: retryHeaders,
+            credentials: 'include',
             ...rest,
           });
           if (!retryRes.ok) {
@@ -181,6 +180,7 @@ export async function apiRequest<T = any>(
         };
         const retryRes = await fetch(url, {
           headers: retryHeaders,
+          credentials: 'include',
           ...rest,
         });
         if (!retryRes.ok) {

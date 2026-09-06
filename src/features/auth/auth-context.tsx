@@ -34,36 +34,61 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tenant, setTenant] = React.useState<Tenant | null>(null)
   const [isLoading, setIsLoading] = React.useState(true)
 
-  // Load active 30-day session from localStorage on mount (Requires real JWT Token)
+  // Load active session on mount with silent cookie refresh fallback
   React.useEffect(() => {
-    try {
-      const saved = localStorage.getItem(AUTH_STORAGE_KEY)
-      const token = localStorage.getItem(ACCESS_TOKEN_KEY)
-      if (saved && token) {
-        const parsed = JSON.parse(saved)
-        if (parsed.user && parsed.tenant) {
-          if (parsed.user.role === "tenant_admin") {
-            parsed.user.role = "OWNER"
-          } else if (parsed.user.role === "technician") {
-            parsed.user.role = "TECHNICIAN"
+    const initAuth = async () => {
+      try {
+        const saved = localStorage.getItem(AUTH_STORAGE_KEY)
+        let token = localStorage.getItem(ACCESS_TOKEN_KEY)
+
+        // Sessiz Yenileme: Eğer access token yoksa veya süresi dolmuşsa httpOnly cookie ile arka planda yenile
+        if (!token) {
+          try {
+            const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: "{}",
+            })
+            if (res.ok) {
+              const data = await res.json()
+              token = data.accessToken
+              if (token) {
+                localStorage.setItem(ACCESS_TOKEN_KEY, token)
+              }
+            }
+          } catch {
+            // Sessiz yenileme başarısızsa unauthenticated devam eder
           }
-          setUser(parsed.user)
-          setTenant(parsed.tenant)
+        }
+
+        if (saved && token) {
+          const parsed = JSON.parse(saved)
+          if (parsed.user && parsed.tenant) {
+            if (parsed.user.role === "tenant_admin") {
+              parsed.user.role = "OWNER"
+            } else if (parsed.user.role === "technician") {
+              parsed.user.role = "TECHNICIAN"
+            }
+            setUser(parsed.user)
+            setTenant(parsed.tenant)
+          } else {
+            setUser(null)
+            setTenant(null)
+          }
         } else {
           setUser(null)
           setTenant(null)
         }
-      } else {
-        // Without a valid saved session & JWT, user remains unauthenticated
+      } catch {
         setUser(null)
         setTenant(null)
+      } finally {
+        setIsLoading(false)
       }
-    } catch {
-      setUser(null)
-      setTenant(null)
-    } finally {
-      setIsLoading(false)
     }
+
+    initAuth()
   }, [])
 
   // Proactive live session verification & auto-kick on license suspension
@@ -77,6 +102,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           headers: {
             Authorization: `Bearer ${token}`,
           },
+          credentials: "include",
         })
 
         if (!res.ok) {
@@ -173,6 +199,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch(`${API_BASE_URL}/auth/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ phone: cleanPhone }),
       })
 
@@ -203,6 +230,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ phone: cleanPhone, code }),
         })
 
@@ -250,11 +278,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(liveUser)
         setTenant(liveTenant)
 
-        // Store 30-day session and JWT in localStorage
+        // Store 30-day session and access token; refresh token is safely isolated in httpOnly cookie
         try {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: liveUser, tenant: liveTenant }))
           localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken)
-          localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken)
+          localStorage.removeItem(REFRESH_TOKEN_KEY)
         } catch {
           // ignore
         }
@@ -275,19 +303,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [verifyOtp]
   )
 
-  const logout = React.useCallback(() => {
-    setUser(null)
-    setTenant(null)
+  const logout = React.useCallback(async () => {
     try {
-      localStorage.removeItem(AUTH_STORAGE_KEY)
-      localStorage.removeItem(ACCESS_TOKEN_KEY)
-      localStorage.removeItem(REFRESH_TOKEN_KEY)
-      queryClient.clear()
-    } catch {
-      // ignore
+      await fetch(`${API_BASE_URL}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      }).catch(() => {})
+    } finally {
+      setUser(null)
+      setTenant(null)
+      try {
+        localStorage.removeItem(AUTH_STORAGE_KEY)
+        localStorage.removeItem(ACCESS_TOKEN_KEY)
+        localStorage.removeItem(REFRESH_TOKEN_KEY)
+        queryClient.clear()
+      } catch {
+        // ignore
+      }
+      toast.info("Oturum güvenli şekilde kapatıldı. Tekrar görüşmek üzere!")
+      router.push("/sign-in")
     }
-    toast.info("Oturum güvenli şekilde kapatıldı. Tekrar görüşmek üzere!")
-    router.push("/sign-in")
   }, [router, queryClient])
 
   const completeOnboarding = React.useCallback((data: Partial<Tenant>) => {
