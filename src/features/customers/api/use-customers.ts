@@ -129,3 +129,47 @@ export function useAnonymizeCustomer() {
     },
   });
 }
+
+export interface BatchImportCustomerItem {
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  email?: string;
+  companyTitle?: string;
+  type?: 'INDIVIDUAL' | 'CORPORATE';
+  taxNumber?: string;
+  taxOffice?: string;
+  notes?: string;
+  plate?: string;
+  brand?: string;
+  model?: string;
+  year?: number;
+  currentKm?: number;
+  vin?: string;
+  fuelType?: string;
+  transmission?: string;
+}
+
+export interface BatchImportResult {
+  totalRows: number;
+  importedCustomersCount: number;
+  existingCustomersCount: number;
+  importedVehiclesCount: number;
+  existingVehiclesCount: number;
+  errors: { row: number; reason: string }[];
+}
+
+export function useBatchImportCustomers() {
+  const queryClient = useQueryClient();
+  return useMutation<BatchImportResult, Error, { items: BatchImportCustomerItem[] }>({
+    mutationFn: (data) => apiClient.post<BatchImportResult>('/customers/batch-import', data),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'İçe aktarma işlemi sırasında hata oluştu.');
+    },
+  });
+}

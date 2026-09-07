@@ -17,16 +17,23 @@ import {
   Filter,
   CreditCard,
   ChevronRight,
+  FileSpreadsheet,
+  UploadCloud,
+  Download,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Customer } from "@/features/customers/types"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { CreateCustomerModal } from "@/features/customers/components/create-customer-modal"
+import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
+import { exportToExcel } from "@/features/import-export/utils/excel-helpers"
+import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
 export default function CustomersPage() {
   const [customers, setCustomers] = React.useState<Customer[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
+  const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [filterType, setFilterType] = React.useState<"all" | "individual" | "corporate" | "debtors" | "leads">("all")
 
@@ -137,6 +144,29 @@ export default function CustomersPage() {
     return customers.reduce((sum, c) => (c.balance > 0 ? sum + c.balance : sum), 0)
   }, [customers])
 
+  const handleExportExcel = () => {
+    try {
+      const dataToExport = filteredCustomers.map((c) => ({
+        "Müşteri Türü": c.type === "corporate" ? "Kurumsal / Filo" : "Bireysel",
+        "Müşteri Adı": c.name,
+        "Soyadı": c.surname,
+        "Firma Ünvanı": c.companyTitle || "",
+        "Telefon": c.phone,
+        "E-Posta": c.email || "",
+        "Vergi Numarası": c.taxNumber || "",
+        "Vergi Dairesi": c.taxOffice || "",
+        "Cari Bakiye (TL)": c.balance,
+        "Kayıtlı Araç Plakaları": c.vehicles.map((v) => v.plate).join(", "),
+        "Kayıtlı Araç Sayısı": c.vehicles.length,
+        "Kayıt Durumu": c.isLead ? "Potansiyel Lead" : "Kayıtlı Müşteri",
+      }))
+      exportToExcel(dataToExport, "WorksAuto_Musteri_Listesi", "Müşteriler")
+      toast.success(`${dataToExport.length} müşteri kaydı Excel olarak indirildi.`)
+    } catch (err: any) {
+      toast.error(err?.message || "Dışa aktarma başarısız.")
+    }
+  }
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-12">
       {/* Header & Main Action */}
@@ -155,14 +185,38 @@ export default function CustomersPage() {
           </p>
         </div>
 
-        <Button
-          type="button"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="h-11 px-5 rounded-2xl gap-2 font-semibold text-xs shadow-lg shadow-sky-500/20 cursor-pointer self-start sm:self-auto"
-        >
-          <Plus size={16} />
-          <span>Yeni Müşteri & Araç Ekle</span>
-        </Button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportExcel}
+            className="h-11 px-4 rounded-2xl gap-2 font-semibold text-xs border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs cursor-pointer"
+            title="Müşteri listesini Excel formatında indir"
+          >
+            <Download size={15} className="text-slate-500" />
+            <span>Excel'e Aktar</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsImportModalOpen(true)}
+            className="h-11 px-4 rounded-2xl gap-2 font-semibold text-xs border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs cursor-pointer"
+            title="Excel dosyasından toplu müşteri ve araç yükle"
+          >
+            <UploadCloud size={15} />
+            <span>Excel İçe Aktar</span>
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() => setIsCreateModalOpen(true)}
+            className="h-11 px-5 rounded-2xl gap-2 font-semibold text-xs shadow-lg shadow-sky-500/20 cursor-pointer"
+          >
+            <Plus size={16} />
+            <span>Yeni Müşteri & Araç Ekle</span>
+          </Button>
+        </div>
       </div>
 
       {/* KPI Cards Grid */}
@@ -419,6 +473,12 @@ export default function CustomersPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onCreated={handleCustomerCreated}
+      />
+
+      {/* Excel Import Modal */}
+      <ExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
       />
     </div>
   )

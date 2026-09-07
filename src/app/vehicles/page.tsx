@@ -17,9 +17,15 @@ import {
   Trash2,
   AlertTriangle,
   X,
+  UploadCloud,
+  Download,
+  Info,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
+import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
+import { exportToExcel } from "@/features/import-export/utils/excel-helpers"
+import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
 export default function VehiclesPage() {
@@ -27,9 +33,32 @@ export default function VehiclesPage() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [brandFilter, setBrandFilter] = React.useState<string>("all")
   const [vehicleToDelete, setVehicleToDelete] = React.useState<any | null>(null)
+  const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
 
   const { data: apiVehicles } = useVehicles()
   const deleteVehicleMutation = useDeleteVehicle()
+
+  const handleExportExcel = () => {
+    if (vehicles.length === 0) {
+      toast.error("Dışa aktarılacak araç kaydı bulunamadı.")
+      return
+    }
+
+    const exportRows = vehicles.map((v) => ({
+      "Plaka": v.plate,
+      "Marka": v.brand || "",
+      "Model": v.model || "",
+      "Model Yılı": v.year || "",
+      "Kilometre": v.kilometer || 0,
+      "Yakıt Türü": v.fuelType || "",
+      "Vites": v.transmission || "",
+      "Müşteri": v.customerName || "",
+      "Müşteri Telefon": v.customerPhone || "",
+    }))
+
+    exportToExcel(exportRows, `WorksAuto_Araclar_${new Date().toISOString().split("T")[0]}`)
+    toast.success(`${vehicles.length} araç Excel dosyası olarak indirildi.`)
+  }
 
   React.useEffect(() => {
     if (apiVehicles) {
@@ -95,13 +124,35 @@ export default function VehiclesPage() {
           </p>
         </div>
 
-        <Link
-          href="/customers"
-          className="h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-2 shadow-2xs self-start sm:self-auto cursor-pointer"
-        >
-          <Users size={15} />
-          <span>Müşteri Listesine Git</span>
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleExportExcel}
+            className="h-10 px-3.5 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          >
+            <Download size={14} className="text-emerald-500" />
+            <span>Excel'e Aktar</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsImportModalOpen(true)}
+            className="h-10 px-3.5 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
+          >
+            <UploadCloud size={14} className="text-sky-500" />
+            <span>Excel İçe Aktar</span>
+          </Button>
+
+          <Link
+            href="/customers"
+            className="h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-2 shadow-2xs self-start sm:self-auto cursor-pointer"
+          >
+            <Users size={15} />
+            <span>Müşteri Listesine Git</span>
+          </Link>
+        </div>
       </div>
 
       {/* Filter & Search Bar */}
@@ -271,8 +322,9 @@ export default function VehiclesPage() {
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 text-[11px] text-slate-500 dark:text-slate-400">
-              ℹ️ Geçmiş iş emirleri ve kesilmiş faturalar muhasebe mevzuatı gereği korunmaya devam eder.
+            <div className="flex items-center gap-1.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-200/60 dark:border-slate-800/60 text-[11px] text-slate-500 dark:text-slate-400">
+              <Info size={14} className="text-sky-500 shrink-0" />
+              <span>Geçmiş iş emirleri ve kesilmiş faturalar muhasebe mevzuatı gereği korunmaya devam eder.</span>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
@@ -306,6 +358,12 @@ export default function VehiclesPage() {
           </div>
         </div>
       )}
+
+      {/* Excel Import Modal */}
+      <ExcelImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+      />
     </div>
   )
 }

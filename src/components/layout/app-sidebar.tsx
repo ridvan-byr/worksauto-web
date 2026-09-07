@@ -110,7 +110,7 @@ export function AppSidebar({
             icon: Users,
           },
           {
-            title: "Araç Parkı",
+            title: "Araçlar",
             href: "/vehicles",
             icon: Car,
             badge:
