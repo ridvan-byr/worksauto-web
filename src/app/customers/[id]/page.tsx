@@ -261,6 +261,29 @@ export default function CustomerDetailPage() {
         </div>
       </div>
 
+      {/* Missing VKN Warning for Corporate Customers */}
+      {(customer.type === "corporate" || (customer.type as any) === "CORPORATE") && !customer.taxNumber && (
+        <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-800 dark:text-amber-200">
+          <div className="flex items-start sm:items-center gap-3">
+            <span className="text-xl">⚠️</span>
+            <div>
+              <p className="text-sm font-semibold">Vergi Kimlik Numarası (VKN) Eksik</p>
+              <p className="text-xs text-amber-700/80 dark:text-amber-300/80">
+                Bu kurumsal müşteri için henüz VKN girilmemiştir. Servis ve iş emri oluşturabilirsiniz; fakat resmi E-Fatura kesebilmek için 10 haneli VKN tanımlanmalıdır.
+              </p>
+            </div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setIsEditCustomerModalOpen(true)}
+            className="shrink-0 bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold rounded-xl h-8 px-3 cursor-pointer shadow-xs"
+          >
+            VKN Tanımla
+          </Button>
+        </div>
+      )}
+
       {/* Registered Vehicles Section */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">

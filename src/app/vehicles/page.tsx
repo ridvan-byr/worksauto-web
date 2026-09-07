@@ -24,7 +24,8 @@ import {
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
-import { exportToExcel } from "@/features/import-export/utils/excel-helpers"
+import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
+import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
 import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
@@ -34,31 +35,22 @@ export default function VehiclesPage() {
   const [brandFilter, setBrandFilter] = React.useState<string>("all")
   const [vehicleToDelete, setVehicleToDelete] = React.useState<any | null>(null)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
+  const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
 
   const { data: apiVehicles } = useVehicles()
   const deleteVehicleMutation = useDeleteVehicle()
 
-  const handleExportExcel = () => {
-    if (vehicles.length === 0) {
-      toast.error("Dışa aktarılacak araç kaydı bulunamadı.")
-      return
-    }
-
-    const exportRows = vehicles.map((v) => ({
-      "Plaka": v.plate,
-      "Marka": v.brand || "",
-      "Model": v.model || "",
-      "Model Yılı": v.year || "",
-      "Kilometre": v.kilometer || 0,
-      "Yakıt Türü": v.fuelType || "",
-      "Vites": v.transmission || "",
-      "Müşteri": v.customerName || "",
-      "Müşteri Telefon": v.customerPhone || "",
-    }))
-
-    exportToExcel(exportRows, `WorksAuto_Araclar_${new Date().toISOString().split("T")[0]}`)
-    toast.success(`${vehicles.length} araç Excel dosyası olarak indirildi.`)
-  }
+  const vehicleExportColumns: ExportColumnDef[] = [
+    { key: "plate", label: "Araç Plakası", type: "plate" },
+    { key: "brand", label: "Marka", type: "text" },
+    { key: "model", label: "Model", type: "text" },
+    { key: "year", label: "Model Yılı", type: "number" },
+    { key: "kilometer", label: "Kilometre", type: "number" },
+    { key: "fuelType", label: "Yakıt Türü", type: "text" },
+    { key: "transmission", label: "Vites", type: "text" },
+    { key: "customerName", label: "Müşteri / Araç Sahibi", type: "text" },
+    { key: "customerPhone", label: "Müşteri Telefon", type: "phone" },
+  ]
 
   React.useEffect(() => {
     if (apiVehicles) {
@@ -106,6 +98,20 @@ export default function VehiclesPage() {
     })
   }, [vehicles, brandFilter, searchQuery])
 
+  const exportData = React.useMemo(() => {
+    return filteredVehicles.map((v) => ({
+      plate: v.plate,
+      brand: v.brand || "",
+      model: v.model || "",
+      year: v.year || "",
+      kilometer: v.kilometer || 0,
+      fuelType: v.fuelType || "",
+      transmission: v.transmission || "",
+      customerName: v.customerName || "",
+      customerPhone: v.customerPhone || "",
+    }))
+  }, [filteredVehicles])
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-12">
       {/* Header */}
@@ -128,7 +134,7 @@ export default function VehiclesPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={handleExportExcel}
+            onClick={() => setIsExportModalOpen(true)}
             className="h-10 px-3.5 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
           >
             <Download size={14} className="text-emerald-500" />
@@ -363,6 +369,18 @@ export default function VehiclesPage() {
       <ExcelImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
+      />
+
+      {/* Excel Export Modal */}
+      <ExcelExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title="Kayıtlı Araçlar Portföyü"
+        subtitle="WorksAuto Sistemine Kayıtlı Tüm Araçlar ve Sahiplik Bilgileri"
+        sheetName="Araçlar"
+        defaultFileName={`WorksAuto_Araclar_${new Date().toISOString().split("T")[0]}`}
+        data={exportData}
+        availableColumns={vehicleExportColumns}
       />
     </div>
   )

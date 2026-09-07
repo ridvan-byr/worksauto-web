@@ -365,7 +365,7 @@ export function CreateAppointmentModal({
                   )}
                 >
                   <UserPlus size={13} className="text-amber-500" />
-                  <span>Hızlı Kayıt (Lead)</span>
+                  <span>Hızlı Kayıt (Potansiyel)</span>
                 </button>
               </div>
             </div>
@@ -444,7 +444,7 @@ export function CreateAppointmentModal({
                                     </span>
                                     {c.isLead && (
                                       <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
-                                        Lead
+                                        Potansiyel
                                       </span>
                                     )}
                                   </div>
@@ -491,7 +491,7 @@ export function CreateAppointmentModal({
                           </p>
                           {selectedCustomer.isLead ? (
                             <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
-                              Potansiyel (Lead)
+                              Potansiyel Müşteri
                             </span>
                           ) : (
                             <span className="text-[10px] font-semibold px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">

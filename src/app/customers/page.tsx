@@ -26,7 +26,8 @@ import { Customer } from "@/features/customers/types"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { CreateCustomerModal } from "@/features/customers/components/create-customer-modal"
 import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
-import { exportToExcel } from "@/features/import-export/utils/excel-helpers"
+import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
+import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
 import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
@@ -144,28 +145,37 @@ export default function CustomersPage() {
     return customers.reduce((sum, c) => (c.balance > 0 ? sum + c.balance : sum), 0)
   }, [customers])
 
-  const handleExportExcel = () => {
-    try {
-      const dataToExport = filteredCustomers.map((c) => ({
-        "Müşteri Türü": c.type === "corporate" ? "Kurumsal / Filo" : "Bireysel",
-        "Müşteri Adı": c.name,
-        "Soyadı": c.surname,
-        "Firma Ünvanı": c.companyTitle || "",
-        "Telefon": c.phone,
-        "E-Posta": c.email || "",
-        "Vergi Numarası": c.taxNumber || "",
-        "Vergi Dairesi": c.taxOffice || "",
-        "Cari Bakiye (TL)": c.balance,
-        "Kayıtlı Araç Plakaları": c.vehicles.map((v) => v.plate).join(", "),
-        "Kayıtlı Araç Sayısı": c.vehicles.length,
-        "Kayıt Durumu": c.isLead ? "Potansiyel Lead" : "Kayıtlı Müşteri",
-      }))
-      exportToExcel(dataToExport, "WorksAuto_Musteri_Listesi", "Müşteriler")
-      toast.success(`${dataToExport.length} müşteri kaydı Excel olarak indirildi.`)
-    } catch (err: any) {
-      toast.error(err?.message || "Dışa aktarma başarısız.")
-    }
-  }
+  const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
+
+  const customerExportColumns: ExportColumnDef[] = [
+    { key: "fullName", label: "Müşteri Adı Soyadı", type: "text" },
+    { key: "type", label: "Müşteri Türü", type: "text" },
+    { key: "companyTitle", label: "Firma Ünvanı", type: "text" },
+    { key: "phone", label: "Telefon Numarası", type: "phone" },
+    { key: "email", label: "E-Posta", type: "text" },
+    { key: "taxNumber", label: "Vergi / TC No", type: "text" },
+    { key: "taxOffice", label: "Vergi Dairesi", type: "text" },
+    { key: "balance", label: "Cari Bakiye", type: "currency" },
+    { key: "vehiclePlates", label: "Kayıtlı Plakalar", type: "text" },
+    { key: "vehicleCount", label: "Araç Sayısı", type: "number" },
+    { key: "status", label: "Kayıt Durumu", type: "text" },
+  ]
+
+  const exportData = React.useMemo(() => {
+    return filteredCustomers.map((c) => ({
+      fullName: `${c.name} ${c.surname}`.trim(),
+      type: c.type === "corporate" ? "Kurumsal / Filo" : "Bireysel",
+      companyTitle: c.companyTitle || "",
+      phone: c.phone,
+      email: c.email || "",
+      taxNumber: c.taxNumber || "",
+      taxOffice: c.taxOffice || "",
+      balance: c.balance,
+      vehiclePlates: c.vehicles.map((v) => v.plate).join(", "),
+      vehicleCount: c.vehicles.length,
+      status: c.isLead ? "Potansiyel Müşteri" : "Kayıtlı Müşteri",
+    }))
+  }, [filteredCustomers])
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-12">
@@ -189,9 +199,9 @@ export default function CustomersPage() {
           <Button
             type="button"
             variant="outline"
-            onClick={handleExportExcel}
+            onClick={() => setIsExportModalOpen(true)}
             className="h-11 px-4 rounded-2xl gap-2 font-semibold text-xs border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs cursor-pointer"
-            title="Müşteri listesini Excel formatında indir"
+            title="Müşteri listesini Excel formatında önizle ve indir"
           >
             <Download size={15} className="text-slate-500" />
             <span>Excel'e Aktar</span>
@@ -339,7 +349,7 @@ export default function CustomersPage() {
                 : "bg-amber-500/10 dark:bg-amber-500/15 border-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
             )}
           >
-            <span>Potansiyel Lead ({customers.filter((c) => c.isLead).length})</span>
+            <span>Potansiyel Müşteri ({customers.filter((c) => c.isLead).length})</span>
           </button>
         </div>
       </div>
@@ -400,7 +410,12 @@ export default function CustomersPage() {
                               </Link>
                               {c.isLead && (
                                 <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
-                                  Potansiyel (Lead)
+                                  Potansiyel Müşteri
+                                </span>
+                              )}
+                              {c.type === "corporate" && !c.taxNumber && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0" title="Resmi fatura düzenlenebilmesi için 10 haneli Vergi Numarası (VKN) girilmelidir">
+                                  ⚠️ VKN Eksik
                                 </span>
                               )}
                             </div>
@@ -479,6 +494,18 @@ export default function CustomersPage() {
       <ExcelImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
+      />
+
+      {/* Excel Export Modal */}
+      <ExcelExportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        title="Müşteri & Cari Hesap Listesi"
+        subtitle="WorksAuto Müşteri Portföyü ve Cari Durum Raporu"
+        sheetName="Müşteriler"
+        defaultFileName={`WorksAuto_Musteri_Listesi_${new Date().toISOString().split("T")[0]}`}
+        data={exportData}
+        availableColumns={customerExportColumns}
       />
     </div>
   )
