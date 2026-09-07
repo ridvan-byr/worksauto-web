@@ -28,7 +28,7 @@ export default function CustomersPage() {
   const [customers, setCustomers] = React.useState<Customer[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [filterType, setFilterType] = React.useState<"all" | "individual" | "corporate" | "debtors">("all")
+  const [filterType, setFilterType] = React.useState<"all" | "individual" | "corporate" | "debtors" | "leads">("all")
 
   const { data: apiCustomers, isLoading } = useCustomers(searchQuery)
   const createCustomerMutation = useCreateCustomer()
@@ -43,6 +43,7 @@ export default function CustomersPage() {
         type: c.type === 'CORPORATE' ? 'corporate' : 'individual',
         name: c.firstName,
         surname: c.lastName,
+        isLead: Boolean(c.isLead),
         companyTitle: c.companyTitle,
         phone: c.phone,
         email: c.email,
@@ -109,6 +110,7 @@ export default function CustomersPage() {
       if (filterType === "individual" && c.type !== "individual") return false
       if (filterType === "corporate" && c.type !== "corporate") return false
       if (filterType === "debtors" && c.balance <= 0) return false
+      if (filterType === "leads" && !c.isLead) return false
 
       // Search Query
       if (!searchQuery.trim()) return true
@@ -273,6 +275,18 @@ export default function CustomersPage() {
           >
             Borçlu ({customers.filter((c) => c.balance > 0).length})
           </button>
+          <button
+            type="button"
+            onClick={() => setFilterType("leads")}
+            className={cn(
+              "px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border flex items-center gap-1",
+              filterType === "leads"
+                ? "bg-amber-500 text-slate-950 border-amber-500 shadow-xs font-bold"
+                : "bg-amber-500/10 dark:bg-amber-500/15 border-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
+            )}
+          >
+            <span>⚡ Potansiyel Lead ({customers.filter((c) => c.isLead).length})</span>
+          </button>
         </div>
       </div>
 
@@ -322,13 +336,20 @@ export default function CustomersPage() {
                             {c.type === "corporate" ? <Building2 size={16} /> : <User size={16} />}
                           </div>
                           <div>
-                            <Link
-                              href={`/customers/${c.id}`}
-                              className="font-bold text-slate-900 dark:text-slate-100 hover:text-sky-500 dark:hover:text-sky-400 transition-colors flex items-center gap-1.5"
-                            >
-                              <span>{displayName}</span>
-                              <ChevronRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-sky-500" />
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link
+                                href={`/customers/${c.id}`}
+                                className="font-bold text-slate-900 dark:text-slate-100 hover:text-sky-500 dark:hover:text-sky-400 transition-colors flex items-center gap-1.5"
+                              >
+                                <span>{displayName}</span>
+                                <ChevronRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-sky-500" />
+                              </Link>
+                              {c.isLead && (
+                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                                  ⚡ Potansiyel (Lead)
+                                </span>
+                              )}
+                            </div>
                             <p className="text-[11px] text-slate-400 mt-0.5">
                               {c.type === "corporate" ? `Yetkili: ${c.name} ${c.surname}` : "Bireysel Müşteri"}
                             </p>

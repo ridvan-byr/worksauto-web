@@ -52,6 +52,39 @@ export function useCreateCustomer() {
   });
 }
 
+export interface QuickLeadDto {
+  firstName: string;
+  lastName?: string;
+  phone: string;
+  plate: string;
+  brand?: string;
+  model?: string;
+  year?: number;
+}
+
+export interface QuickLeadResponse {
+  customer: any;
+  vehicle: any;
+}
+
+export function useQuickLeadCustomer() {
+  const queryClient = useQueryClient();
+  return useMutation<QuickLeadResponse, Error, QuickLeadDto>({
+    mutationFn: (data: QuickLeadDto) => apiClient.post<QuickLeadResponse>('/customers/quick-lead', data),
+    onSuccess: (res) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      toast.success('Hızlı potansiyel müşteri ve araç kaydı oluşturuldu.', {
+        description: `${res.customer.firstName} ${res.customer.lastName || ''} - ${res.vehicle.plate}`,
+      });
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Hızlı kayıt oluşturulamadı.');
+    },
+  });
+}
+
 export function useUpdateCustomer() {
   const queryClient = useQueryClient();
   return useMutation<Customer, Error, { id: string; data: Partial<CustomerFormValues> }>({

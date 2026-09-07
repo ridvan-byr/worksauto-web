@@ -14,6 +14,7 @@ export interface Customer {
   type: CustomerType
   name: string
   surname: string
+  isLead?: boolean
   firstName?: string
   lastName?: string
   companyTitle?: string
