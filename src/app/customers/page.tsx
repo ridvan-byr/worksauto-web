@@ -285,7 +285,7 @@ export default function CustomersPage() {
                 : "bg-amber-500/10 dark:bg-amber-500/15 border-amber-500/20 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20"
             )}
           >
-            <span>⚡ Potansiyel Lead ({customers.filter((c) => c.isLead).length})</span>
+            <span>Potansiyel Lead ({customers.filter((c) => c.isLead).length})</span>
           </button>
         </div>
       </div>
@@ -346,7 +346,7 @@ export default function CustomersPage() {
                               </Link>
                               {c.isLead && (
                                 <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
-                                  ⚡ Potansiyel (Lead)
+                                  Potansiyel (Lead)
                                 </span>
                               )}
                             </div>

@@ -67,14 +67,10 @@ export function CreateAppointmentModal({
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false)
   const dropdownRef = React.useRef<HTMLDivElement>(null)
 
-  // Quick Lead Form State
-  const [quickLeadFirstName, setQuickLeadFirstName] = React.useState("")
-  const [quickLeadLastName, setQuickLeadLastName] = React.useState("")
+  // Quick Lead Form State (Tek input ad soyad, telefon, plaka - marka model kaldırıldı)
+  const [quickLeadFullName, setQuickLeadFullName] = React.useState("")
   const [quickLeadPhone, setQuickLeadPhone] = React.useState("")
   const [quickLeadPlate, setQuickLeadPlate] = React.useState("")
-  const [quickLeadBrand, setQuickLeadBrand] = React.useState("")
-  const [quickLeadModel, setQuickLeadModel] = React.useState("")
-  const [quickLeadYear, setQuickLeadYear] = React.useState<number>(new Date().getFullYear())
   const [quickLeadErrors, setQuickLeadErrors] = React.useState<Record<string, string>>({})
 
   // Fleet vehicle filter (for customers with 4+ vehicles)
@@ -101,19 +97,9 @@ export function CreateAppointmentModal({
     }))
   }, [apiCustomers])
 
-  // Form Selection State
+  // Form Selection State (Varsayılan olarak boş başlar, otomatik seçim yapılmaz)
   const [selectedCustomerId, setSelectedCustomerId] = React.useState<string>("")
   const [selectedVehicleId, setSelectedVehicleId] = React.useState<string>("")
-
-  // Initial customer auto-select if none selected
-  React.useEffect(() => {
-    if (customers.length > 0 && !selectedCustomerId) {
-      setSelectedCustomerId(customers[0].id)
-      if (customers[0].vehicles.length > 0) {
-        setSelectedVehicleId(customers[0].vehicles[0].id)
-      }
-    }
-  }, [customers, selectedCustomerId])
 
   const [date, setDate] = React.useState<string>(initialDate || new Date().toISOString().split("T")[0])
   const [time, setTime] = React.useState<string>(initialTime || "10:00")
@@ -135,9 +121,12 @@ export function CreateAppointmentModal({
 
   // Update selected vehicle when customer changes
   React.useEffect(() => {
+    if (!selectedCustomerId) {
+      setSelectedVehicleId("")
+      return
+    }
     const cust = customers.find((c) => c.id === selectedCustomerId)
     if (cust && cust.vehicles.length > 0) {
-      // If current selected vehicle doesn't belong to this customer, pick first
       const belongs = cust.vehicles.some((v: any) => v.id === selectedVehicleId)
       if (!belongs) {
         setSelectedVehicleId(cust.vehicles[0].id)
@@ -195,10 +184,10 @@ export function CreateAppointmentModal({
     return matchPlate || matchModel
   })
 
-  // Calculations (Optional Services: duration defaults to 30 min diagnostic slot if empty)
+  // Calculations
   const totalDuration = selectedServices.length > 0
     ? selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0)
-    : 30 // Default 30 min for fault diagnosis slot
+    : 30
   const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
 
   const handleToggleService = (item: AppointmentServiceItem) => {
@@ -210,28 +199,29 @@ export function CreateAppointmentModal({
     }
   }
 
-  // Handle Quick Lead Submit
+  // Handle Quick Lead Submit (Ad Soyad tek input, telefon, plaka)
   const handleQuickLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const newErrors: Record<string, string> = {}
-    if (!quickLeadFirstName.trim()) newErrors.firstName = "Ad gereklidir."
-    if (!quickLeadPhone.trim()) newErrors.phone = "Telefon gereklidir."
-    if (!quickLeadPlate.trim()) newErrors.plate = "Plaka gereklidir."
+    if (!quickLeadFullName.trim()) newErrors.fullName = "Müşteri Adı Soyadı gereklidir."
+    if (!quickLeadPhone.trim()) newErrors.phone = "Telefon numarası gereklidir."
+    if (!quickLeadPlate.trim()) newErrors.plate = "Araç plakası gereklidir."
 
     if (Object.keys(newErrors).length > 0) {
       setQuickLeadErrors(newErrors)
       return
     }
 
+    const nameParts = quickLeadFullName.trim().split(" ")
+    const firstName = nameParts[0] || ""
+    const lastName = nameParts.slice(1).join(" ") || ""
+
     try {
       const res = await quickLeadMutation.mutateAsync({
-        firstName: quickLeadFirstName.trim(),
-        lastName: quickLeadLastName.trim() || undefined,
+        firstName,
+        lastName,
         phone: quickLeadPhone.trim(),
         plate: quickLeadPlate.trim().toUpperCase(),
-        brand: quickLeadBrand.trim() || undefined,
-        model: quickLeadModel.trim() || undefined,
-        year: quickLeadYear || undefined,
       })
 
       // Switch to search mode and auto-select new customer + vehicle
@@ -239,12 +229,9 @@ export function CreateAppointmentModal({
       setSelectedVehicleId(res.vehicle.id)
       setCustomerMode("search")
       setIsDropdownOpen(false)
-      setQuickLeadFirstName("")
-      setQuickLeadLastName("")
+      setQuickLeadFullName("")
       setQuickLeadPhone("")
       setQuickLeadPlate("")
-      setQuickLeadBrand("")
-      setQuickLeadModel("")
       setQuickLeadErrors({})
     } catch (err) {
       console.error("Quick lead creation error:", err)
@@ -268,7 +255,6 @@ export function CreateAppointmentModal({
     const endDateTime = new Date(startDateTime.getTime() + (totalDuration || 30) * 60000)
 
     try {
-      // If service selected, pass first service id (or null if none selected)
       const primaryServiceId = selectedServices.length > 0 ? selectedServices[0].id : undefined
 
       const createdApp: any = await createAppointmentMutation.mutateAsync({
@@ -329,7 +315,7 @@ export function CreateAppointmentModal({
                 <span>Yeni Servis Randevusu Oluştur</span>
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Müşteri arayın veya hızlı potansiyel müşteri kaydı oluşturarak randevu tanımlayın.
+                Müşteri arayın veya hızlı müşteri kaydı oluşturarak randevu tanımlayın.
               </p>
             </div>
           </div>
@@ -378,8 +364,8 @@ export function CreateAppointmentModal({
                       : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
                   )}
                 >
-                  <Sparkles size={12} className="text-amber-500" />
-                  <span>⚡ Hızlı Kayıt (Lead)</span>
+                  <UserPlus size={13} className="text-amber-500" />
+                  <span>Hızlı Kayıt (Lead)</span>
                 </button>
               </div>
             </div>
@@ -458,7 +444,7 @@ export function CreateAppointmentModal({
                                     </span>
                                     {c.isLead && (
                                       <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
-                                        ⚡ Lead
+                                        Lead
                                       </span>
                                     )}
                                   </div>
@@ -505,7 +491,7 @@ export function CreateAppointmentModal({
                           </p>
                           {selectedCustomer.isLead ? (
                             <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
-                              ⚡ Potansiyel (Lead)
+                              Potansiyel (Lead)
                             </span>
                           ) : (
                             <span className="text-[10px] font-semibold px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
@@ -534,18 +520,18 @@ export function CreateAppointmentModal({
               </div>
             )}
 
-            {/* TAB CONTENT: QUICK LEAD REGISTRATION FORM */}
+            {/* TAB CONTENT: QUICK LEAD REGISTRATION FORM (Sadece Ad Soyad, Telefon, Plaka) */}
             {customerMode === "quick-lead" && (
               <div className="p-4 rounded-2xl bg-amber-500/5 dark:bg-amber-500/10 border border-amber-500/20 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <Sparkles size={16} className="text-amber-500 shrink-0" />
+                    <UserPlus size={16} className="text-amber-500 shrink-0" />
                     <div>
                       <p className="text-xs font-bold text-amber-900 dark:text-amber-300">
                         1 Adımda Hızlı Potansiyel Müşteri & Araç Kaydı
                       </p>
                       <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
-                        İlk telefon veya dükkan temasında ad, telefon ve plaka alarak anında randevu oluşturun.
+                        İlk telefon veya servis temasında ad soyad, telefon ve plaka alarak anında randevu oluşturun.
                       </p>
                     </div>
                   </div>
@@ -558,36 +544,25 @@ export function CreateAppointmentModal({
                   </button>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+                  {/* TEK INPUT: MÜŞTERİ ADI SOYADI */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                      Müşteri Adı <span className="text-rose-500">*</span>
+                      Müşteri Adı Soyadı <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
-                      placeholder="Örn: Mehmet"
-                      value={quickLeadFirstName}
-                      onChange={(e) => setQuickLeadFirstName(e.target.value)}
+                      placeholder="Örn: Mehmet Yılmaz"
+                      value={quickLeadFullName}
+                      onChange={(e) => setQuickLeadFullName(e.target.value)}
                       className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
-                    {quickLeadErrors.firstName && (
-                      <p className="text-[10px] text-rose-500">{quickLeadErrors.firstName}</p>
+                    {quickLeadErrors.fullName && (
+                      <p className="text-[10px] text-rose-500">{quickLeadErrors.fullName}</p>
                     )}
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                      Soyadı (Opsiyonel)
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Örn: Yılmaz"
-                      value={quickLeadLastName}
-                      onChange={(e) => setQuickLeadLastName(e.target.value)}
-                      className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
-
+                  {/* TELEFON NUMARASI */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                       Telefon Numarası <span className="text-rose-500">*</span>
@@ -604,6 +579,7 @@ export function CreateAppointmentModal({
                     )}
                   </div>
 
+                  {/* ARAÇ PLAKASI */}
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                       Araç Plakası <span className="text-rose-500">*</span>
@@ -619,41 +595,6 @@ export function CreateAppointmentModal({
                       <p className="text-[10px] text-rose-500">{quickLeadErrors.plate}</p>
                     )}
                   </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                      Araç Marka & Model
-                    </label>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <input
-                        type="text"
-                        placeholder="Marka (Fiat)"
-                        value={quickLeadBrand}
-                        onChange={(e) => setQuickLeadBrand(e.target.value)}
-                        className="w-full h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Model (Egea)"
-                        value={quickLeadModel}
-                        onChange={(e) => setQuickLeadModel(e.target.value)}
-                        className="w-full h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                      Model Yılı
-                    </label>
-                    <input
-                      type="number"
-                      placeholder="2022"
-                      value={quickLeadYear}
-                      onChange={(e) => setQuickLeadYear(Number(e.target.value))}
-                      className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    />
-                  </div>
                 </div>
 
                 <div className="pt-2 flex justify-end">
@@ -663,7 +604,7 @@ export function CreateAppointmentModal({
                     disabled={quickLeadMutation.isPending}
                     className="h-9 px-4 rounded-xl text-xs font-bold gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer shadow-md shadow-amber-500/20"
                   >
-                    <Sparkles size={13} />
+                    <UserPlus size={13} />
                     <span>{quickLeadMutation.isPending ? "Kaydediliyor..." : "Kaydet ve Randevuya Seç"}</span>
                   </Button>
                 </div>
@@ -676,7 +617,7 @@ export function CreateAppointmentModal({
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                 <Car size={15} className="text-sky-500" />
-                <span>Randevu Alınacak Araç ({customerVehicles.length})</span>
+                <span>Randevu Alınacak Araç {selectedCustomer ? `(${customerVehicles.length})` : ""}</span>
                 <span className="text-rose-500">*</span>
               </label>
 
@@ -687,7 +628,15 @@ export function CreateAppointmentModal({
               )}
             </div>
 
-            {customerVehicles.length === 0 ? (
+            {/* Müşteri Henüz Seçilmemişse */}
+            {!selectedCustomer ? (
+              <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 text-center space-y-1">
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Araç seçimi yapabilmek için lütfen yukarıdan müşteri arayın veya hızlı kayıt yapın.
+                </p>
+              </div>
+            ) : customerVehicles.length === 0 ? (
+              /* Müşteri seçildi ama gerçekten aracı yoksa */
               <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-center space-y-2">
                 <p className="text-xs text-amber-700 dark:text-amber-300">
                   Bu müşteriye ait kayıtlı araç bulunamadı.
@@ -717,7 +666,7 @@ export function CreateAppointmentModal({
                 </div>
                 <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl">
                   <CheckCircle2 size={14} />
-                  <span>Otomatik Seçildi</span>
+                  <span>Seçili Araç</span>
                 </div>
               </div>
             ) : customerVehicles.length <= 3 ? (
