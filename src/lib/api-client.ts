@@ -112,7 +112,6 @@ export async function apiRequest<T = any>(
     // Handle 401 on Super Admin endpoints separately: redirect to /admin/login instead of /sign-in
     if (response.status === 401 && endpoint.includes('/admin/')) {
       if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
-        localStorage.removeItem('worksauto_admin_token');
         localStorage.removeItem('worksauto_admin_user');
         window.location.href = '/admin/login';
       }

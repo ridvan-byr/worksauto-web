@@ -31,3 +31,17 @@ export const addWorkOrderItemFormSchema = z.object({
 
 export type WorkOrderCreateValues = z.infer<typeof workOrderCreateSchema>;
 export type AddWorkOrderItemFormValues = z.infer<typeof addWorkOrderItemFormSchema>;
+
+export const createWorkOrderModalStep1Schema = z.object({
+  customerId: z.string().min(1, 'Lütfen bir müşteri seçiniz.'),
+  vehicleId: z.string().min(1, 'Lütfen aracı seçiniz.'),
+});
+
+export const createWorkOrderModalStep2Schema = z.object({
+  serviceName: z.string().min(2, 'İşlem/Hizmet adı en az 2 karakter olmalıdır.'),
+  laborPrice: z
+    .number({ message: 'İşçilik ücreti sayı olmalıdır' })
+    .min(0, 'İşçilik ücreti negatif olamaz.'),
+  assignedLift: z.string().min(1, 'Lift seçimi zorunludur.'),
+  assignedMechanic: z.string().min(1, 'Usta seçimi zorunludur.'),
+});

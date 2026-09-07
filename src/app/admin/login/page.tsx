@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { BrandLogo } from "@/components/shared/brand-logo"
 import { toast } from "@/components/ui/sonner"
-import { useAdminLogin, setAdminSession, getAdminToken, getAdminUser } from "@/features/admin/api/use-admin"
+import { useAdminLogin, setAdminSession, getAdminUser } from "@/features/admin/api/use-admin"
 
 export default function AdminLoginPage() {
   const router = useRouter()
@@ -19,9 +19,8 @@ export default function AdminLoginPage() {
 
   // If already authenticated as admin, redirect to /admin
   React.useEffect(() => {
-    const token = getAdminToken()
     const user = getAdminUser()
-    if (token && user && user.role === "SUPER_ADMIN") {
+    if (user && user.role === "SUPER_ADMIN") {
       router.replace("/admin")
     }
   }, [router])
@@ -45,8 +44,8 @@ export default function AdminLoginPage() {
 
     try {
       const res = await adminLoginMutation.mutateAsync({ email, password })
-      if (res.success && res.accessToken) {
-        setAdminSession(res.accessToken, res.user)
+      if (res.success && res.user) {
+        setAdminSession(res.user)
         toast.success("Platform konsoluna güvenli bağlantı sağlandı.", {
           description: `Hoş geldiniz, ${res.user?.name || "Yönetici"}.`,
         })

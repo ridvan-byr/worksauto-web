@@ -29,6 +29,10 @@ import { useCreateAppointment } from "@/features/appointments/api/use-appointmen
 import { useAuth } from "@/features/auth/auth-context"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"
+import {
+  appointmentCreateSchema,
+  quickLeadSchema,
+} from "../schemas/appointment.schema"
 
 interface CreateAppointmentModalProps {
   isOpen: boolean
@@ -199,16 +203,25 @@ export function CreateAppointmentModal({
     }
   }
 
-  // Handle Quick Lead Submit (Ad Soyad tek input, telefon, plaka)
+  // Handle Quick Lead Submit (Ad Soyad tek input, telefon, plaka) via Zod Schema
   const handleQuickLeadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const newErrors: Record<string, string> = {}
-    if (!quickLeadFullName.trim()) newErrors.fullName = "Müşteri Adı Soyadı gereklidir."
-    if (!quickLeadPhone.trim()) newErrors.phone = "Telefon numarası gereklidir."
-    if (!quickLeadPlate.trim()) newErrors.plate = "Araç plakası gereklidir."
 
-    if (Object.keys(newErrors).length > 0) {
-      setQuickLeadErrors(newErrors)
+    const result = quickLeadSchema.safeParse({
+      fullName: quickLeadFullName.trim(),
+      phone: quickLeadPhone.trim(),
+      plate: quickLeadPlate.trim().toUpperCase(),
+    })
+
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {}
+      for (const issue of result.error.issues) {
+        const field = issue.path[0] as string
+        if (!fieldErrors[field]) {
+          fieldErrors[field] = issue.message
+        }
+      }
+      setQuickLeadErrors(fieldErrors)
       return
     }
 
@@ -240,12 +253,27 @@ export function CreateAppointmentModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedCustomer) {
-      setErrors({ customer: "Lütfen bir müşteri seçin veya hızlı kayıt yapın." })
+
+    const valResult = appointmentCreateSchema.safeParse({
+      customerId: selectedCustomerId,
+      vehicleId: selectedVehicleId,
+      customerNote,
+    })
+
+    if (!valResult.success) {
+      const fieldErrors: Record<string, string> = {}
+      for (const issue of valResult.error.issues) {
+        const field = issue.path[0] as string
+        if (!fieldErrors[field]) {
+          fieldErrors[field] = issue.message
+        }
+      }
+      setErrors(fieldErrors)
       return
     }
-    if (!selectedVehicle) {
-      setErrors({ customer: "Lütfen müşteriye ait bir araç seçin." })
+
+    if (!selectedCustomer || !selectedVehicle) {
+      setErrors({ customer: "Lütfen bir müşteri ve araç seçin." })
       return
     }
 

@@ -18,7 +18,6 @@ import { BrandLogo } from "@/components/shared/brand-logo"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { toast } from "@/components/ui/sonner"
 import {
-  getAdminToken,
   getAdminUser,
   clearAdminSession,
   useAdminHealth,
@@ -42,10 +41,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       return
     }
 
-    const token = getAdminToken()
     const user = getAdminUser()
 
-    if (!token || !user || user.role !== "SUPER_ADMIN") {
+    if (!user || user.role !== "SUPER_ADMIN") {
       clearAdminSession()
       router.replace("/admin/login")
       return

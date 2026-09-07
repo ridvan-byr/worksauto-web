@@ -8,6 +8,10 @@ import { WorkOrder, WorkOrderPriority } from "../types"
 import { useCustomers } from "@/features/customers/api/use-customers"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"
+import {
+  createWorkOrderModalStep1Schema,
+  createWorkOrderModalStep2Schema,
+} from "../schemas/work-order.schema"
 
 interface CreateWorkOrderModalProps {
   isOpen: boolean
@@ -18,6 +22,7 @@ interface CreateWorkOrderModalProps {
 export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkOrderModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const [step, setStep] = React.useState<1 | 2>(1)
+  const [errors, setErrors] = React.useState<Record<string, string>>({})
   const { data: apiCustomers } = useCustomers()
 
   const customers = React.useMemo(() => {
@@ -85,9 +90,57 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId)
   const selectedVehicle = selectedCustomer?.vehicles.find((v: any) => v.id === selectedVehicleId)
 
+  const handleNextStep = () => {
+    const result = createWorkOrderModalStep1Schema.safeParse({
+      customerId: selectedCustomerId,
+      vehicleId: selectedVehicleId,
+    })
+
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {}
+      for (const issue of result.error.issues) {
+        const field = issue.path[0] as string
+        if (!fieldErrors[field]) {
+          fieldErrors[field] = issue.message
+        }
+      }
+      setErrors(fieldErrors)
+      return
+    }
+
+    setErrors({})
+    setStep(2)
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!selectedCustomer || !selectedVehicle) return
+
+    const step2Result = createWorkOrderModalStep2Schema.safeParse({
+      serviceName: serviceName.trim(),
+      laborPrice: Number(laborPrice),
+      assignedLift,
+      assignedMechanic,
+    })
+
+    if (!step2Result.success) {
+      const fieldErrors: Record<string, string> = {}
+      for (const issue of step2Result.error.issues) {
+        const field = issue.path[0] as string
+        if (!fieldErrors[field]) {
+          fieldErrors[field] = issue.message
+        }
+      }
+      setErrors(fieldErrors)
+      return
+    }
+
+    if (!selectedCustomer || !selectedVehicle) {
+      setErrors({ customerId: "Müşteri veya araç seçilmedi" })
+      setStep(1)
+      return
+    }
+
+    setErrors({})
 
     const newWONumber = "WO-2026-" + Math.floor(100 + Math.random() * 900)
     const newOrder: WorkOrder = {
@@ -211,6 +264,9 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
               </select>
             </div>
 
+            {errors.customerId && <p className="text-[11px] text-rose-500 font-medium">{errors.customerId}</p>}
+            {errors.vehicleId && <p className="text-[11px] text-rose-500 font-medium">{errors.vehicleId}</p>}
+
             {selectedVehicle && (
               <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
@@ -231,7 +287,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
               <Button type="button" variant="outline" onClick={onClose} className="h-10 px-4 text-xs font-semibold cursor-pointer">
                 Vazgeç
               </Button>
-              <Button type="button" onClick={() => setStep(2)} className="h-10 px-5 text-xs font-semibold gap-1.5 cursor-pointer">
+              <Button type="button" onClick={handleNextStep} className="h-10 px-5 text-xs font-semibold gap-1.5 cursor-pointer">
                 <span>Atölye Detaylarına Geç</span>
                 <ArrowRight size={14} />
               </Button>
@@ -255,6 +311,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                   <option value="Lift 3 (Elektronik & Teşhis)">Lift 3 (Elektronik)</option>
                   <option value="Hızlı Kabul Alanı">Hızlı Kabul Alanı</option>
                 </select>
+                {errors.assignedLift && <p className="text-[10px] text-rose-500">{errors.assignedLift}</p>}
               </div>
 
               <div className="space-y-1">
@@ -268,6 +325,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                   <option value="Mustafa Usta">Mustafa Usta (Elektrik)</option>
                   <option value="Ali Usta">Ali Usta (Ön Takım)</option>
                 </select>
+                {errors.assignedMechanic && <p className="text-[10px] text-rose-500">{errors.assignedMechanic}</p>}
               </div>
             </div>
 
@@ -278,8 +336,8 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                 value={serviceName}
                 onChange={(e) => setServiceName(e.target.value)}
                 className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
-                required
               />
+              {errors.serviceName && <p className="text-[10px] text-rose-500">{errors.serviceName}</p>}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -290,8 +348,8 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                   value={laborPrice}
                   onChange={(e) => setLaborPrice(Number(e.target.value))}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  required
                 />
+                {errors.laborPrice && <p className="text-[10px] text-rose-500">{errors.laborPrice}</p>}
               </div>
 
               <div className="space-y-1">

@@ -20,6 +20,10 @@ import { Button } from "@/components/ui/button"
 import { Customer, Vehicle } from "../types"
 import { PlateBadge } from "./plate-badge"
 import { cn } from "@/lib/utils"
+import {
+  createCustomerStep1Schema,
+  createCustomerStep2Schema,
+} from "../schemas/customer.schema"
 
 interface CreateCustomerModalProps {
   isOpen: boolean
@@ -86,48 +90,63 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
     setPhone(res)
   }
 
-  // Validate Step 1
+  // Validate Step 1 via Zod Schema
   const handleNextStep = () => {
-    const errs: Record<string, string> = {}
-    if (customerType === "individual") {
-      if (!name.trim()) errs.name = "Ad zorunludur."
-      if (!surname.trim()) errs.surname = "Soyad zorunludur."
-    } else {
-      if (!companyTitle.trim()) errs.companyTitle = "Şirket ünvanı zorunludur."
-      if (!name.trim()) errs.name = "Yetkili adı zorunludur."
-      if (!taxNumber.trim() || taxNumber.trim().length < 10) {
-        errs.taxNumber = "Kurumsal müşteriler için 10 haneli Vergi Numarası zorunludur."
+    const result = createCustomerStep1Schema.safeParse({
+      customerType,
+      name: name.trim(),
+      surname: surname.trim(),
+      companyTitle: companyTitle.trim(),
+      taxOffice: taxOffice.trim(),
+      taxNumber: taxNumber.trim(),
+      phone: phone.trim(),
+      email: email.trim(),
+      city: city.trim(),
+      district: district.trim(),
+    })
+
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {}
+      for (const issue of result.error.issues) {
+        const field = issue.path[0] as string
+        if (!fieldErrors[field]) {
+          fieldErrors[field] = issue.message
+        }
       }
-    }
-    if (!phone.trim() || phone.length < 17) {
-      errs.phone = "Geçerli bir telefon numarası giriniz."
+      setErrors(fieldErrors)
+      return
     }
 
-    setErrors(errs)
-    if (Object.keys(errs).length === 0) {
-      setCurrentStep(2)
-    }
+    setErrors({})
+    setCurrentStep(2)
   }
 
-  // Submit Step 2
+  // Submit Step 2 via Zod Schema
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    const errs: Record<string, string> = {}
-    const currentYear = new Date().getFullYear()
-    const maxYear = currentYear + 1 // 2026 yılı için en fazla 2027
+    const result = createCustomerStep2Schema.safeParse({
+      plate: plate.toUpperCase().trim(),
+      brand: brand.trim(),
+      model: model.trim(),
+      year: Number(year),
+      kilometer: kilometer === "" ? 0 : Number(kilometer),
+      fuelType,
+      transmission,
+    })
 
-    if (!plate.trim()) errs.plate = "Plaka zorunludur."
-    if (!brand.trim()) errs.brand = "Marka zorunludur."
-    if (!model.trim()) errs.model = "Model zorunludur."
-    if (Number(year) < 1950 || Number(year) > maxYear) {
-      errs.year = `Model yılı 1950 ile ${maxYear} arasında olmalıdır.`
-    }
-    if (kilometer !== "" && Number(kilometer) < 0) {
-      errs.kilometer = "Kilometre negatif olamaz."
+    if (!result.success) {
+      const fieldErrors: Record<string, string> = {}
+      for (const issue of result.error.issues) {
+        const field = issue.path[0] as string
+        if (!fieldErrors[field]) {
+          fieldErrors[field] = issue.message
+        }
+      }
+      setErrors(fieldErrors)
+      return
     }
 
-    setErrors(errs)
-    if (Object.keys(errs).length > 0) return
+    setErrors({})
 
     const newCustomerId = "cust_" + Date.now()
     const newVehicleId = "veh_" + Date.now()
@@ -139,7 +158,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
       plate: plate.toUpperCase().trim(),
       brand: brand.trim(),
       model: model.trim(),
-      year: Number(year) || currentYear,
+      year: Number(year) || new Date().getFullYear(),
       kilometer: Number(kilometer) || 0,
       fuelType,
       transmission,

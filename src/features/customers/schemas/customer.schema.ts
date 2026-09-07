@@ -19,4 +19,63 @@ export const customerSchema = z.object({
   notes: z.string().max(500, 'Notlar en fazla 500 karakter olabilir').optional().or(z.literal('')),
 });
 
+export const createCustomerStep1Schema = z
+  .object({
+    customerType: z.enum(['individual', 'corporate']),
+    name: z.string().min(2, 'Ad en az 2 karakter olmalıdır'),
+    surname: z.string().optional().default(''),
+    companyTitle: z.string().optional().default(''),
+    taxOffice: z.string().optional().default(''),
+    taxNumber: z.string().optional().default(''),
+    phone: z.string().min(10, 'Geçerli bir telefon numarası giriniz (en az 10 hane)'),
+    email: z.string().email('Geçerli bir e-posta giriniz').optional().or(z.literal('')),
+    city: z.string().optional().default('İstanbul'),
+    district: z.string().optional().default(''),
+  })
+  .superRefine((data, ctx) => {
+    if (data.customerType === 'individual') {
+      if (!data.surname || data.surname.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Soyad zorunludur.',
+          path: ['surname'],
+        });
+      }
+    } else {
+      if (!data.companyTitle || data.companyTitle.trim().length === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Şirket ünvanı zorunludur.',
+          path: ['companyTitle'],
+        });
+      }
+      if (!data.taxNumber || data.taxNumber.trim().length < 10) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Kurumsal müşteriler için en az 10 haneli Vergi Numarası zorunludur.',
+          path: ['taxNumber'],
+        });
+      }
+    }
+  });
+
+export const createCustomerStep2Schema = z.object({
+  plate: z.string().min(2, 'Plaka zorunludur.'),
+  brand: z.string().min(1, 'Marka zorunludur.'),
+  model: z.string().min(1, 'Model zorunludur.'),
+  year: z
+    .number({ message: 'Model yılı sayı olmalıdır' })
+    .min(1950, 'Model yılı 1950 den küçük olamaz')
+    .max(new Date().getFullYear() + 1, 'Geçerli bir model yılı giriniz'),
+  kilometer: z
+    .number({ message: 'Kilometre sayı olmalıdır' })
+    .min(0, 'Kilometre negatif olamaz.')
+    .optional()
+    .default(0),
+  fuelType: z.enum(['Benzin', 'Dizel', 'LPG', 'Hibrit', 'Elektrik']).default('Benzin'),
+  transmission: z.enum(['Manuel', 'Otomatik']).default('Otomatik'),
+});
+
 export type CustomerFormValues = z.infer<typeof customerSchema>;
+export type CreateCustomerStep1Values = z.infer<typeof createCustomerStep1Schema>;
+export type CreateCustomerStep2Values = z.infer<typeof createCustomerStep2Schema>;
