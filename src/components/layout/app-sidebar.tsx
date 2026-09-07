@@ -16,6 +16,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   ShieldCheck,
   LogOut,
 } from "lucide-react"
@@ -60,6 +61,25 @@ export function AppSidebar({
   const pathname = usePathname()
   const { tenant, user, logout } = useAuth()
   const { data: summary } = useDashboardSummary()
+
+  const [openSubMenus, setOpenSubMenus] = React.useState<Record<string, boolean>>({
+    "Müşteriler": true,
+  })
+
+  React.useEffect(() => {
+    if (pathname.startsWith("/customers") || pathname.startsWith("/vehicles")) {
+      setOpenSubMenus((prev) => ({ ...prev, "Müşteriler": true }))
+    }
+  }, [pathname])
+
+  const toggleSubMenu = (e: React.MouseEvent, title: string) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setOpenSubMenus((prev) => ({
+      ...prev,
+      [title]: prev[title] !== undefined ? !prev[title] : false,
+    }))
+  }
 
   const handleNavClick = (href: string) => {
     onCloseMobile()
@@ -213,68 +233,100 @@ export function AppSidebar({
             const hasChildren = Boolean(item.children && item.children.length > 0)
             const isChildActive = Boolean(hasChildren && item.children!.some((c) => pathname === c.href))
             const isActive = pathname === item.href || (collapsed && isChildActive)
+            const isExpanded = openSubMenus[item.title] ?? true
             const Icon = item.icon
 
             return (
               <div key={item.title} className="space-y-1">
-                <Link
-                  href={item.href}
-                  onClick={() => handleNavClick(item.href)}
-                  className={cn(
-                    "group relative flex items-center rounded-xl text-sm font-medium transition-colors duration-150 cursor-pointer",
-                    collapsed ? "h-11 w-full justify-center px-0" : "h-11 px-3 gap-3",
-                    isActive
-                      ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25 dark:bg-sky-500 dark:text-slate-950 font-semibold"
-                      : isChildActive
-                      ? "text-sky-600 dark:text-sky-400 bg-sky-500/10 font-medium"
-                      : item.highlight
-                      ? "text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20"
-                      : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100"
-                  )}
-                  title={collapsed ? item.title : undefined}
-                >
-                  <Icon
-                    size={20}
+                <div className="flex items-center">
+                  <Link
+                    href={item.href}
+                    onClick={() => {
+                      handleNavClick(item.href)
+                      if (hasChildren && !isExpanded) {
+                        setOpenSubMenus((prev) => ({ ...prev, [item.title]: true }))
+                      }
+                    }}
                     className={cn(
-                      "shrink-0 transition-transform group-hover:scale-110",
+                      "group relative flex-1 flex items-center rounded-xl text-sm font-medium transition-colors duration-150 cursor-pointer",
+                      collapsed ? "h-11 w-full justify-center px-0" : "h-11 px-3 gap-3",
                       isActive
-                        ? "text-white dark:text-slate-950"
+                        ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25 dark:bg-sky-500 dark:text-slate-950 font-semibold"
                         : isChildActive
-                        ? "text-sky-500 dark:text-sky-400"
-                        : "text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200",
-                      item.highlight && "text-amber-500 animate-pulse"
+                        ? "text-sky-600 dark:text-sky-400 bg-sky-500/10 font-medium"
+                        : item.highlight
+                        ? "text-amber-600 dark:text-amber-400 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20"
+                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100"
                     )}
-                  />
-
-                  {!collapsed && (
-                    <span className="flex-1 truncate tracking-tight transition-opacity duration-200">
-                      {item.title}
-                    </span>
-                  )}
-
-                  {!collapsed && item.badge && !hasChildren && (
-                    <span
+                    title={collapsed ? item.title : undefined}
+                  >
+                    <Icon
+                      size={20}
                       className={cn(
-                        "ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full transition-opacity duration-200",
+                        "shrink-0 transition-transform group-hover:scale-110",
                         isActive
-                          ? "bg-white/20 text-white dark:bg-slate-900/40 dark:text-slate-950"
-                          : item.badgeVariant === "accent"
-                          ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20"
-                          : item.badgeVariant === "warning"
-                          ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20"
-                          : item.badgeVariant === "danger"
-                          ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20"
-                          : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                          ? "text-white dark:text-slate-950"
+                          : isChildActive
+                          ? "text-sky-500 dark:text-sky-400"
+                          : "text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-slate-200",
+                        item.highlight && "text-amber-500 animate-pulse"
                       )}
-                    >
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
+                    />
+
+                    {!collapsed && (
+                      <span className="flex-1 truncate tracking-tight transition-opacity duration-200">
+                        {item.title}
+                      </span>
+                    )}
+
+                    {!collapsed && item.badge && !hasChildren && (
+                      <span
+                        className={cn(
+                          "ml-auto text-[11px] font-semibold px-2 py-0.5 rounded-full transition-opacity duration-200",
+                          isActive
+                            ? "bg-white/20 text-white dark:bg-slate-900/40 dark:text-slate-950"
+                            : item.badgeVariant === "accent"
+                            ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20"
+                            : item.badgeVariant === "warning"
+                            ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                            : item.badgeVariant === "danger"
+                            ? "bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/20"
+                            : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
+                        )}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+
+                    {/* Collapsible toggle arrow for items with children */}
+                    {!collapsed && hasChildren && (
+                      <button
+                        type="button"
+                        onClick={(e) => toggleSubMenu(e, item.title)}
+                        className={cn(
+                          "ml-auto p-1 rounded-lg transition-transform cursor-pointer",
+                          isActive
+                            ? "text-white dark:text-slate-950 hover:bg-white/20"
+                            : "text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
+                        )}
+                        title={isExpanded ? "Alt menüyü daralt" : "Alt menüyü genişlet"}
+                        aria-label={isExpanded ? "Alt menüyü daralt" : "Alt menüyü genişlet"}
+                      >
+                        <ChevronDown
+                          size={14}
+                          className={cn(
+                            "transition-transform duration-200",
+                            isExpanded ? "rotate-0" : "-rotate-90"
+                          )}
+                        />
+                      </button>
+                    )}
+                  </Link>
+                </div>
 
                 {/* Sub-items (nested under parent like Müşteriler -> Araç Parkı) */}
-                {!collapsed && hasChildren && (
-                  <div className="ml-5 pl-3 border-l-2 border-slate-200/80 dark:border-slate-800/80 space-y-1 py-0.5">
+                {!collapsed && hasChildren && isExpanded && (
+                  <div className="ml-5 pl-3 border-l-2 border-slate-200/80 dark:border-slate-800/80 space-y-1 py-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
                     {item.children!.map((sub) => {
                       const isSubActive = pathname === sub.href
                       const SubIcon = sub.icon
