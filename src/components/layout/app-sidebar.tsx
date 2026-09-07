@@ -231,8 +231,17 @@ export function AppSidebar({
         <div className="flex-1 overflow-y-auto py-4 px-2.5 space-y-1.5 scrollbar-none">
           {visibleNavItems.map((item) => {
             const hasChildren = Boolean(item.children && item.children.length > 0)
-            const isChildActive = Boolean(hasChildren && item.children!.some((c) => pathname === c.href))
-            const isActive = pathname === item.href || (collapsed && isChildActive)
+            const isChildActive = Boolean(
+              hasChildren &&
+              item.children!.some(
+                (c) => pathname === c.href || (c.href !== "/" && pathname.startsWith(c.href + "/"))
+              )
+            )
+            const isSelfActive =
+              item.href === "/"
+                ? pathname === "/"
+                : pathname === item.href || pathname.startsWith(item.href + "/")
+            const isActive = isSelfActive || isChildActive
             const isExpanded = openSubMenus[item.title] ?? true
             const Icon = item.icon
 
@@ -328,7 +337,9 @@ export function AppSidebar({
                 {!collapsed && hasChildren && isExpanded && (
                   <div className="ml-5 pl-3 border-l-2 border-slate-200/80 dark:border-slate-800/80 space-y-1 py-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
                     {item.children!.map((sub) => {
-                      const isSubActive = pathname === sub.href
+                      const isSubActive =
+                        pathname === sub.href ||
+                        (sub.href !== "/" && pathname.startsWith(sub.href + "/"))
                       const SubIcon = sub.icon
 
                       return (
