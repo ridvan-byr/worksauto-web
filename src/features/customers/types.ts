@@ -1,4 +1,40 @@
-export type CustomerType = "individual" | "corporate"
+export type CustomerType = "INDIVIDUAL" | "CORPORATE" | "individual" | "corporate"
+
+export interface CurrentAccountInfo {
+  id?: string
+  balance: number
+  totalDebit?: number
+  totalCredit?: number
+  movements?: any[]
+}
+
+export interface Customer {
+  id: string
+  tenantId: string
+  type: CustomerType
+  name: string
+  surname: string
+  firstName?: string
+  lastName?: string
+  companyTitle?: string
+  taxOffice?: string
+  taxNumber?: string
+  phone: string
+  email?: string
+  city?: string
+  district?: string
+  address?: string
+  notes?: string
+  balance: number
+  currentAccount?: CurrentAccountInfo
+  vehicles: Vehicle[]
+  appointments: AppointmentSummary[]
+  workOrders: WorkOrderSummary[]
+  invoices: InvoiceSummary[]
+  movements: CariMovement[]
+  createdAt: string
+  updatedAt: string
+}
 
 export interface Vehicle {
   id: string
@@ -60,27 +96,4 @@ export interface CariMovement {
   documentNo?: string
 }
 
-export interface Customer {
-  id: string
-  tenantId: string
-  type: CustomerType
-  name: string
-  surname: string
-  companyTitle?: string
-  taxOffice?: string
-  taxNumber?: string
-  phone: string
-  email?: string
-  city?: string
-  district?: string
-  address?: string
-  notes?: string
-  balance: number // Pozitif: Müşterinin servise borcu var, Negatif: Alacaklı
-  vehicles: Vehicle[]
-  appointments: AppointmentSummary[]
-  workOrders: WorkOrderSummary[]
-  invoices: InvoiceSummary[]
-  movements: CariMovement[]
-  createdAt: string
-  updatedAt: string
-}
+

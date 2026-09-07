@@ -33,10 +33,10 @@ export function EditCustomerModal({
 }: EditCustomerModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const [customerType, setCustomerType] = React.useState<"individual" | "corporate">(
-    customer.type || "individual"
+    (customer.type?.toString().toLowerCase() === "corporate" ? "corporate" : "individual")
   )
-  const [firstName, setFirstName] = React.useState(customer.name || "")
-  const [lastName, setLastName] = React.useState(customer.surname || "")
+  const [firstName, setFirstName] = React.useState(customer.firstName || customer.name || "")
+  const [lastName, setLastName] = React.useState(customer.lastName || customer.surname || "")
   const [companyTitle, setCompanyTitle] = React.useState(customer.companyTitle || "")
   const [taxOffice, setTaxOffice] = React.useState(customer.taxOffice || "")
   const [taxNumber, setTaxNumber] = React.useState(customer.taxNumber || "")
@@ -57,9 +57,9 @@ export function EditCustomerModal({
   // Sync state when customer changes
   React.useEffect(() => {
     if (customer) {
-      setCustomerType(customer.type || "individual")
-      setFirstName(customer.name || "")
-      setLastName(customer.surname || "")
+      setCustomerType(customer.type?.toString().toLowerCase() === "corporate" ? "corporate" : "individual")
+      setFirstName(customer.firstName || customer.name || "")
+      setLastName(customer.lastName || customer.surname || "")
       setCompanyTitle(customer.companyTitle || "")
       setTaxOffice(customer.taxOffice || "")
       setTaxNumber(customer.taxNumber || "")

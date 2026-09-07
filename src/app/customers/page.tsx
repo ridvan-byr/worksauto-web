@@ -75,15 +75,14 @@ export default function CustomersPage() {
   const handleCustomerCreated = async (newCust: Customer) => {
     try {
       const createdCustomer = await createCustomerMutation.mutateAsync({
-        firstName: newCust.name,
-        lastName: newCust.surname,
+        firstName: newCust.name || newCust.firstName || '',
+        lastName: newCust.surname || newCust.lastName || '',
         phone: newCust.phone,
         type: newCust.type === 'corporate' ? 'CORPORATE' : 'INDIVIDUAL',
         companyTitle: newCust.companyTitle,
-        creditLimit: 0,
       })
 
-      if (createdCustomer?.id && newCust.vehicles?.length > 0) {
+      if (createdCustomer?.id && (newCust.vehicles?.length ?? 0) > 0) {
         const v = newCust.vehicles[0]
         await createVehicleMutation.mutateAsync({
           customerId: createdCustomer.id,

@@ -1,27 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { toast } from '@/components/ui/sonner';
+import { WorkOrder, WorkOrderStatus } from '../types';
+import { WorkOrderCreateValues, AddWorkOrderItemFormValues } from '../schemas/work-order.schema';
 
-export function useWorkOrders(status?: string) {
-  return useQuery({
+export function useWorkOrders(status?: WorkOrderStatus | string) {
+  return useQuery<WorkOrder[]>({
     queryKey: ['work-orders', status],
-    queryFn: () => apiClient.get<any[]>('/work-orders', { params: { status } }),
+    queryFn: () => apiClient.get<WorkOrder[]>('/work-orders', { params: { status } }),
   });
 }
 
 export function useWorkOrder(id?: string) {
-  return useQuery({
+  return useQuery<WorkOrder>({
     queryKey: ['work-orders', id],
-    queryFn: () => apiClient.get<any>(`/work-orders/${id}`),
+    queryFn: () => apiClient.get<WorkOrder>(`/work-orders/${id}`),
     enabled: !!id,
   });
 }
 
 export function useCreateWorkOrder() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: any) => apiClient.post('/work-orders', data),
-    onSuccess: (data: any) => {
+  return useMutation<WorkOrder, Error, WorkOrderCreateValues>({
+    mutationFn: (data: WorkOrderCreateValues) => apiClient.post<WorkOrder>('/work-orders', data),
+    onSuccess: (data: WorkOrder) => {
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
@@ -29,7 +31,7 @@ export function useCreateWorkOrder() {
         description: data?.id ? `İş Emri #${data.id.slice(0, 8)} atölye paneline eklendi.` : undefined,
       });
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'İş emri oluşturulurken bir hata oluştu.');
     },
   });
@@ -37,9 +39,9 @@ export function useCreateWorkOrder() {
 
 export function useUpdateWorkOrderStatus() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      apiClient.patch(`/work-orders/${id}/status`, { status }),
+  return useMutation<WorkOrder, Error, { id: string; status: WorkOrderStatus | string }>({
+    mutationFn: ({ id, status }) =>
+      apiClient.patch<WorkOrder>(`/work-orders/${id}/status`, { status }),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
@@ -49,7 +51,7 @@ export function useUpdateWorkOrderStatus() {
         description: `Yeni Durum: ${variables.status}`,
       });
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Durum güncellenirken hata oluştu.');
     },
   });
@@ -57,14 +59,14 @@ export function useUpdateWorkOrderStatus() {
 
 export function useRollbackWorkOrder() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => apiClient.post(`/work-orders/${id}/rollback`),
+  return useMutation<WorkOrder, Error, string>({
+    mutationFn: (id: string) => apiClient.post<WorkOrder>(`/work-orders/${id}/rollback`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       toast.info('İş emri önceki aşamaya geri alındı.');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Geri alma işlemi başarısız oldu.');
     },
   });
@@ -72,16 +74,16 @@ export function useRollbackWorkOrder() {
 
 export function useAddWorkOrderItem() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ workOrderId, item }: { workOrderId: string; item: any }) =>
-      apiClient.post(`/work-orders/${workOrderId}/items`, item),
+  return useMutation<WorkOrder, Error, { workOrderId: string; item: AddWorkOrderItemFormValues }>({
+    mutationFn: ({ workOrderId, item }) =>
+      apiClient.post<WorkOrder>(`/work-orders/${workOrderId}/items`, item),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       toast.success('Hizmet/Parça iş emrine eklendi.');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Kalem eklenirken hata oluştu.');
     },
   });
@@ -89,16 +91,16 @@ export function useAddWorkOrderItem() {
 
 export function useRemoveWorkOrderItem() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ workOrderId, itemId }: { workOrderId: string; itemId: string }) =>
-      apiClient.delete(`/work-orders/${workOrderId}/items/${itemId}`),
+  return useMutation<WorkOrder, Error, { workOrderId: string; itemId: string }>({
+    mutationFn: ({ workOrderId, itemId }) =>
+      apiClient.delete<WorkOrder>(`/work-orders/${workOrderId}/items/${itemId}`),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
       queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       toast.success('Kalem iş emrinden çıkarıldı.');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Kalem silinirken hata oluştu.');
     },
   });
@@ -106,14 +108,14 @@ export function useRemoveWorkOrderItem() {
 
 export function useAddWorkOrderPhoto() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ workOrderId, data }: { workOrderId: string; data: any }) =>
+  return useMutation<any, Error, { workOrderId: string; data: { url: string; caption: string; photoType: string } }>({
+    mutationFn: ({ workOrderId, data }) =>
       apiClient.post(`/work-orders/${workOrderId}/photos`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
       toast.success('Fotoğraf başarıyla yüklendi.');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Fotoğraf yüklenemedi.');
     },
   });

@@ -1,42 +1,52 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { toast } from '@/components/ui/sonner';
+import { Customer } from '../types';
+import { CustomerFormValues } from '../schemas/customer.schema';
+
+export interface CustomerStats {
+  totalSpent: number;
+  totalWorkOrders: number;
+  totalAppointments: number;
+  lastServiceDate?: string;
+  balance: number;
+}
 
 export function useCustomers(search?: string) {
-  return useQuery({
+  return useQuery<Customer[]>({
     queryKey: ['customers', search],
-    queryFn: () => apiClient.get<any[]>('/customers', { params: { search } }),
+    queryFn: () => apiClient.get<Customer[]>('/customers', { params: { search } }),
   });
 }
 
 export function useCustomer(id?: string) {
-  return useQuery({
+  return useQuery<Customer>({
     queryKey: ['customers', id],
-    queryFn: () => apiClient.get<any>(`/customers/${id}`),
+    queryFn: () => apiClient.get<Customer>(`/customers/${id}`),
     enabled: !!id,
   });
 }
 
 export function useCustomerStats(id?: string) {
-  return useQuery({
+  return useQuery<CustomerStats>({
     queryKey: ['customers', id, 'stats'],
-    queryFn: () => apiClient.get<any>(`/customers/${id}/stats`),
+    queryFn: () => apiClient.get<CustomerStats>(`/customers/${id}/stats`),
     enabled: !!id,
   });
 }
 
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (data: any) => apiClient.post('/customers', data),
-    onSuccess: (data: any) => {
+  return useMutation<Customer, Error, CustomerFormValues>({
+    mutationFn: (data: CustomerFormValues) => apiClient.post<Customer>('/customers', data),
+    onSuccess: (data: Customer) => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       toast.success('Müşteri başarıyla kaydedildi.', {
-        description: data?.firstName ? `${data.firstName} ${data.lastName || ''} müşteri rehberine eklendi.` : undefined,
+        description: data?.name ? `${data.name} ${data.surname || ''} müşteri rehberine eklendi.` : undefined,
       });
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Müşteri oluşturulurken bir hata oluştu.');
     },
   });
@@ -44,14 +54,14 @@ export function useCreateCustomer() {
 
 export function useUpdateCustomer() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiClient.put(`/customers/${id}`, data),
+  return useMutation<Customer, Error, { id: string; data: Partial<CustomerFormValues> }>({
+    mutationFn: ({ id, data }) => apiClient.put<Customer>(`/customers/${id}`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['customers', variables.id] });
       toast.success('Müşteri bilgileri güncellendi.');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Müşteri bilgileri güncellenemedi.');
     },
   });
@@ -59,14 +69,14 @@ export function useUpdateCustomer() {
 
 export function useDeleteCustomer() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => apiClient.delete(`/customers/${id}`),
+  return useMutation<{ success: boolean }, Error, string>({
+    mutationFn: (id: string) => apiClient.delete<{ success: boolean }>(`/customers/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       toast.success('Müşteri kaydı silindi.');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Müşteri silinemedi.');
     },
   });
@@ -74,14 +84,14 @@ export function useDeleteCustomer() {
 
 export function useAnonymizeCustomer() {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, legalRef }: { id: string; legalRef: string }) =>
-      apiClient.post(`/customers/${id}/anonymize`, { legalRef }),
+  return useMutation<{ success: boolean }, Error, { id: string; legalRef: string }>({
+    mutationFn: ({ id, legalRef }) =>
+      apiClient.post<{ success: boolean }>(`/customers/${id}/anonymize`, { legalRef }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       toast.info('KVKK kapsamında müşteri kaydı anonimleştirildi.');
     },
-    onError: (err: any) => {
+    onError: (err: Error) => {
       toast.error(err?.message || 'Anonimleştirme işlemi başarısız.');
     },
   });

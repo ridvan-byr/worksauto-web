@@ -143,6 +143,7 @@ export default function WorkOrderDetailPage() {
           name: newServiceName.trim(),
           quantity: 1,
           unitPrice: Number(newServicePrice),
+          kdvRate: 20,
         },
       })
     } catch (e) {
@@ -154,7 +155,7 @@ export default function WorkOrderDetailPage() {
       return {
         ...prev,
         services: [
-          ...prev.services,
+          ...(prev.services || []),
           {
             id: 'serv_' + Date.now(),
             name: newServiceName.trim(),
@@ -164,8 +165,8 @@ export default function WorkOrderDetailPage() {
             mechanicName: prev.assignedMechanicName,
           },
         ],
-        laborTotal: prev.laborTotal + price,
-        grandTotal: prev.grandTotal + price * 1.2,
+        laborTotal: (prev.laborTotal || 0) + price,
+        grandTotal: (prev.grandTotal || 0) + price * 1.2,
       }
     })
     setNewServiceName("")
@@ -185,6 +186,7 @@ export default function WorkOrderDetailPage() {
           name: newPartName.trim(),
           quantity: qty,
           unitPrice: price,
+          kdvRate: 20,
         },
       })
     } catch (e) {
