@@ -20,6 +20,8 @@ import {
   UploadCloud,
   Download,
   Info,
+  ChevronDown,
+  Check,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -36,6 +38,26 @@ export default function VehiclesPage() {
   const [vehicleToDelete, setVehicleToDelete] = React.useState<any | null>(null)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
+
+  // Brand dropdown filter state
+  const [isBrandDropdownOpen, setIsBrandDropdownOpen] = React.useState(false)
+  const [brandSearch, setBrandSearch] = React.useState("")
+  const brandDropdownRef = React.useRef<HTMLDivElement>(null)
+
+  // Close dropdown on outside click
+  React.useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (brandDropdownRef.current && !brandDropdownRef.current.contains(event.target as Node)) {
+        setIsBrandDropdownOpen(false)
+      }
+    }
+    if (isBrandDropdownOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [isBrandDropdownOpen])
 
   const { data: apiVehicles } = useVehicles()
   const deleteVehicleMutation = useDeleteVehicle()
@@ -72,14 +94,24 @@ export default function VehiclesPage() {
     }
   }, [apiVehicles])
 
-  // Unique brands
-  const brands = React.useMemo(() => {
-    const set = new Set<string>()
+  // Unique brands with vehicle count, sorted by count descending then alphabetically
+  const brandStats = React.useMemo(() => {
+    const map = new Map<string, number>()
     vehicles.forEach((v) => {
-      if (v.brand) set.add(v.brand)
+      if (v.brand) {
+        map.set(v.brand, (map.get(v.brand) || 0) + 1)
+      }
     })
-    return Array.from(set)
+    return Array.from(map.entries())
+      .map(([brand, count]) => ({ brand, count }))
+      .sort((a, b) => b.count - a.count || a.brand.localeCompare(b.brand))
   }, [vehicles])
+
+  const filteredBrands = React.useMemo(() => {
+    if (!brandSearch.trim()) return brandStats
+    const q = brandSearch.toLowerCase().trim()
+    return brandStats.filter((b) => b.brand.toLowerCase().includes(q))
+  }, [brandStats, brandSearch])
 
   // Filtered vehicles
   const filteredVehicles = React.useMemo(() => {
@@ -164,45 +196,162 @@ export default function VehiclesPage() {
       {/* Filter & Search Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
         <div className="relative flex-1 max-w-md">
-          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
           <input
             type="text"
-            placeholder="Plaka (örn: 34 RB 1905), marka, model veya müşteri ara..."
+            placeholder="Plaka (Örn: 34 RB 1905), marka, model veya müşteri ara..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-10 pr-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+            className="w-full h-10 pl-10 pr-9 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
 
-        {/* Brand Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        {/* Brand Dropdown Menu Filter */}
+        <div ref={brandDropdownRef} className="relative min-w-[200px] sm:min-w-[220px]">
           <button
             type="button"
-            onClick={() => setBrandFilter("all")}
+            onClick={() => {
+              setIsBrandDropdownOpen((prev) => !prev)
+              setBrandSearch("")
+            }}
             className={cn(
-              "px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border",
-              brandFilter === "all"
-                ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs"
-                : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
+              "w-full h-10 px-3.5 rounded-xl text-xs font-semibold flex items-center justify-between gap-2 transition-all cursor-pointer border shadow-2xs",
+              brandFilter !== "all"
+                ? "bg-sky-50 dark:bg-sky-950/40 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 ring-2 ring-sky-500/20"
+                : "bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
             )}
           >
-            Tüm Markalar ({vehicles.length})
-          </button>
-          {brands.map((b) => (
-            <button
-              key={b}
-              type="button"
-              onClick={() => setBrandFilter(b)}
-              className={cn(
-                "px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border",
-                brandFilter === b
-                  ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs"
-                  : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
+            <div className="flex items-center gap-2 truncate">
+              <Filter size={14} className={cn("shrink-0", brandFilter !== "all" ? "text-sky-500" : "text-slate-400")} />
+              <span className="truncate">
+                {brandFilter === "all" ? (
+                  <>Tüm Markalar <span className="text-[11px] font-normal text-slate-400">({vehicles.length})</span></>
+                ) : (
+                  <>Marka: <span className="font-bold">{brandFilter}</span></>
+                )}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1 shrink-0 pl-1.5 border-l border-slate-200 dark:border-slate-800">
+              {brandFilter !== "all" ? (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setBrandFilter("all")
+                  }}
+                  className="p-1 rounded-md hover:bg-sky-200/60 dark:hover:bg-sky-900/60 text-sky-600 dark:text-sky-400 cursor-pointer transition-colors"
+                  title="Marka Filtresini Temizle"
+                >
+                  <X size={13} />
+                </span>
+              ) : (
+                <ChevronDown
+                  size={14}
+                  className={cn("text-slate-400 transition-transform duration-200", isBrandDropdownOpen && "rotate-180")}
+                />
               )}
-            >
-              {b} ({vehicles.filter((v) => v.brand === b).length})
-            </button>
-          ))}
+            </div>
+          </button>
+
+          {/* Dropdown Popover */}
+          {isBrandDropdownOpen && (
+            <div className="absolute right-0 top-full mt-1.5 w-full sm:w-64 max-h-80 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl z-50 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150">
+              {/* Mini Search inside Dropdown */}
+              <div className="p-2 border-b border-slate-100 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-950/50">
+                <div className="relative">
+                  <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Marka filtrele..."
+                    value={brandSearch}
+                    onChange={(e) => setBrandSearch(e.target.value)}
+                    className="w-full h-8 pl-8 pr-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
+                    autoFocus
+                  />
+                </div>
+              </div>
+
+              {/* Options List */}
+              <div className="p-1.5 overflow-y-auto max-h-60 space-y-0.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBrandFilter("all")
+                    setIsBrandDropdownOpen(false)
+                  }}
+                  className={cn(
+                    "w-full px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer",
+                    brandFilter === "all"
+                      ? "bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-2xs"
+                      : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                  )}
+                >
+                  <div className="flex items-center gap-2">
+                    {brandFilter === "all" && <Check size={13} className="shrink-0" />}
+                    <span>Tüm Markalar</span>
+                  </div>
+                  <span className={cn(
+                    "text-[10px] px-1.5 py-0.5 rounded-md font-mono",
+                    brandFilter === "all"
+                      ? "bg-white/20 dark:bg-slate-900/20 text-white dark:text-slate-900"
+                      : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                  )}>
+                    {vehicles.length}
+                  </span>
+                </button>
+
+                {filteredBrands.map(({ brand, count }) => {
+                  const isSelected = brandFilter === brand
+                  return (
+                    <button
+                      key={brand}
+                      type="button"
+                      onClick={() => {
+                        setBrandFilter(brand)
+                        setIsBrandDropdownOpen(false)
+                      }}
+                      className={cn(
+                        "w-full px-2.5 py-2 rounded-xl text-xs font-semibold flex items-center justify-between transition-all cursor-pointer",
+                        isSelected
+                          ? "bg-sky-500 text-white shadow-2xs"
+                          : "text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+                      )}
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        {isSelected && <Check size={13} className="shrink-0" />}
+                        <span className="truncate">{brand}</span>
+                      </div>
+                      <span className={cn(
+                        "text-[10px] px-1.5 py-0.5 rounded-md font-mono shrink-0 ml-2",
+                        isSelected
+                          ? "bg-white/20 text-white"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400"
+                      )}>
+                        {count} araç
+                      </span>
+                    </button>
+                  )
+                })}
+
+                {filteredBrands.length === 0 && (
+                  <p className="py-4 text-center text-xs text-slate-400">
+                    Marka bulunamadı
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
