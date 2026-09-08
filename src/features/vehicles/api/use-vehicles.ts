@@ -50,3 +50,21 @@ export function useDeleteVehicle() {
     },
   });
 }
+
+export function useUpdateVehicle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: any }) => apiClient.put(`/vehicles/${id}`, data),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      toast.success('Araç bilgileri başarıyla güncellendi.', {
+        description: data?.plate ? `${data.plate} güncellendi.` : undefined,
+      });
+    },
+    onError: (err: any) => {
+      toast.error(err?.message || 'Araç güncellenirken bir hata oluştu.');
+    },
+  });
+}

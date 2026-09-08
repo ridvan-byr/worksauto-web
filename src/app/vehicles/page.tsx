@@ -13,6 +13,7 @@ import {
   Calendar,
   Fuel,
   Settings2,
+  Edit3,
   Users,
   Trash2,
   AlertTriangle,
@@ -27,6 +28,7 @@ import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
 import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
+import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
 import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
 import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
@@ -36,6 +38,14 @@ export default function VehiclesPage() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [brandFilter, setBrandFilter] = React.useState<string>("all")
   const [vehicleToDelete, setVehicleToDelete] = React.useState<any | null>(null)
+  const [vehicleToEdit, setVehicleToEdit] = React.useState<any | null>(null)
+
+  const handleVehicleUpdated = (updatedVehicle: any) => {
+    setVehicles((prev) =>
+      prev.map((v) => (v.id === updatedVehicle.id ? { ...v, ...updatedVehicle } : v))
+    )
+    setVehicleToEdit(null)
+  }
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
 
@@ -434,6 +444,15 @@ export default function VehiclesPage() {
                     {/* Action */}
                     <td className="py-4 px-4 sm:px-6 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setVehicleToEdit(v)}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-sky-50 dark:hover:bg-sky-950/20 text-slate-700 dark:text-slate-200 hover:text-sky-600 hover:border-sky-200 dark:hover:border-sky-900/40 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                          title="Aracı Düzenle"
+                        >
+                          <Edit3 size={13} />
+                          <span>Düzenle</span>
+                        </button>
                         <Link
                           href={`/customers/${v.customerId}`}
                           className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"

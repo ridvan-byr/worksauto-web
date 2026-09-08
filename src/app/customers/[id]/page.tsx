@@ -33,6 +33,7 @@ import { Customer, Vehicle } from "@/features/customers/types"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { AddVehicleModal } from "@/features/customers/components/add-vehicle-modal"
 import { EditCustomerModal } from "@/features/customers/components/edit-customer-modal"
+import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
 import { cn } from "@/lib/utils"
 
 export default function CustomerDetailPage() {
@@ -45,6 +46,7 @@ export default function CustomerDetailPage() {
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = React.useState(false)
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = React.useState(false)
   const [vehicleToDelete, setVehicleToDelete] = React.useState<Vehicle | null>(null)
+  const [vehicleToEdit, setVehicleToEdit] = React.useState<Vehicle | null>(null)
 
   const { data: apiCustomer } = useCustomer(customerId)
   const { data: customerStats } = useCustomerStats(customerId)
@@ -135,6 +137,19 @@ export default function CustomerDetailPage() {
       updatedAt: new Date().toISOString(),
     }
     setCustomer(updatedCustomer)
+  }
+
+  const handleVehicleUpdated = (updatedVehicle: any) => {
+    if (!customer) return
+    const nextVehicles = customer.vehicles.map((v) =>
+      v.id === updatedVehicle.id ? { ...v, ...updatedVehicle } : v
+    )
+    setCustomer({
+      ...customer,
+      vehicles: nextVehicles,
+      updatedAt: new Date().toISOString(),
+    })
+    setVehicleToEdit(null)
   }
 
   const handleCustomerUpdated = (updatedData: Partial<Customer>) => {
@@ -329,6 +344,14 @@ export default function CustomerDetailPage() {
                       {v.color}
                     </span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => setVehicleToEdit(v)}
+                    className="p-1 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/20 transition-colors cursor-pointer"
+                    title="Aracı Düzenle"
+                  >
+                    <Edit3 size={13} />
+                  </button>
                   <button
                     type="button"
                     onClick={() => setVehicleToDelete(v)}
@@ -605,6 +628,14 @@ export default function CustomerDetailPage() {
           </div>
         )}
       </div>
+
+      {/* Edit Vehicle Modal */}
+      <EditVehicleModal
+        isOpen={!!vehicleToEdit}
+        vehicle={vehicleToEdit}
+        onClose={() => setVehicleToEdit(null)}
+        onUpdated={handleVehicleUpdated}
+      />
 
       {/* Add Vehicle Modal */}
       <AddVehicleModal
