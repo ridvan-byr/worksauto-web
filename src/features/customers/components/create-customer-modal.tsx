@@ -25,38 +25,102 @@ import {
   createCustomerStep2Schema,
 } from "../schemas/customer.schema"
 
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+
 interface CreateCustomerModalProps {
   isOpen: boolean
   onClose: () => void
   onCreated: (customer: Customer) => void
 }
 
+// Unified multi-step customer + vehicle form schema
+const fullCustomerFormSchema = z.object({
+  customerType: z.enum(["individual", "corporate"]),
+  name: z.string().min(2, "Ad en az 2 karakter olmalıdır"),
+  surname: z.string().default(""),
+  companyTitle: z.string().default(""),
+  taxOffice: z.string().default(""),
+  taxNumber: z.string().default(""),
+  phone: z.string().min(10, "Geçerli bir telefon numarası giriniz (en az 10 hane)"),
+  email: z.string().default(""),
+  city: z.string().default("İstanbul"),
+  district: z.string().default(""),
+  plate: z.string().min(2, "Plaka zorunludur."),
+  brand: z.string().min(1, "Marka zorunludur."),
+  model: z.string().min(1, "Model zorunludur."),
+  year: z.number().min(1950, "Model yılı 1950 den küçük olamaz").max(new Date().getFullYear() + 1),
+  kilometer: z.number().min(0, "Kilometre negatif olamaz."),
+  fuelType: z.enum(["Benzin", "Dizel", "LPG", "Hibrit", "Elektrik"]),
+  transmission: z.enum(["Manuel", "Otomatik"]),
+}).superRefine((data, ctx) => {
+  if (data.customerType === "individual") {
+    if (!data.surname || data.surname.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Soyad zorunludur.",
+        path: ["surname"],
+      });
+    }
+  } else {
+    if (!data.companyTitle || data.companyTitle.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Şirket ünvanı zorunludur.",
+        path: ["companyTitle"],
+      });
+    }
+    if (!data.taxNumber || data.taxNumber.trim().length < 10) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Kurumsal müşteriler için en az 10 haneli Vergi Numarası zorunludur.",
+        path: ["taxNumber"],
+      });
+    }
+  }
+});
+
+type FullCustomerFormValues = z.infer<typeof fullCustomerFormSchema>;
+
 export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustomerModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const [currentStep, setCurrentStep] = React.useState<1 | 2>(1)
-  const [customerType, setCustomerType] = React.useState<"individual" | "corporate">("individual")
-  
-  // Step 1: Customer Info
-  const [name, setName] = React.useState("")
-  const [surname, setSurname] = React.useState("")
-  const [companyTitle, setCompanyTitle] = React.useState("")
-  const [taxOffice, setTaxOffice] = React.useState("")
-  const [taxNumber, setTaxNumber] = React.useState("")
-  const [phone, setPhone] = React.useState("")
-  const [email, setEmail] = React.useState("")
-  const [city, setCity] = React.useState("İstanbul")
-  const [district, setDistrict] = React.useState("")
 
-  // Step 2: Vehicle Info
-  const [plate, setPlate] = React.useState("")
-  const [brand, setBrand] = React.useState("")
-  const [model, setModel] = React.useState("")
-  const [year, setYear] = React.useState(new Date().getFullYear())
-  const [kilometer, setKilometer] = React.useState<number | "">(45000)
-  const [fuelType, setFuelType] = React.useState<"Benzin" | "Dizel" | "LPG" | "Hibrit" | "Elektrik">("Benzin")
-  const [transmission, setTransmission] = React.useState<"Manuel" | "Otomatik">("Otomatik")
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    trigger,
+    reset,
+    formState: { errors },
+  } = useForm<FullCustomerFormValues>({
+    resolver: zodResolver(fullCustomerFormSchema) as any,
+    defaultValues: {
+      customerType: "individual",
+      name: "",
+      surname: "",
+      companyTitle: "",
+      taxOffice: "",
+      taxNumber: "",
+      phone: "",
+      email: "",
+      city: "İstanbul",
+      district: "",
+      plate: "",
+      brand: "",
+      model: "",
+      year: new Date().getFullYear(),
+      kilometer: 45000,
+      fuelType: "Benzin",
+      transmission: "Otomatik",
+    },
+    mode: "onTouched",
+  })
 
-  const [errors, setErrors] = React.useState<Record<string, string>>({})
+  const customerType = watch("customerType")
+  const plateValue = watch("plate")
 
   React.useEffect(() => {
     setMounted(true)
@@ -78,7 +142,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.replace(/\D/g, "")
     if (raw.length === 0) {
-      setPhone("")
+      setValue("phone", "", { shouldValidate: true })
       return
     }
     let formatted = raw.startsWith("0") ? raw.slice(0, 11) : "0" + raw.slice(0, 10)
@@ -87,67 +151,31 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
     if (formatted.length >= 4) res += ") " + formatted.slice(4, 7)
     if (formatted.length >= 7) res += " " + formatted.slice(7, 9)
     if (formatted.length >= 9) res += " " + formatted.slice(9, 11)
-    setPhone(res)
+    setValue("phone", res, { shouldValidate: true })
   }
 
-  // Validate Step 1 via Zod Schema
-  const handleNextStep = () => {
-    const result = createCustomerStep1Schema.safeParse({
-      customerType,
-      name: name.trim(),
-      surname: surname.trim(),
-      companyTitle: companyTitle.trim(),
-      taxOffice: taxOffice.trim(),
-      taxNumber: taxNumber.trim(),
-      phone: phone.trim(),
-      email: email.trim(),
-      city: city.trim(),
-      district: district.trim(),
-    })
+  // Validate Step 1 before transitioning to Step 2
+  const handleNextStep = async () => {
+    const isValid = await trigger([
+      "customerType",
+      "name",
+      "surname",
+      "companyTitle",
+      "taxOffice",
+      "taxNumber",
+      "phone",
+      "email",
+      "city",
+      "district",
+    ])
 
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {}
-      for (const issue of result.error.issues) {
-        const field = issue.path[0] as string
-        if (!fieldErrors[field]) {
-          fieldErrors[field] = issue.message
-        }
-      }
-      setErrors(fieldErrors)
-      return
+    if (isValid) {
+      setCurrentStep(2)
     }
-
-    setErrors({})
-    setCurrentStep(2)
   }
 
-  // Submit Step 2 via Zod Schema
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    const result = createCustomerStep2Schema.safeParse({
-      plate: plate.toUpperCase().trim(),
-      brand: brand.trim(),
-      model: model.trim(),
-      year: Number(year),
-      kilometer: kilometer === "" ? 0 : Number(kilometer),
-      fuelType,
-      transmission,
-    })
-
-    if (!result.success) {
-      const fieldErrors: Record<string, string> = {}
-      for (const issue of result.error.issues) {
-        const field = issue.path[0] as string
-        if (!fieldErrors[field]) {
-          fieldErrors[field] = issue.message
-        }
-      }
-      setErrors(fieldErrors)
-      return
-    }
-
-    setErrors({})
-
+  // Form Submission
+  const onFormSubmit = (data: FullCustomerFormValues) => {
     const newCustomerId = "cust_" + Date.now()
     const newVehicleId = "veh_" + Date.now()
 
@@ -155,29 +183,29 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
       id: newVehicleId,
       tenantId: "tenant_1",
       customerId: newCustomerId,
-      plate: plate.toUpperCase().trim(),
-      brand: brand.trim(),
-      model: model.trim(),
-      year: Number(year) || new Date().getFullYear(),
-      kilometer: Number(kilometer) || 0,
-      fuelType,
-      transmission,
+      plate: data.plate.toUpperCase().trim(),
+      brand: data.brand.trim(),
+      model: data.model.trim(),
+      year: Number(data.year) || new Date().getFullYear(),
+      kilometer: Number(data.kilometer) || 0,
+      fuelType: data.fuelType,
+      transmission: data.transmission,
       lastServiceDate: new Date().toISOString().split("T")[0],
     }
 
     const newCustomer: Customer = {
       id: newCustomerId,
       tenantId: "tenant_1",
-      type: customerType,
-      name: name.trim(),
-      surname: surname.trim(),
-      companyTitle: customerType === "corporate" ? companyTitle.trim() : undefined,
-      taxOffice: customerType === "corporate" ? taxOffice.trim() : undefined,
-      taxNumber: customerType === "corporate" ? taxNumber.trim() : undefined,
-      phone,
-      email: email.trim() || undefined,
-      city,
-      district: district.trim() || undefined,
+      type: data.customerType,
+      name: data.name.trim(),
+      surname: data.surname ? data.surname.trim() : "",
+      companyTitle: data.customerType === "corporate" ? data.companyTitle?.trim() : undefined,
+      taxOffice: data.customerType === "corporate" ? data.taxOffice?.trim() : undefined,
+      taxNumber: data.customerType === "corporate" ? data.taxNumber?.trim() : undefined,
+      phone: data.phone,
+      email: data.email ? data.email.trim() : undefined,
+      city: data.city,
+      district: data.district ? data.district.trim() : undefined,
       balance: 0,
       vehicles: [initialVehicle],
       appointments: [],
@@ -189,6 +217,8 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
     }
 
     onCreated(newCustomer)
+    reset()
+    setCurrentStep(1)
     onClose()
   }
 
@@ -230,7 +260,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
             <div className="flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
               <button
                 type="button"
-                onClick={() => setCustomerType("individual")}
+                onClick={() => setValue("customerType", "individual", { shouldValidate: true })}
                 className={cn(
                   "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                   customerType === "individual"
@@ -243,7 +273,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
               </button>
               <button
                 type="button"
-                onClick={() => setCustomerType("corporate")}
+                onClick={() => setValue("customerType", "corporate", { shouldValidate: true })}
                 className={cn(
                   "flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer",
                   customerType === "corporate"
@@ -267,11 +297,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                     <input
                       type="text"
                       placeholder="Örn: Ege Lojistik A.Ş."
-                      value={companyTitle}
-                      onChange={(e) => setCompanyTitle(e.target.value)}
+                      {...register("companyTitle")}
                       className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                     />
-                    {errors.companyTitle && <p className="text-[10px] text-rose-500">{errors.companyTitle}</p>}
+                    {errors.companyTitle && <p className="text-[10px] text-rose-500">{errors.companyTitle.message}</p>}
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5">
@@ -282,11 +311,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                       <input
                         type="text"
                         placeholder="Örn: İkitelli V.D."
-                        value={taxOffice}
-                        onChange={(e) => setTaxOffice(e.target.value)}
+                        {...register("taxOffice")}
                         className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                       />
-                      {errors.taxOffice && <p className="text-[10px] text-rose-500">{errors.taxOffice}</p>}
+                      {errors.taxOffice && <p className="text-[10px] text-rose-500">{errors.taxOffice.message}</p>}
                     </div>
 
                     <div className="space-y-1">
@@ -297,11 +325,12 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                         type="text"
                         placeholder="10 veya 11 haneli"
                         maxLength={11}
-                        value={taxNumber}
-                        onChange={(e) => setTaxNumber(e.target.value.replace(/\D/g, ''))}
+                        {...register("taxNumber", {
+                          onChange: (e) => setValue("taxNumber", e.target.value.replace(/\D/g, '')),
+                        })}
                         className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
                       />
-                      {errors.taxNumber && <p className="text-[10px] text-rose-500">{errors.taxNumber}</p>}
+                      {errors.taxNumber && <p className="text-[10px] text-rose-500">{errors.taxNumber.message}</p>}
                     </div>
                   </div>
                 </>
@@ -315,11 +344,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   <input
                     type="text"
                     placeholder="Örn: Rıdvan"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
+                    {...register("name")}
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
-                  {errors.name && <p className="text-[10px] text-rose-500">{errors.name}</p>}
+                  {errors.name && <p className="text-[10px] text-rose-500">{errors.name.message}</p>}
                 </div>
 
                 <div className="space-y-1">
@@ -329,11 +357,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   <input
                     type="text"
                     placeholder="Örn: Bayar"
-                    value={surname}
-                    onChange={(e) => setSurname(e.target.value)}
+                    {...register("surname")}
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
-                  {errors.surname && <p className="text-[10px] text-rose-500">{errors.surname}</p>}
+                  {errors.surname && <p className="text-[10px] text-rose-500">{errors.surname.message}</p>}
                 </div>
               </div>
 
@@ -345,12 +372,12 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   <input
                     type="tel"
                     placeholder="0 (5XX) XXX XX XX"
-                    value={phone}
+                    value={watch("phone")}
                     onChange={handlePhoneChange}
                     maxLength={17}
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
-                  {errors.phone && <p className="text-[10px] text-rose-500">{errors.phone}</p>}
+                  {errors.phone && <p className="text-[10px] text-rose-500">{errors.phone.message}</p>}
                 </div>
 
                 <div className="space-y-1">
@@ -360,10 +387,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   <input
                     type="email"
                     placeholder="musteri@eposta.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    {...register("email")}
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  {errors.email && <p className="text-[10px] text-rose-500">{errors.email.message}</p>}
                 </div>
               </div>
 
@@ -372,20 +399,20 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">İl</label>
                   <input
                     type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
+                    {...register("city")}
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  {errors.city && <p className="text-[10px] text-rose-500">{errors.city.message}</p>}
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">İlçe</label>
                   <input
                     type="text"
                     placeholder="Örn: Kadıköy"
-                    value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
+                    {...register("district")}
                     className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
+                  {errors.district && <p className="text-[10px] text-rose-500">{errors.district.message}</p>}
                 </div>
               </div>
             </div>
@@ -414,17 +441,17 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
 
         {/* STEP 2: VEHICLE INFO */}
         {currentStep === 2 && (
-          <form onSubmit={handleSubmit} className="p-6 space-y-4 animate-in fade-in duration-200">
+          <form onSubmit={handleSubmit(onFormSubmit)} className="p-6 space-y-4 animate-in fade-in duration-200">
             {/* Live Plate Badge Preview */}
             <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
               <div className="text-xs">
                 <p className="font-bold text-slate-900 dark:text-slate-100">
-                  {customerType === "corporate" ? companyTitle : `${name} ${surname}`}
+                  {customerType === "corporate" ? watch("companyTitle") : `${watch("name")} ${watch("surname") || ""}`}
                 </p>
-                <p className="text-[10px] text-slate-500">{phone}</p>
+                <p className="text-[10px] text-slate-500">{watch("phone")}</p>
               </div>
-              {plate ? (
-                <PlateBadge plate={plate} size="sm" />
+              {plateValue ? (
+                <PlateBadge plate={plateValue} size="sm" />
               ) : (
                 <span className="text-[10px] text-slate-400 italic">Plaka bekleniyor...</span>
               )}
@@ -438,12 +465,12 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                 <input
                   type="text"
                   placeholder="34 ABC 123"
-                  value={plate}
-                  onChange={(e) => setPlate(e.target.value.toUpperCase())}
+                  value={watch("plate")}
+                  onChange={(e) => setValue("plate", e.target.value.toUpperCase(), { shouldValidate: true })}
                   className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-mono font-bold tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-sky-500"
                   autoFocus
                 />
-                {errors.plate && <p className="text-[10px] text-rose-500">{errors.plate}</p>}
+                {errors.plate && <p className="text-[10px] text-rose-500">{errors.plate.message}</p>}
               </div>
 
               <div className="space-y-1">
@@ -453,11 +480,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                 <input
                   type="text"
                   placeholder="Örn: BMW"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
+                  {...register("brand")}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                {errors.brand && <p className="text-[10px] text-rose-500">{errors.brand}</p>}
+                {errors.brand && <p className="text-[10px] text-rose-500">{errors.brand.message}</p>}
               </div>
 
               <div className="space-y-1">
@@ -467,11 +493,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                 <input
                   type="text"
                   placeholder="Örn: 320i M Sport"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
+                  {...register("model")}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                {errors.model && <p className="text-[10px] text-rose-500">{errors.model}</p>}
+                {errors.model && <p className="text-[10px] text-rose-500">{errors.model.message}</p>}
               </div>
 
               <div className="space-y-1">
@@ -480,11 +505,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   type="number"
                   min={1950}
                   max={new Date().getFullYear() + 1}
-                  value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
+                  {...register("year", { valueAsNumber: true })}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                {errors.year && <p className="text-[10px] text-rose-500">{errors.year}</p>}
+                {errors.year && <p className="text-[10px] text-rose-500">{errors.year.message}</p>}
               </div>
 
               <div className="space-y-1">
@@ -492,18 +516,16 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                 <input
                   type="number"
                   min={0}
-                  value={kilometer}
-                  onChange={(e) => setKilometer(e.target.value === "" ? "" : Number(e.target.value))}
+                  {...register("kilometer", { valueAsNumber: true })}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                {errors.kilometer && <p className="text-[10px] text-rose-500">{errors.kilometer}</p>}
+                {errors.kilometer && <p className="text-[10px] text-rose-500">{errors.kilometer.message}</p>}
               </div>
 
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Yakıt</label>
                 <select
-                  value={fuelType}
-                  onChange={(e) => setFuelType(e.target.value as any)}
+                  {...register("fuelType")}
                   className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
                 >
                   <option value="Benzin">Benzin</option>
@@ -512,18 +534,19 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   <option value="Elektrik">Elektrik</option>
                   <option value="LPG">LPG</option>
                 </select>
+                {errors.fuelType && <p className="text-[10px] text-rose-500">{errors.fuelType.message}</p>}
               </div>
 
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Vites</label>
                 <select
-                  value={transmission}
-                  onChange={(e) => setTransmission(e.target.value as any)}
+                  {...register("transmission")}
                   className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
                 >
                   <option value="Otomatik">Otomatik</option>
                   <option value="Manuel">Manuel</option>
                 </select>
+                {errors.transmission && <p className="text-[10px] text-rose-500">{errors.transmission.message}</p>}
               </div>
             </div>
 
