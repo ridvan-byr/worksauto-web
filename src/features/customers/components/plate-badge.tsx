@@ -7,8 +7,28 @@ interface PlateBadgeProps {
   className?: string
 }
 
+/**
+ * Otomatik plaka biçimlendirici:
+ * Plaka bitişik yazılmış olsa bile (örn: 34ABC123, 34ILH08, 06ank06)
+ * Şehir kodu, harf grubu ve sayı grubu arasına boşluk koyarak
+ * standart plaka formatına ("34 ABC 123", "34 İLH 08") dönüştürür.
+ */
+export function formatTurkishPlate(plate?: string): string {
+  if (!plate) return ""
+  const cleaned = plate.replace(/\s+/g, "").toLocaleUpperCase("tr-TR").trim()
+
+  // Standart TR Plaka: 2 haneli il kodu + 1-3 (veya daha fazla) harf + sayı grubu
+  const match = cleaned.match(/^(\d{2})([A-ZÇĞIİÖŞÜ]+)(\d+)$/)
+  if (match) {
+    return `${match[1]} ${match[2]} ${match[3]}`
+  }
+
+  // Özel veya standart dışı plakalarda birden fazla boşluğu teke indirip büyük harfe çevirir
+  return plate.trim().replace(/\s+/g, " ").toLocaleUpperCase("tr-TR")
+}
+
 export function PlateBadge({ plate, size = "md", className }: PlateBadgeProps) {
-  const formatted = plate.toUpperCase().trim()
+  const formatted = React.useMemo(() => formatTurkishPlate(plate), [plate])
 
   return (
     <div
@@ -31,8 +51,8 @@ export function PlateBadge({ plate, size = "md", className }: PlateBadgeProps) {
           size === "lg" && "w-6 px-1 text-[10px]"
         )}
       >
-        <span className="leading-none scale-75 opacity-90">★</span>
-        <span className="leading-none mt-0.5">TR</span>
+        <span className="leading-none text-[8px] scale-75 opacity-90">★</span>
+        <span className="leading-none mt-0.5 font-bold">TR</span>
       </div>
 
       {/* Plate Letters - strictly whitespace-nowrap */}
