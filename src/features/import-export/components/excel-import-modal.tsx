@@ -1512,28 +1512,28 @@ export function ExcelImportModal({
                 <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
                   <p className="text-[10px] font-semibold text-slate-400">Yeni Müşteri</p>
                   <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                    +{importResult.importedCustomersCount}
+                    +{importResult.importedCustomersCount || 0}
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
                   <p className="text-[10px] font-semibold text-slate-400">Yeni Araç</p>
                   <p className="text-xl font-bold text-sky-600 dark:text-sky-400">
-                    +{importResult.importedVehiclesCount}
+                    +{importResult.importedVehiclesCount || 0}
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
                   <p className="text-[10px] font-semibold text-slate-400">Mevcut Kayıt</p>
                   <p className="text-xl font-bold text-slate-700 dark:text-slate-300">
-                    {importResult.existingCustomersCount + importResult.existingVehiclesCount}
+                    {(importResult.existingCustomersCount || 0) + (importResult.existingVehiclesCount || 0)}
                   </p>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800">
                   <p className="text-[10px] font-semibold text-slate-400">Toplam Satır</p>
                   <p className="text-xl font-bold text-slate-900 dark:text-slate-100">
-                    {importResult.totalRows}
+                    {importResult.totalRows || 0}
                   </p>
                 </div>
               </div>

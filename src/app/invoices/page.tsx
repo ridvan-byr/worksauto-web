@@ -62,7 +62,7 @@ export default function InvoicesPage() {
         vehicleBrand: inv.workOrder?.vehicle?.brand || 'Araç',
         vehicleModel: inv.workOrder?.vehicle ? `${inv.workOrder.vehicle.brand} ${inv.workOrder.vehicle.model}` : 'Model',
         vehicleYear: inv.workOrder?.vehicle?.year || 2024,
-        vehicleKm: inv.workOrder?.vehicle?.mileage || 0,
+        vehicleKm: inv.workOrder?.vehicle?.currentKm ?? inv.workOrder?.vehicle?.mileage ?? 0,
         issueDate: new Date(inv.issueDate).toISOString().split('T')[0],
         dueDate: new Date(inv.dueDate).toISOString().split('T')[0],
         subtotal: Number(inv.subtotal),

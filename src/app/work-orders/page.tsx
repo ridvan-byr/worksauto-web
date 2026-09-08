@@ -47,7 +47,7 @@ export default function WorkOrdersPage() {
         brand: w.vehicle?.brand || 'Araç',
         model: w.vehicle?.model || '',
         year: w.vehicle?.year || 2024,
-        kilometer: w.vehicle?.mileage || 0,
+        kilometer: w.vehicle?.currentKm ?? w.vehicle?.mileage ?? 0,
         status: w.status === 'QUEUE' ? 'PENDING' : w.status,
         priority: 'NORMAL',
         assignedLift: w.assignedLift || 'Lift 1',

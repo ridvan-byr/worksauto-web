@@ -66,7 +66,7 @@ export default function CustomersPage() {
           brand: v.brand,
           model: v.model,
           year: v.year,
-          kilometer: v.mileage || 0,
+          kilometer: v.currentKm ?? v.mileage ?? 0,
           fuelType: v.fuelType,
           transmission: v.transmission,
         })),
