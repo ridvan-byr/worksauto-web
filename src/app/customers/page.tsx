@@ -89,6 +89,11 @@ export default function CustomersPage() {
         phone: newCust.phone,
         type: newCust.type === 'corporate' ? 'CORPORATE' : 'INDIVIDUAL',
         companyTitle: newCust.companyTitle,
+        taxOffice: newCust.taxOffice,
+        taxNumber: newCust.taxNumber,
+        email: newCust.email,
+        city: newCust.city,
+        district: newCust.district,
       })
 
       if (createdCustomer?.id && (newCust.vehicles?.length ?? 0) > 0) {

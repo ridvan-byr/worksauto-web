@@ -259,19 +259,52 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
             {/* Fields */}
             <div className="space-y-3">
               {customerType === "corporate" && (
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                    Şirket Ticari Ünvanı <span className="text-rose-500">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Örn: Ege Lojistik A.Ş."
-                    value={companyTitle}
-                    onChange={(e) => setCompanyTitle(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                  {errors.companyTitle && <p className="text-[10px] text-rose-500">{errors.companyTitle}</p>}
-                </div>
+                <>
+                  <div className="space-y-1">
+                    <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                      Şirket Ticari Ünvanı <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Örn: Ege Lojistik A.Ş."
+                      value={companyTitle}
+                      onChange={(e) => setCompanyTitle(e.target.value)}
+                      className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                    {errors.companyTitle && <p className="text-[10px] text-rose-500">{errors.companyTitle}</p>}
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        Vergi Dairesi
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="Örn: İkitelli V.D."
+                        value={taxOffice}
+                        onChange={(e) => setTaxOffice(e.target.value)}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                      {errors.taxOffice && <p className="text-[10px] text-rose-500">{errors.taxOffice}</p>}
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        Vergi No <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="10 veya 11 haneli"
+                        maxLength={11}
+                        value={taxNumber}
+                        onChange={(e) => setTaxNumber(e.target.value.replace(/\D/g, ''))}
+                        className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                      {errors.taxNumber && <p className="text-[10px] text-rose-500">{errors.taxNumber}</p>}
+                    </div>
+                  </div>
+                </>
               )}
 
               <div className="grid grid-cols-2 gap-2.5">
