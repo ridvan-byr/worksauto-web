@@ -36,23 +36,25 @@ This repository (`worksauto-web`) contains the **Frontend (Web UI)** application
 
 ---
 
-## ✨ Key Features (Phase 1: UI Bootstrap & Core Shell)
+## ✨ Key Enterprise Features
 
-### 🎨 Intelligent Brand & Dynamic Logo Architecture
-- **Responsive Brand Logo (`BrandLogo.tsx`):**
-  - **Expanded Sidebar:** High-contrast crisp vector logo (`worksauto-logo-white.png` / `worksauto-logo-dark.png`) featuring an ambient glow and a 45-degree **metallic light sweep (Shimmer Sweep)** on hover.
-  - **Collapsed Sidebar:** High-resolution tight icon logo (`worksauto-icon-white-tight.png` / `worksauto-icon-black-tight.png`) with an atmospheric cyan halo and dynamic micro-tilt (`rotate-[-2deg]`).
-- **Dynamic Adaptive Favicon (`DynamicFavicon.tsx`):** Listens to `resolvedTheme` at runtime to automatically swap tab icons (white for dark theme, black for light theme) without hydration mismatch.
+### 🚗 Core Automotive ERP Modules
+- **İş Emirleri & Atölye Paneli (`/work-orders`):** Araç kabulü, usta ve lift ataması, canlı parça ekleme ve durum yaşam döngüsü.
+- **Randevu Takvimi & Açık Müşteri Portalı (`/appointments`, `/book/[slug]`):** Çift çakışma önleyici haftalık takvim gridi ve müşterilere özel online randevu rezervasyonu.
+- **Canlı Stok & Yedek Parça Kataloğu (`/inventory`):** Atomik stok düşümü, kritik eşik uyarıları ve raf/koridor lokasyon takibi.
+- **Müşteri & Filo Yönetimi (`/customers`, `/vehicles`):** TR standart plaka formatlama, servis geçmişi ve cari hesap borç/alacak takibi.
+- **Finans, Fatura & Cari Ekstre (`/invoices`, `/current-accounts`):** İdempotent ödeme kaydı ve tek tıkla cari hesap hareketleri.
+- **Süper Yönetici Konsolu (`/admin`):** Çoklu servis lisanslama, platform sağlık ve işlem hacmi KPI paneli.
+- **Canlı WebSocket Bildirimleri (`socket.io`):** Atölye zili, kritik stok uyarıları ve gerçek zamanlı iş emri güncellemeleri.
 
-### 🌗 Enterprise Theme Management
-- **3-Way Theme Switcher:** Light, Dark, and System modes.
-- **Circular Reveal Animation:** Native **View Transitions API** creates an expanding circular ripple originating directly from the trigger button coordinates for a seamless visual transition.
+### 🧪 Test & CI/CD Kalitesi
+- **Birim Testleri (Vitest):** Token saklama, formatlayıcılar ve middleware guard testleri (`npm test`).
+- **E2E Test Paketi (Playwright Chromium):** 4 kapsamlı E2E test paketi (auth-guard, work-order-lifecycle, appointment-booking, admin-tenant-management) ile %100 yeşil test güvencesi.
+- **GitHub Actions Pipeline:** Lint, Typecheck, Unit Test, Build ve E2E test aşamalarıyla korunan dağıtım zinciri.
 
-### 🏛️ Zero-Flicker SaaS Layout Shell
-- **Next.js Server Cookie Architecture:** The sidebar collapsed state is read directly on the server via `next/headers` (`cookies()`). Ensures HTML is pre-rendered with the correct width, eliminating hydration mismatches and client-side flash-of-unstyled-content (FOUC).
-- **Floating Edge Handle:** Minimalist circular toggle anchored along the right border of the sidebar, preventing any overlap with the brand mark.
-- **Hardware-Accelerated Page Transitions (`template.tsx`):** Smooth 10px lift and opacity interpolation utilizing GPU hardware acceleration (`translate3d(0, 10px, 0)`).
-- **Refined Minimalist 404 Page:** Clean, typography-driven error layout adhering to Linear and Stripe design guidelines (`not-found.tsx`).
+### 🎨 Marka & Arayüz Mimarisi
+- **Çift Katmanlı Rota Güvenliği:** Next.js Edge Middleware (`middleware.ts`) + Client-side in-memory access token mimarisi.
+- **3-Kademeli Tema & Görsel Geçişler:** View Transitions API ile dairesel dalga animasyonu ve sıfır-flicker SSR layout.
 
 ---
 

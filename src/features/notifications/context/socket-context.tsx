@@ -8,6 +8,7 @@ import { playNotificationChime } from "../sound/chime";
 import { NotificationItem } from "../types";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-context";
+import { getAccessToken } from "@/lib/api-client";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -81,7 +82,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const token = localStorage.getItem("worksauto_access_token");
+    const token = getAccessToken() || (typeof window !== "undefined" ? localStorage.getItem("worksauto_access_token") : null);
     const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
     // Strip trailing /api/v1 to reach the root WebSocket host
     const socketHost = rawApiUrl.replace(/\/api\/v1\/?$/, "");
