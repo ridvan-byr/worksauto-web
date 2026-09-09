@@ -36,6 +36,7 @@ export function setSessionCookie(active: boolean) {
 }
 
 let isRefreshing = false;
+let refreshPromise: Promise<string> | null = null;
 let failedQueue: Array<{
   resolve: (value?: unknown) => void;
   reject: (reason?: unknown) => void;
@@ -71,41 +72,53 @@ export class ApiError extends Error {
 }
 
 export async function refreshAccessToken(): Promise<string> {
-  const legacyRefreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
+  if (refreshPromise) {
+    return refreshPromise;
+  }
 
-  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify(legacyRefreshToken ? { refreshToken: legacyRefreshToken } : {}),
-  });
+  refreshPromise = (async () => {
+    try {
+      const legacyRefreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
 
-  if (!response.ok) {
-    if (typeof window !== 'undefined') {
-      const errData = await response.json().catch(() => ({}));
-      const errMsg = (errData.message || '').toLowerCase();
-      const isSuspended = errMsg.includes('askıya') || errMsg.includes('lisans') || errMsg.includes('aktif değil');
+      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(legacyRefreshToken ? { refreshToken: legacyRefreshToken } : {}),
+      });
 
-      setAccessToken(null);
-      setSessionCookie(false);
-      localStorage.removeItem(ACCESS_TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      localStorage.removeItem('worksauto_auth_session');
-      if (!window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/sign-in')) {
-        window.location.href = isSuspended ? '/sign-in?suspended=true' : '/sign-in';
+      if (!response.ok) {
+        if (typeof window !== 'undefined') {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = (errData.message || '').toLowerCase();
+          const isSuspended = errMsg.includes('askıya') || errMsg.includes('lisans') || errMsg.includes('aktif değil');
+
+          setAccessToken(null);
+          setSessionCookie(false);
+          localStorage.removeItem(ACCESS_TOKEN_KEY);
+          localStorage.removeItem(REFRESH_TOKEN_KEY);
+          localStorage.removeItem('worksauto_auth_session');
+          if (!window.location.pathname.startsWith('/admin') && !window.location.pathname.startsWith('/sign-in')) {
+            window.location.href = isSuspended ? '/sign-in?suspended=true' : '/sign-in';
+          }
+        }
+        throw new Error('Refresh token expired or invalid');
       }
+
+      const data = await response.json();
+      setAccessToken(data.accessToken);
+      setSessionCookie(true);
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
+      }
+
+      return data.accessToken;
+    } finally {
+      refreshPromise = null;
     }
-    throw new Error('Refresh token expired or invalid');
-  }
+  })();
 
-  const data = await response.json();
-  setAccessToken(data.accessToken);
-  setSessionCookie(true);
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-  }
-
-  return data.accessToken;
+  return refreshPromise;
 }
 
 export async function apiRequest<T = unknown>(
@@ -208,8 +221,8 @@ export async function apiRequest<T = unknown>(
         await new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         });
-        // Re-read token and retry
-        const retryToken = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
+        // Re-read in-memory token and retry
+        const retryToken = getAccessToken();
         const retryHeaders = {
           ...requestHeaders,
           ...(retryToken ? { Authorization: `Bearer ${retryToken}` } : {}),

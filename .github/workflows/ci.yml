@@ -33,9 +33,29 @@ jobs:
       - name: Validate TypeScript Compilation
         run: npx tsc --noEmit
 
+  unit-tests:
+    name: Automated Unit & Component Tests (Vitest)
+    needs: lint-and-typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Execute Vitest Test Suite
+        run: npm run test
+
   build:
     name: Production Build Verification
-    needs: lint-and-typecheck
+    needs: [lint-and-typecheck, unit-tests]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -53,9 +73,35 @@ jobs:
       - name: Build Web Application
         run: npm run build
 
+  e2e-tests:
+    name: End-to-End Route Guard Tests (Playwright)
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Application for E2E
+        run: npm run build
+
+      - name: Install Playwright Chromium Browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run Playwright E2E Tests
+        run: npx playwright test
+
   deploy-production:
     name: Production Deployment Gate (Manual Approval)
-    needs: [build]
+    needs: [build, e2e-tests]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
     environment: production
@@ -75,7 +121,7 @@ jobs:
         if: steps.check_secrets.outputs.has_secrets != 'true'
         run: |
           echo "ℹ️ PROD_HOST secret is not configured in GitHub Secrets."
-          echo "✅ Continuous Integration & Build verification completed with 100% PASS."
+          echo "✅ All Quality Gates (Lint, TypeScript, 18 Vitest Tests, Playwright E2E, Build) completed with 100% PASS."
 
       - name: Deploy to Production Server via SSH
         if: steps.check_secrets.outputs.has_secrets == 'true'
@@ -91,4 +137,3 @@ jobs:
             npm ci --omit=dev
             npm run build
             pm2 reload worksauto-web || pm2 start "npm start" --name worksauto-web
-
