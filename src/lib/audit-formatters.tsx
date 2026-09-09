@@ -195,6 +195,12 @@ export function getActionBadge(action: string): React.ReactNode {
           <span>Kalem / Parça Silindi</span>
         </span>
       )
+    case "work_order.item_quantity_updated":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+          <span>Parça Adedi Güncellendi</span>
+        </span>
+      )
     case "work_order.deleted":
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
@@ -277,6 +283,12 @@ export function getActionBadge(action: string): React.ReactNode {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
           <span>Personel Güncellendi</span>
+        </span>
+      )
+    case "staff.lift_changed":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+          <span>Lift Ataması Değiştirildi</span>
         </span>
       )
     case "staff.deactivated":
@@ -414,6 +426,12 @@ function smartTranslateAction(action: string): string {
 
   const normalized = action.toLowerCase().replace(/_/g, " ").replace(/\./g, " ")
 
+  if (normalized.includes("lift")) {
+    return "Lift Ataması Değiştirildi"
+  }
+  if (normalized.includes("item quantity") || normalized.includes("quantity")) {
+    return "Parça Adedi Güncellendi"
+  }
   if (normalized.includes("create") || normalized.includes("add")) {
     return "Yeni Kayıt Eklendi"
   }
@@ -457,6 +475,8 @@ export function getActionTitle(action: string | undefined): string {
       return "İş Emrine Yeni Parça / İşçilik Kalemi Eklendi"
     case "work_order.item_removed":
       return "İş Emrinden Parça / İşçilik Kalemi Silindi"
+    case "work_order.item_quantity_updated":
+      return "İş Emrinde Parça / Kalem Adedi Güncellendi"
     case "work_order.deleted":
       return "İş Emri Sistemden Silindi"
 
@@ -487,6 +507,8 @@ export function getActionTitle(action: string | undefined): string {
       return "Yeni Personel Hesabı Oluşturuldu"
     case "staff.updated":
       return "Personel Bilgileri / Yetkileri Güncellendi"
+    case "staff.lift_changed":
+      return "Personele Atanan Lift Değiştirildi"
     case "staff.deactivated":
       return "Personel Hesabı Pasife Alındı"
     case "staff.deleted":

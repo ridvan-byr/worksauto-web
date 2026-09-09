@@ -69,6 +69,8 @@ export interface AdminTenantDetail {
 export interface AuditLogEntry {
   id: string;
   action: string;
+  entityName?: string | null;
+  entityId?: string | null;
   ipAddress?: string | null;
   userAgent?: string | null;
   createdAt: string;

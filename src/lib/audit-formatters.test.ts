@@ -5,6 +5,7 @@ import {
   formatPaymentMethod,
   formatRole,
   formatClientIp,
+  getActionTitle,
 } from './audit-formatters'
 
 describe('Audit Formatters', () => {
@@ -48,5 +49,13 @@ describe('Audit Formatters', () => {
     expect(formatClientIp('127.0.0.1')).toBe('127.0.0.1 (Yerel)')
     expect(formatClientIp('localhost')).toBe('127.0.0.1 (Yerel)')
     expect(formatClientIp(undefined)).toBe('127.0.0.1 (Yerel)')
+  })
+
+  it('translates action titles accurately', () => {
+    expect(getActionTitle('work_order.item_quantity_updated')).toBe('İş Emrinde Parça / Kalem Adedi Güncellendi')
+    expect(getActionTitle('work_order.item_added')).toBe('İş Emrine Yeni Parça / İşçilik Kalemi Eklendi')
+    expect(getActionTitle('work_order.item_removed')).toBe('İş Emrinden Parça / İşçilik Kalemi Silindi')
+    expect(getActionTitle('staff.lift_changed')).toBe('Personele Atanan Lift Değiştirildi')
+    expect(getActionTitle('staff.updated')).toBe('Personel Bilgileri / Yetkileri Güncellendi')
   })
 })

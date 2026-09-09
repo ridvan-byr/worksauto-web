@@ -18,6 +18,8 @@ import {
   FileText,
   CreditCard,
   Tag,
+  Boxes,
+  Users,
   Search,
   Eye,
   ChevronLeft,
@@ -80,9 +82,17 @@ export function getActionTitle(action: string) {
     case "appointment.cancelled": return "Servis Randevusu İptal Edildi"
     case "work_order.status_changed": return "İş Emri Süreç / Aşama Değişikliği"
     case "work_order.created": return "Yeni Araç Kabul ve İş Emri Açıldı"
+    case "work_order.item_quantity_updated": return "İş Emrinde Parça / Kalem Adedi Güncellendi"
+    case "work_order.item_added": return "İş Emrine Yeni Parça / Kalem Eklendi"
+    case "work_order.item_removed": return "İş Emrinden Parça / Kalem Silindi"
     case "invoice.auto_created_on_wo_complete": return "İş Emri Tamamlanması Sonrası Otomatik Fatura"
     case "invoice.created": return "Servis Faturası Düzenlendi"
     case "payment.created": return "Tahsilat / Ödeme Kaydı Alındı"
+    case "staff.lift_changed": return "Personele Atanan Lift Değiştirildi"
+    case "staff.created": return "Yeni Personel Hesabı Oluşturuldu"
+    case "staff.updated": return "Personel Bilgileri / Yetkileri Güncellendi"
+    case "staff.deactivated": return "Personel Hesabı Pasife Alındı"
+    case "staff.deleted": return "Personel Hesabı Silindi"
     default: return action.replace(/_/g, " ").replace(/\./g, " › ")
   }
 }
@@ -194,6 +204,27 @@ export function getActionBadge(action: string) {
           <span>Yeni İş Emri Açıldı</span>
         </span>
       )
+    case "work_order.item_quantity_updated":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+          <Boxes size={12} />
+          <span>Parça Adedi Güncellendi</span>
+        </span>
+      )
+    case "work_order.item_added":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30">
+          <Plus size={12} />
+          <span>Kalem / Parça Eklendi</span>
+        </span>
+      )
+    case "work_order.item_removed":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+          <Trash2 size={12} />
+          <span>Kalem / Parça Silindi</span>
+        </span>
+      )
     case "invoice.auto_created_on_wo_complete":
     case "invoice.created":
       return (
@@ -207,6 +238,41 @@ export function getActionBadge(action: string) {
         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
           <CreditCard size={12} />
           <span>Tahsilat Alındı</span>
+        </span>
+      )
+    case "staff.lift_changed":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+          <Boxes size={12} />
+          <span>Lift Ataması Değiştirildi</span>
+        </span>
+      )
+    case "staff.created":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+          <Users size={12} />
+          <span>Yeni Personel Kaydı</span>
+        </span>
+      )
+    case "staff.updated":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+          <Users size={12} />
+          <span>Personel Güncellendi</span>
+        </span>
+      )
+    case "staff.deactivated":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+          <Pause size={12} />
+          <span>Personel Pasife Alındı</span>
+        </span>
+      )
+    case "staff.deleted":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+          <Trash2 size={12} />
+          <span>Personel Silindi</span>
         </span>
       )
     default:

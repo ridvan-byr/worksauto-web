@@ -38,7 +38,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   const isMutedRef = React.useRef(isMuted);
   const queryClient = useQueryClient();
   const router = useRouter();
-  const { isAuthenticated, user, tenant } = useAuth();
+  const { isAuthenticated, isLoading, user, tenant } = useAuth();
 
   // Keep isMutedRef in sync
   React.useEffect(() => {
@@ -72,7 +72,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
   // Connect / Disconnect socket based on auth state
   React.useEffect(() => {
-    if (typeof window === "undefined" || !isAuthenticated) {
+    if (typeof window === "undefined" || !isAuthenticated || isLoading) {
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -83,6 +83,10 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     }
 
     const token = getAccessToken() || (typeof window !== "undefined" ? localStorage.getItem("worksauto_access_token") : null);
+    if (!token || token === "null" || token === "undefined") {
+      return;
+    }
+
     const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
     // Strip trailing /api/v1 to reach the root WebSocket host
     const socketHost = rawApiUrl.replace(/\/api\/v1\/?$/, "");

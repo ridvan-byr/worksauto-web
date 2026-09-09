@@ -1,6 +1,12 @@
 "use client"
 
-import { useWorkOrder, useAddWorkOrderItem, useUpdateWorkOrderStatus } from "@/features/work-orders/api/use-work-orders"
+import {
+  useWorkOrder,
+  useAddWorkOrderItem,
+  useUpdateWorkOrderStatus,
+  useRemoveWorkOrderItem,
+  useUpdateWorkOrderItemQuantity,
+} from "@/features/work-orders/api/use-work-orders"
 import { useProducts, type ProductRecord } from "@/features/inventory/api/use-inventory"
 
 import * as React from "react"
@@ -14,6 +20,9 @@ import {
   CheckCircle2,
   Play,
   Plus,
+  Minus,
+  Trash2,
+  Loader2,
   Receipt,
   FileText,
   Search,
@@ -81,9 +90,39 @@ export default function WorkOrderDetailPage() {
   const { data: apiOrder } = useWorkOrder(id)
   const addItemMutation = useAddWorkOrderItem()
   const updateStatusMutation = useUpdateWorkOrderStatus()
+  const removeItemMutation = useRemoveWorkOrderItem()
+  const updateQuantityMutation = useUpdateWorkOrderItemQuantity()
+
+  const [updatingItemId, setUpdatingItemId] = React.useState<string | null>(null)
+  const [deletingItemId, setDeletingItemId] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     if (apiOrder) {
+      const rawItems = (apiOrder.items || []) as Array<Record<string, unknown>>
+      const servicesList = rawItems
+        .filter((i) => i.itemType === 'SERVICE')
+        .map((i) => ({
+          id: String(i.id || 'srv_1'),
+          name: String(i.name || 'İşçilik'),
+          durationMinutes: 60,
+          laborPrice: Number(i.unitPrice || 0),
+          completed: true,
+        }))
+
+      const partsList = rawItems
+        .filter((i) => i.itemType === 'PART')
+        .map((i) => ({
+          id: String(i.id || 'prt_1'),
+          name: String(i.name || 'Yedek Parça'),
+          partNumber: String(i.itemId || i.partNumber || 'YEDEK-PARCA'),
+          quantity: Number(i.quantity || 1),
+          unitPrice: Number(i.unitPrice || 0),
+          totalPrice: Number(i.totalPrice || Number(i.unitPrice || 0) * Number(i.quantity || 1) * 1.2),
+        }))
+
+      const computedLaborTotal = servicesList.reduce((sum, s) => sum + s.laborPrice, 0)
+      const computedPartsTotal = partsList.reduce((sum, p) => sum + p.quantity * p.unitPrice, 0)
+
       setOrder({
         id: apiOrder.id,
         tenantId: apiOrder.tenantId || 'ten_1',
@@ -101,21 +140,8 @@ export default function WorkOrderDetailPage() {
         priority: 'NORMAL',
         assignedLift: apiOrder.assignedLift || 'Lift 1',
         assignedMechanicName: apiOrder.assignedMechanic?.user ? `${apiOrder.assignedMechanic.user.name} ${apiOrder.assignedMechanic.user.surname}` : 'Usta',
-        services: ((apiOrder.items || []) as Array<Record<string, unknown>>).filter((i) => i.itemType === 'SERVICE').map((i) => ({
-          id: String(i.id || 'srv_1'),
-          name: String(i.name || 'İşçilik'),
-          durationMinutes: 60,
-          laborPrice: Number(i.unitPrice || 0),
-          completed: true,
-        })),
-        parts: ((apiOrder.items || []) as Array<Record<string, unknown>>).filter((i) => i.itemType === 'PART').map((i) => ({
-          id: String(i.id || 'prt_1'),
-          name: String(i.name || 'Yedek Parça'),
-          partNumber: String(i.itemId || i.partNumber || 'YEDEK-PARCA'),
-          quantity: Number(i.quantity || 1),
-          unitPrice: Number(i.unitPrice || 0),
-          totalPrice: Number(i.totalPrice || 0),
-        })),
+        services: servicesList,
+        parts: partsList,
         notes: (apiOrder.notes || []).map((n) => ({
           id: n.id,
           authorName: n.authorName || 'Usta',
@@ -131,10 +157,10 @@ export default function WorkOrderDetailPage() {
           uploaderName: p.uploadedBy || 'Usta',
           type: (p.type || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
         })),
-        laborTotal: Number(apiOrder.subtotal || 0),
-        partsTotal: 0,
+        laborTotal: computedLaborTotal,
+        partsTotal: computedPartsTotal,
         taxRate: 0.20,
-        grandTotal: Number(apiOrder.grandTotal || 0),
+        grandTotal: Number(apiOrder.grandTotal ?? (computedLaborTotal + computedPartsTotal) * 1.2),
         estimatedCompletionTime: apiOrder.targetCompletionDate || '18:00',
         createdAt: apiOrder.createdAt,
         updatedAt: apiOrder.updatedAt,
@@ -153,6 +179,8 @@ export default function WorkOrderDetailPage() {
     )
   }
 
+  const isOrderLocked = order.status === "COMPLETED" || order.status === "CANCELLED"
+
   const handleStatusUpdate = async (status: WorkOrderStatus) => {
     try {
       await updateStatusMutation.mutateAsync({ id: order.id, status })
@@ -160,6 +188,42 @@ export default function WorkOrderDetailPage() {
       console.warn('API status update error:', e)
     }
     setOrder((prev) => (prev ? { ...prev, status } : null))
+  }
+
+  const handleRemoveItem = async (itemId: string, itemName: string) => {
+    if (isOrderLocked) return
+    if (!window.confirm(`"${itemName}" kalemini iş emrinden çıkarmak istediğinize emin misiniz? (Parça ise stoğa iade edilir)`)) {
+      return
+    }
+
+    setDeletingItemId(itemId)
+    try {
+      await removeItemMutation.mutateAsync({
+        workOrderId: order.id,
+        itemId,
+      })
+    } catch (err) {
+      console.error('Failed to remove item:', err)
+    } finally {
+      setDeletingItemId(null)
+    }
+  }
+
+  const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
+    if (isOrderLocked || newQuantity < 1) return
+
+    setUpdatingItemId(itemId)
+    try {
+      await updateQuantityMutation.mutateAsync({
+        workOrderId: order.id,
+        itemId,
+        quantity: newQuantity,
+      })
+    } catch (err) {
+      console.error('Failed to update quantity:', err)
+    } finally {
+      setUpdatingItemId(null)
+    }
   }
 
   const handleAddService = async (e: React.FormEvent) => {
@@ -424,19 +488,25 @@ export default function WorkOrderDetailPage() {
                 </div>
               </div>
 
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setIsAddingService(!isAddingService)}
-                className="h-8 px-3 text-xs font-semibold gap-1.5 cursor-pointer"
-              >
-                <Plus size={13} />
-                <span>İşçilik Ekle</span>
-              </Button>
+              {!isOrderLocked ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setIsAddingService(!isAddingService)}
+                  className="h-8 px-3 text-xs font-semibold gap-1.5 cursor-pointer"
+                >
+                  <Plus size={13} />
+                  <span>İşçilik Ekle</span>
+                </Button>
+              ) : (
+                <span className="text-[11px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+                  Kilitli
+                </span>
+              )}
             </div>
 
             {/* Inline Add Service Form */}
-            {isAddingService && (
+            {isAddingService && !isOrderLocked && (
               <form onSubmit={handleAddService} className="p-3.5 rounded-2xl bg-sky-500/5 border border-sky-500/20 flex flex-col sm:flex-row gap-2 items-center animate-in fade-in duration-200">
                 <input
                   type="text"
@@ -467,28 +537,49 @@ export default function WorkOrderDetailPage() {
 
             {/* Services Table */}
             <div className="space-y-2">
-              {order.services.map((srv) => (
-                <div
-                  key={srv.id}
-                  className="p-3 rounded-2xl bg-slate-50/60 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-4 h-4 rounded-md bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
-                      <CheckCircle2 size={13} />
+              {order.services.length === 0 ? (
+                <p className="text-center py-4 text-xs text-slate-400 italic">
+                  Henüz işçilik veya işlem girilmedi.
+                </p>
+              ) : (
+                order.services.map((srv) => (
+                  <div
+                    key={srv.id}
+                    className="p-3 rounded-2xl bg-slate-50/60 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between text-xs gap-3"
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div className="w-4 h-4 rounded-md bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                        <CheckCircle2 size={13} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold text-slate-900 dark:text-slate-100 truncate">{srv.name}</p>
+                        <p className="text-[10px] text-slate-400 font-mono">~{srv.durationMinutes} dakika</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-slate-100">{srv.name}</p>
-                      <p className="text-[10px] text-slate-400 font-mono">~{srv.durationMinutes} dakika</p>
-                    </div>
-                  </div>
 
-                  <div className="text-right">
-                    <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
-                      {srv.laborPrice.toLocaleString("tr-TR")} ₺
-                    </span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                        {srv.laborPrice.toLocaleString("tr-TR")} ₺
+                      </span>
+                      {!isOrderLocked && (
+                        <button
+                          type="button"
+                          disabled={deletingItemId === srv.id}
+                          onClick={() => handleRemoveItem(srv.id, srv.name)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer disabled:opacity-50"
+                          title="İşçiliği Sil"
+                        >
+                          {deletingItemId === srv.id ? (
+                            <Loader2 size={14} className="animate-spin text-rose-500" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                        </button>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -509,19 +600,25 @@ export default function WorkOrderDetailPage() {
                 </div>
               </div>
 
-              <Button
-                type="button"
-                size="sm"
-                onClick={() => setIsAddingPart(!isAddingPart)}
-                className="h-8 px-3 text-xs font-semibold gap-1.5 cursor-pointer"
-              >
-                <Plus size={13} />
-                <span>Parça Ekle</span>
-              </Button>
+              {!isOrderLocked ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={() => setIsAddingPart(!isAddingPart)}
+                  className="h-8 px-3 text-xs font-semibold gap-1.5 cursor-pointer"
+                >
+                  <Plus size={13} />
+                  <span>Parça Ekle</span>
+                </Button>
+              ) : (
+                <span className="text-[11px] font-medium text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+                  Kilitli
+                </span>
+              )}
             </div>
 
             {/* Inline Add Part Form */}
-            {isAddingPart && (
+            {isAddingPart && !isOrderLocked && (
               <form onSubmit={handleAddPart} className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/20 space-y-3 animate-in fade-in duration-200">
                 {/* Source Selection Tabs */}
                 <div className="flex items-center justify-between pb-2 border-b border-indigo-500/10">
@@ -788,19 +885,76 @@ export default function WorkOrderDetailPage() {
                 order.parts.map((p) => (
                   <div
                     key={p.id}
-                    className="p-3 rounded-2xl bg-slate-50/60 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between text-xs"
+                    className="p-3 rounded-2xl bg-slate-50/60 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800/70 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                   >
-                    <div>
-                      <p className="font-bold text-slate-900 dark:text-slate-100">{p.name}</p>
+                    <div className="min-w-0">
+                      <p className="font-bold text-slate-900 dark:text-slate-100 truncate">{p.name}</p>
                       <p className="text-[10px] text-slate-400 font-mono">
-                        {p.partNumber} • {p.quantity} Adet × {p.unitPrice.toLocaleString("tr-TR")} ₺
+                        {p.partNumber} • Birim: {p.unitPrice.toLocaleString("tr-TR")} ₺
                       </p>
                     </div>
 
-                    <div className="text-right">
-                      <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
-                        {p.totalPrice.toLocaleString("tr-TR")} ₺
-                      </span>
+                    <div className="flex items-center justify-between sm:justify-end gap-3 shrink-0">
+                      {/* Quantity Stepper */}
+                      {!isOrderLocked ? (
+                        <div className="flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-xs">
+                          <button
+                            type="button"
+                            disabled={p.quantity <= 1 || updatingItemId === p.id}
+                            onClick={() => handleUpdateQuantity(p.id, p.quantity - 1)}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            title="Adet Azalt (Stoğa iade et)"
+                          >
+                            <Minus size={12} />
+                          </button>
+
+                          <div className="w-9 text-center font-mono font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center justify-center">
+                            {updatingItemId === p.id ? (
+                              <Loader2 size={13} className="animate-spin text-indigo-500" />
+                            ) : (
+                              <span>{p.quantity}</span>
+                            )}
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={updatingItemId === p.id}
+                            onClick={() => handleUpdateQuantity(p.id, p.quantity + 1)}
+                            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            title="Adet Artır (Stoktan düş)"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="font-mono text-xs px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 font-bold text-slate-600 dark:text-slate-400">
+                          {p.quantity} Adet
+                        </span>
+                      )}
+
+                      {/* Total Price */}
+                      <div className="text-right min-w-[70px]">
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                          {p.totalPrice.toLocaleString("tr-TR")} ₺
+                        </span>
+                      </div>
+
+                      {/* Remove Button */}
+                      {!isOrderLocked && (
+                        <button
+                          type="button"
+                          disabled={deletingItemId === p.id}
+                          onClick={() => handleRemoveItem(p.id, p.name)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer disabled:opacity-50"
+                          title="Kalemi Kaldır & Stoğa İade Et"
+                        >
+                          {deletingItemId === p.id ? (
+                            <Loader2 size={14} className="animate-spin text-rose-500" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))

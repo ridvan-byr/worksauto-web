@@ -106,6 +106,23 @@ export function useRemoveWorkOrderItem() {
   });
 }
 
+export function useUpdateWorkOrderItemQuantity() {
+  const queryClient = useQueryClient();
+  return useMutation<WorkOrder, Error, { workOrderId: string; itemId: string; quantity: number }>({
+    mutationFn: ({ workOrderId, itemId, quantity }) =>
+      apiClient.patch<WorkOrder>(`/work-orders/${workOrderId}/items/${itemId}`, { quantity }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      toast.success('Kalem miktarı güncellendi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Kalem miktarı güncellenirken hata oluştu.');
+    },
+  });
+}
+
 export function useAddWorkOrderPhoto() {
   const queryClient = useQueryClient();
   return useMutation<unknown, Error, { workOrderId: string; data: { url: string; caption: string; photoType: string } }>({

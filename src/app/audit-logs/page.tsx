@@ -252,9 +252,30 @@ export default function TenantAuditLogsPage() {
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
               {filteredLogs.map((log) => {
-                const changes = ((log.changesAfter || log.changesBefore || log.details || {}) as unknown) as Record<string, unknown>
+                const before = ((log.changesBefore || {}) as unknown) as Record<string, unknown>
+                const after = ((log.changesAfter || {}) as unknown) as Record<string, unknown>
+                const details = ((log.details || {}) as unknown) as Record<string, unknown>
+                const changes = { ...before, ...after, ...details }
+                const isStaffLog =
+                  log.entityName?.toLowerCase() === "user" ||
+                  log.entityName?.toLowerCase() === "staff" ||
+                  log.action.startsWith("staff.") ||
+                  Boolean(before.staffName || after.staffName || before.assignedLift !== undefined || after.assignedLift !== undefined)
                 const plate = typeof changes.plate === "string" ? changes.plate : undefined
                 const displayName = typeof (changes.itemName || changes.name || changes.serviceName) === "string" ? String(changes.itemName || changes.name || changes.serviceName) : undefined
+                const staffName = isStaffLog
+                  ? String(after.staffName || before.staffName || after.name || before.name || displayName || "")
+                  : undefined
+                const oldLift = before.assignedLift !== undefined ? String(before.assignedLift || "Atanmamış") : undefined
+                const newLift = after.assignedLift !== undefined ? String(after.assignedLift || "Atanmamış") : undefined
+                const isLiftChanged = Boolean(after.liftChange || (oldLift !== undefined && newLift !== undefined && oldLift !== newLift))
+                const oldRole = before.role ? formatRole(String(before.role)) : undefined
+                const newRole = after.role ? formatRole(String(after.role)) : undefined
+                const isRoleChanged = Boolean(oldRole && newRole && oldRole !== newRole)
+                const isStatusChanged = Boolean(before.isActive !== undefined && after.isActive !== undefined && before.isActive !== after.isActive)
+                const oldQty = before.quantity !== undefined ? Number(before.quantity) : undefined
+                const newQty = after.quantity !== undefined ? Number(after.quantity) : undefined
+                const isQtyUpdated = log.action === "work_order.item_quantity_updated" || (oldQty !== undefined && newQty !== undefined && oldQty !== newQty)
                 const quantity = changes.quantity !== undefined ? String(changes.quantity) : undefined
                 const paymentMethod = typeof changes.paymentMethod === "string" ? changes.paymentMethod : undefined
                 const status = typeof changes.status === "string" ? changes.status : undefined
@@ -282,46 +303,118 @@ export default function TenantAuditLogsPage() {
                     </td>
                     <td className="p-4">
                       <div className="space-y-0.5 max-w-xs">
-                        {plate && (
-                          <div className="font-mono text-sky-600 dark:text-sky-400 font-bold text-[11px]">
-                            {plate}
-                          </div>
-                        )}
-                        {displayName && (
-                          <div className="font-medium text-slate-900 dark:text-white truncate">
-                            {displayName}
-                            {quantity && (
-                              <span className="text-slate-500 text-[11px] font-normal ml-1">
-                                ({quantity} adet)
-                              </span>
+                        {isStaffLog ? (
+                          <>
+                            {staffName && (
+                              <div className="font-semibold text-slate-900 dark:text-white truncate">
+                                {staffName}
+                              </div>
                             )}
-                          </div>
-                        )}
-                        {changes.grandTotal !== undefined && (
-                          <div className="text-[11px] font-mono flex items-center gap-1">
-                            <span className="text-[10px] text-slate-500 font-sans">
-                              {log.action?.includes("invoice") ? "Fatura Tutarı:" : "Tutar:"}
-                            </span>
-                            <span className="font-bold text-slate-900 dark:text-white">
-                              ₺{Number(changes.grandTotal).toLocaleString("tr-TR")}
-                            </span>
-                          </div>
-                        )}
-                        {changes.amount !== undefined && (
-                          <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-[11px]">
-                            +₺{Number(changes.amount).toLocaleString("tr-TR")}{" "}
-                            <span className="text-[10px] font-normal text-slate-500 font-sans">
-                              ({formatPaymentMethod(paymentMethod)})
-                            </span>
-                          </div>
-                        )}
-                        {status && (
-                          <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                            <span>Durum:</span>
-                            <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              {formatStatus(status)}
-                            </span>
-                          </div>
+                            {isLiftChanged && (
+                              <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                                <span className="text-[10px] text-slate-500 font-sans">Atanan Lift:</span>
+                                {oldLift !== undefined && (
+                                  <span className="text-slate-400 line-through">{oldLift}</span>
+                                )}
+                                {oldLift !== undefined && newLift !== undefined && (
+                                  <ArrowRight size={10} className="text-slate-400" />
+                                )}
+                                {newLift !== undefined && (
+                                  <span className="font-bold text-sky-600 dark:text-sky-400">{newLift}</span>
+                                )}
+                              </div>
+                            )}
+                            {isRoleChanged && (
+                              <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                                <span className="text-[10px] text-slate-500 font-sans">Rol:</span>
+                                <span className="text-slate-400 line-through">{oldRole}</span>
+                                <ArrowRight size={10} className="text-slate-400" />
+                                <span className="font-bold text-indigo-600 dark:text-indigo-400">{newRole}</span>
+                              </div>
+                            )}
+                            {isStatusChanged && (
+                              <div className="text-[11px] flex items-center gap-1">
+                                <span className="text-[10px] text-slate-500">Durum:</span>
+                                <span className={`font-semibold ${after.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                                  {after.isActive ? "Aktif Edildi" : "Pasife Alındı"}
+                                </span>
+                              </div>
+                            )}
+                            {!isLiftChanged && !isRoleChanged && !isStatusChanged && (after.role || before.role) && (
+                              <div className="text-[11px] text-slate-500 font-mono">
+                                {formatRole(String(after.role || before.role))}
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <>
+                            {plate && (
+                              <div className="font-mono text-sky-600 dark:text-sky-400 font-bold text-[11px]">
+                                {plate}
+                              </div>
+                            )}
+                            {displayName && (
+                              <div className="font-medium text-slate-900 dark:text-white truncate">
+                                {displayName}
+                                {!isQtyUpdated && quantity && (
+                                  <span className="text-slate-500 text-[11px] font-normal ml-1">
+                                    ({quantity} adet)
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                            {isQtyUpdated && (
+                              <div className="space-y-0.5">
+                                <div className="flex items-center gap-1.5 text-[11px] font-mono">
+                                  {oldQty !== undefined && (
+                                    <span className="text-slate-400 line-through">{oldQty} adet</span>
+                                  )}
+                                  {oldQty !== undefined && newQty !== undefined && (
+                                    <ArrowRight size={10} className="text-slate-400" />
+                                  )}
+                                  {newQty !== undefined && (
+                                    <span className="font-bold text-blue-600 dark:text-blue-400">{newQty} adet</span>
+                                  )}
+                                  {Boolean(changes.quantityChange) && (
+                                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-bold">
+                                      ({String(changes.quantityChange)})
+                                    </span>
+                                  )}
+                                </div>
+                                {Boolean(changes.stockMovement) && (
+                                  <div className="text-[10px] text-slate-500 dark:text-slate-400 italic">
+                                    {String(changes.stockMovement)}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                            {changes.grandTotal !== undefined && (
+                              <div className="text-[11px] font-mono flex items-center gap-1">
+                                <span className="text-[10px] text-slate-500 font-sans">
+                                  {log.action?.includes("invoice") ? "Fatura Tutarı:" : "Tutar:"}
+                                </span>
+                                <span className="font-bold text-slate-900 dark:text-white">
+                                  ₺{Number(changes.grandTotal).toLocaleString("tr-TR")}
+                                </span>
+                              </div>
+                            )}
+                            {changes.amount !== undefined && (
+                              <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-[11px]">
+                                +₺{Number(changes.amount).toLocaleString("tr-TR")}{" "}
+                                <span className="text-[10px] font-normal text-slate-500 font-sans">
+                                  ({formatPaymentMethod(paymentMethod)})
+                                </span>
+                              </div>
+                            )}
+                            {status && (
+                              <div className="text-[11px] text-slate-500 flex items-center gap-1">
+                                <span>Durum:</span>
+                                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                                  {formatStatus(status)}
+                                </span>
+                              </div>
+                            )}
+                          </>
                         )}
                         <div className="text-slate-400 dark:text-slate-500 font-mono text-[10px] mt-0.5">
                           {formatEntityName(log.entityName)} #{log.entityId?.slice(0, 8)}
@@ -526,9 +619,19 @@ export default function TenantAuditLogsPage() {
               type AuditLogDetailChanges = {
                 itemName?: string
                 name?: string
+                staffName?: string
+                role?: string
+                assignedLift?: string
+                liftChange?: string
+                specialty?: string
+                isActive?: boolean
                 serviceName?: string
                 plate?: string
                 customerName?: string
+                workOrderNumber?: string
+                quantity?: number | string
+                quantityChange?: string
+                stockMovement?: string
                 grandTotal?: number | string
                 amount?: number | string
                 status?: string
@@ -540,6 +643,12 @@ export default function TenantAuditLogsPage() {
                 Object.keys(before).length > 0 || Object.keys(after).length > 0
               if (!hasDiff) return null
 
+              const isStaffLog =
+                selectedLog.entityName?.toLowerCase() === "user" ||
+                selectedLog.entityName?.toLowerCase() === "staff" ||
+                selectedLog.action.startsWith("staff.") ||
+                Boolean(before.staffName || after.staffName || before.assignedLift !== undefined || after.assignedLift !== undefined)
+
               return (
                 <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 space-y-2.5 text-xs">
                   <div className="font-semibold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
@@ -548,24 +657,156 @@ export default function TenantAuditLogsPage() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-0.5 text-[11px]">
-                    {(before.itemName ||
-                      after.itemName ||
-                      before.name ||
-                      after.name ||
-                      before.serviceName ||
-                      after.serviceName) && (
+                    {/* Personel Adı (Personel işlemleri için) */}
+                    {isStaffLog && Boolean(before.staffName || after.staffName || before.name || after.name) && (
                       <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
                         <span className="text-slate-500 block text-[10px]">
-                          Kalem / Hizmet Tanımı
+                          İlgili Personel
                         </span>
                         <span className="font-medium text-slate-900 dark:text-white">
-                          {before.itemName ||
-                            after.itemName ||
-                            before.name ||
-                            after.name ||
-                            before.serviceName ||
-                            after.serviceName}
+                          {after.staffName || before.staffName || after.name || before.name}
                         </span>
+                      </div>
+                    )}
+
+                    {/* Parça / Kalem Tanımı (İş emri için) */}
+                    {Boolean(before.itemName || after.itemName) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">
+                          Parça / Kalem Tanımı
+                        </span>
+                        <span className="font-medium text-slate-900 dark:text-white">
+                          {before.itemName || after.itemName}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Hizmet Tanımı (Hizmet Kataloğu için) */}
+                    {!isStaffLog && Boolean(before.name || after.name || before.serviceName || after.serviceName) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">
+                          Hizmet / Tanım
+                        </span>
+                        <span className="font-medium text-slate-900 dark:text-white">
+                          {before.name || after.name || before.serviceName || after.serviceName}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Atanan Lift Değişimi */}
+                    {Boolean(before.assignedLift !== undefined || after.assignedLift !== undefined || after.liftChange) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">
+                          Atanan Lift
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {before.assignedLift !== undefined && (
+                            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px] line-through">
+                              {String(before.assignedLift || "Atanmamış")}
+                            </span>
+                          )}
+                          {before.assignedLift !== undefined && after.assignedLift !== undefined && (
+                            <ArrowRight size={12} className="text-slate-400" />
+                          )}
+                          {after.assignedLift !== undefined && (
+                            <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-mono text-[10px] font-bold">
+                              {String(after.assignedLift || "Atanmamış")}
+                            </span>
+                          )}
+                        </div>
+                        {Boolean(after.liftChange) && (
+                          <span className="text-[10px] text-sky-600 dark:text-sky-400 mt-1 block font-semibold">
+                            İşlem: {String(after.liftChange)}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Personel Rolü / Yetkisi */}
+                    {Boolean(before.role || after.role) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">
+                          Personel Rolü / Yetkisi
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {Boolean(before.role) && (
+                            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px] line-through">
+                              {formatRole(String(before.role))}
+                            </span>
+                          )}
+                          {Boolean(before.role && after.role && before.role !== after.role) && (
+                            <ArrowRight size={12} className="text-slate-400" />
+                          )}
+                          {Boolean(after.role) && (
+                            <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono text-[10px] font-bold">
+                              {formatRole(String(after.role))}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Uzmanlık Alanı */}
+                    {Boolean(before.specialty || after.specialty) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">
+                          Uzmanlık Alanı
+                        </span>
+                        <span className="font-medium text-slate-900 dark:text-white text-[11px]">
+                          {String(after.specialty || before.specialty || "")}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Hesap Durumu (Aktif/Pasif) */}
+                    {Boolean(before.isActive !== undefined || after.isActive !== undefined) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">
+                          Hesap Durumu
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {before.isActive !== undefined && (
+                            <span className="text-[10px] font-mono line-through text-slate-400">
+                              {before.isActive ? "Aktif" : "Pasif"}
+                            </span>
+                          )}
+                          {before.isActive !== undefined && after.isActive !== undefined && before.isActive !== after.isActive && (
+                            <ArrowRight size={12} className="text-slate-400" />
+                          )}
+                          {after.isActive !== undefined && (
+                            <span className={`text-[10px] font-bold ${after.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+                              {after.isActive ? "Aktif" : "Pasif"}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {Boolean(before.quantity !== undefined || after.quantity !== undefined) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">
+                          Adet / Miktar Değişimi
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {before.quantity !== undefined && (
+                            <span className="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-mono text-[10px] line-through">
+                              {String(before.quantity)} Adet
+                            </span>
+                          )}
+                          {before.quantity !== undefined && after.quantity !== undefined && (
+                            <ArrowRight size={12} className="text-slate-400" />
+                          )}
+                          {after.quantity !== undefined && (
+                            <span className="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 font-mono text-[10px] font-bold">
+                              {String(after.quantity)} Adet
+                            </span>
+                          )}
+                        </div>
+                        {Boolean(after.stockMovement) && (
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 block italic">
+                            {String(after.stockMovement)}
+                          </span>
+                        )}
                       </div>
                     )}
                     {(before.plate || after.plate) && (
@@ -585,6 +826,16 @@ export default function TenantAuditLogsPage() {
                         </span>
                         <span className="font-medium text-slate-900 dark:text-white">
                           {before.customerName || after.customerName}
+                        </span>
+                      </div>
+                    )}
+                    {Boolean(before.workOrderNumber || after.workOrderNumber) && (
+                      <div className="bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-800/60">
+                        <span className="text-slate-500 block text-[10px]">
+                          İş Emri No
+                        </span>
+                        <span className="font-mono font-bold text-slate-900 dark:text-white">
+                          {String(before.workOrderNumber || after.workOrderNumber || "")}
                         </span>
                       </div>
                     )}
@@ -645,42 +896,45 @@ export default function TenantAuditLogsPage() {
             })()}
 
             {/* Changes / Payload Data (Tam JSON) */}
-            <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-slate-800 dark:text-slate-300">
-                  Olay Değişiklik Verisi (Tam JSON)
-                </span>
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleCopyJson(
-                      selectedLog.changesAfter || selectedLog.changesBefore
-                    )
-                  }
-                  className="text-[11px] text-sky-600 dark:text-sky-400 hover:text-sky-500 dark:hover:text-sky-300 flex items-center gap-1 cursor-pointer"
-                >
-                  {copied ? (
-                    <Check size={12} className="text-emerald-500" />
-                  ) : (
-                    <Copy size={12} />
-                  )}
-                  <span>{copied ? "Kopyalandı!" : "JSON Kopyala"}</span>
-                </button>
-              </div>
+            {(() => {
+              const before = selectedLog.changesBefore || {}
+              const after = selectedLog.changesAfter || {}
+              const hasBoth =
+                Object.keys(before).length > 0 && Object.keys(after).length > 0
+              const jsonDisplay = hasBoth
+                ? { oncekiDurum: before, yeniDurum: after }
+                : Object.keys(after).length > 0
+                ? after
+                : Object.keys(before).length > 0
+                ? before
+                : { info: "Ek detay verisi bulunmuyor" }
 
-              <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-emerald-400 overflow-x-auto max-h-48">
-                <pre>
-                  {JSON.stringify(
-                    selectedLog.changesAfter ||
-                      selectedLog.changesBefore || {
-                        info: "Ek detay verisi bulunmuyor",
-                      },
-                    null,
-                    2
-                  )}
-                </pre>
-              </div>
-            </div>
+              return (
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold text-slate-800 dark:text-slate-300">
+                      Olay Değişiklik Verisi (Tam JSON)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyJson(jsonDisplay)}
+                      className="text-[11px] text-sky-600 dark:text-sky-400 hover:text-sky-500 dark:hover:text-sky-300 flex items-center gap-1 cursor-pointer"
+                    >
+                      {copied ? (
+                        <Check size={12} className="text-emerald-500" />
+                      ) : (
+                        <Copy size={12} />
+                      )}
+                      <span>{copied ? "Kopyalandı!" : "JSON Kopyala"}</span>
+                    </button>
+                  </div>
+
+                  <div className="p-3.5 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-[11px] text-emerald-400 overflow-x-auto max-h-48">
+                    <pre>{JSON.stringify(jsonDisplay, null, 2)}</pre>
+                  </div>
+                </div>
+              )
+            })()}
 
             <div className="flex justify-end pt-2 border-t border-slate-200 dark:border-slate-800">
               <Button
