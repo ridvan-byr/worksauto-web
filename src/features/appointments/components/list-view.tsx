@@ -1,8 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Search, Calendar, Clock, User, Wrench, ArrowUpRight } from "lucide-react"
-import { Appointment, AppointmentStatus } from "../types"
+import { Search, ArrowUpRight } from "lucide-react"
+import { Appointment } from "../types"
 import { AppointmentStatusBadge } from "./appointment-status-badge"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"

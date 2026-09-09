@@ -5,11 +5,9 @@ import { createPortal } from "react-dom"
 import {
   X,
   Calendar,
-  Clock,
   Car,
   User,
   Wrench,
-  Users,
   CheckCircle2,
   AlertTriangle,
   Plus,
@@ -17,11 +15,8 @@ import {
   UserPlus,
   Check,
   Building2,
-  Sparkles,
   Info,
-  ChevronRight,
-  Filter,
-} from "lucide-react"
+  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Appointment, AppointmentServiceItem } from "../types"
 import { useCustomers, useQuickLeadCustomer } from "@/features/customers/api/use-customers"

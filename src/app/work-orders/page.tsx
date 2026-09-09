@@ -12,7 +12,6 @@ import {
   CheckCircle2,
   Clock,
   Filter,
-  Sparkles,
   Search,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"

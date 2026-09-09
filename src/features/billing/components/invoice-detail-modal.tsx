@@ -4,7 +4,7 @@ import Image from "next/image"
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, Printer, Receipt, FileText } from "lucide-react"
+import { X, Printer, Receipt } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { InvoiceStatusBadge } from "./invoice-status-badge"

@@ -18,11 +18,10 @@ import {
   Plus,
   ArrowRight,
   ChevronRight,
-  Sparkles,
-} from "lucide-react"
+  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
 import { useWorkOrders } from "@/features/work-orders/api/use-work-orders"

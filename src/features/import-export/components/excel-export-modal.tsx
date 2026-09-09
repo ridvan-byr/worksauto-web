@@ -8,11 +8,9 @@ import {
   X,
   CheckSquare,
   Square,
-  Sparkles,
   Eye,
   Settings2,
-  TableProperties,
-} from "lucide-react"
+  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/features/auth/auth-context"

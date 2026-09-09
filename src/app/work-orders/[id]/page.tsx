@@ -10,15 +10,10 @@ import {
   Wrench,
   User,
   Phone,
-  Car,
-  Clock,
   CheckCircle2,
   Play,
   Plus,
-  Trash2,
-  Sparkles,
   Receipt,
-  AlertCircle,
   FileText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -27,7 +22,7 @@ import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-ord
 import { TechnicianNotes } from "@/features/work-orders/components/technician-notes"
 import { PhotoGallery } from "@/features/work-orders/components/photo-gallery"
 import { WorkOrder, WorkOrderStatus } from "@/features/work-orders/types"
-import { cn } from "@/lib/utils"
+
 
 export default function WorkOrderDetailPage() {
   const params = useParams()

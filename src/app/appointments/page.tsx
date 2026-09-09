@@ -10,12 +10,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Users,
   CheckCircle2,
   Clock,
   Wrench,
-  AlertCircle,
-  Sparkles,
   Search,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"

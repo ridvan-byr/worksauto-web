@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, PackagePlus, ArrowRight, ArrowLeft, CheckCircle2, Tag, Layers, MapPin } from "lucide-react"
+import { X, PackagePlus, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Product, ProductCategory, StockUnit } from "../types"
 

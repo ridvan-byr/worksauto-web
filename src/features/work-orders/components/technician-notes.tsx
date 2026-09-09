@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { MessageSquare, Plus, ShieldCheck, Send } from "lucide-react"
+import { MessageSquare, Send } from "lucide-react"
 import { WorkOrderNote } from "../types"
 import { Button } from "@/components/ui/button"
 

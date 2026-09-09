@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Clock, Play, CheckCircle2, Wrench } from "lucide-react"
+import { Clock, CheckCircle2, Wrench } from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"
 import { WorkOrderCard } from "./work-order-card"
 

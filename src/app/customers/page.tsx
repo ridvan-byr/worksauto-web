@@ -11,13 +11,10 @@ import {
   Search,
   Plus,
   ArrowUpRight,
-  Phone,
   Building2,
   User,
-  Filter,
   CreditCard,
   ChevronRight,
-  FileSpreadsheet,
   UploadCloud,
   Download,
 } from "lucide-react"
@@ -28,7 +25,7 @@ import { CreateCustomerModal } from "@/features/customers/components/create-cust
 import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
 import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
 import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
-import { toast } from "@/components/ui/sonner"
+
 import { cn } from "@/lib/utils"
 
 export default function CustomersPage() {

@@ -1,9 +1,9 @@
 "use client"
 
 import * as React from "react"
-import { Clock, Plus, User, Wrench } from "lucide-react"
+import { Clock, Plus } from "lucide-react"
 import { Appointment } from "../types"
-import { AppointmentStatusBadge } from "./appointment-status-badge"
+
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"
 

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, History, ArrowDownRight, ArrowUpRight, Wrench, Receipt } from "lucide-react"
+import { X, History, ArrowDownRight, ArrowUpRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Product } from "../types"
 

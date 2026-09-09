@@ -2,22 +2,12 @@
 
 import * as React from "react"
 import { usePathname, useRouter } from "next/navigation"
-import Link from "next/link"
-import {
-  Shield,
-  Building2,
-  Server,
-  Activity,
-  LogOut,
-  ChevronRight,
-  Sparkles,
-  CheckCircle2,
-  AlertTriangle,
-} from "lucide-react"
+import { Shield, LogOut } from "lucide-react"
 import { BrandLogo } from "@/components/shared/brand-logo"
 import { ThemeToggle } from "@/components/layout/theme-toggle"
 import { toast } from "@/components/ui/sonner"
 import {
+  AdminUser,
   getAdminUser,
   clearAdminSession,
   useAdminHealth,
@@ -30,7 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const isLoginPage = currentPath === "/admin/login"
 
   const [isLoading, setIsLoading] = React.useState(true)
-  const [adminUser, setAdminUser] = React.useState<any>(null)
+  const [adminUser, setAdminUser] = React.useState<AdminUser | null>(null)
 
   const { data: health } = useAdminHealth()
 

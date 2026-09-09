@@ -9,10 +9,7 @@ import {
   Plus,
   Coins,
   TrendingUp,
-  ArrowDownRight,
-  ArrowUpRight,
-  Sparkles,
-} from "lucide-react"
+  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Product, StockMovementType } from "@/features/inventory/types"
 import { ProductTable } from "@/features/inventory/components/product-table"

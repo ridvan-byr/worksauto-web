@@ -1,24 +1,17 @@
 "use client"
 
 import * as React from "react"
-import Link from "next/navigation"
 import { useRouter } from "next/navigation"
 import {
   Wrench,
-  User,
-  Clock,
-  ArrowRight,
   Play,
   CheckCircle2,
-  Camera,
-  MessageSquare,
-  AlertCircle,
-} from "lucide-react"
+  } from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"
-import { WorkOrderStatusBadge } from "./work-order-status-badge"
+
 import { PlateBadge } from "@/features/customers/components/plate-badge"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+
+
 
 interface WorkOrderCardProps {
   order: WorkOrder

@@ -3,17 +3,14 @@
 import * as React from "react"
 import {
   Search,
-  Plus,
   ArrowDownRight,
   ArrowUpRight,
   History,
-  AlertTriangle,
-  Layers,
   MapPin,
 } from "lucide-react"
-import { Product, ProductCategory } from "../types"
+import { Product } from "../types"
 import { StockBadge } from "./stock-badge"
-import { Button } from "@/components/ui/button"
+
 import { cn } from "@/lib/utils"
 
 interface ProductTableProps {

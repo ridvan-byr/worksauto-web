@@ -7,22 +7,19 @@ import {
   Menu,
   Search,
   Plus,
-  Bell,
-  Calendar,
   X,
   Car,
-  User,
   ChevronRight,
 } from "lucide-react"
 import { BrandLogo } from "@/components/shared/brand-logo"
-import { Button } from "@/components/ui/button"
+
 import { ThemeToggle } from "./theme-toggle"
 import { useAuth } from "@/features/auth/auth-context"
 import { useVehicles } from "@/features/vehicles/api/use-vehicles"
 import { restartPageAnimation } from "@/lib/animation"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { NotificationPopover } from "@/features/notifications/components/notification-popover"
-import { cn } from "@/lib/utils"
+
 
 interface AppHeaderProps {
   onOpenMobile: () => void

@@ -10,28 +10,13 @@ import {
   Plus,
   Clock,
   Phone,
-  Mail,
   Check,
   Pencil,
   Trash2,
   AlertTriangle,
   X,
   Briefcase,
-  Eye,
-  ChevronLeft,
-  ChevronRight,
-  Copy,
-  Terminal,
-  Sparkles,
-  ArrowRight,
-  Tag,
-  RefreshCw,
-  Calendar,
-  FileText,
-  CreditCard,
-  ShieldCheck,
-  ShieldAlert,
-} from "lucide-react"
+  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"

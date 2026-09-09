@@ -16,12 +16,8 @@ import {
   Car,
   User,
   Check,
-  Building2,
   Trash2,
-  RefreshCw,
   ShieldCheck,
-  Layers,
-  Info,
   Table as TableIcon,
   Search,
   Plus,
@@ -29,7 +25,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
 import {
-  TARGET_FIELDS,
   guessTargetField,
   readExcelFile,
   downloadSampleTemplate,
@@ -40,7 +35,7 @@ import {
   parseRowsFromHeaderIndex,
 } from "../utils/excel-helpers"
 import { useBatchImportCustomers, BatchImportCustomerItem } from "@/features/customers/api/use-customers"
-import { PlateBadge } from "@/features/customers/components/plate-badge"
+
 import { cn } from "@/lib/utils"
 
 interface ExcelImportModalProps {
@@ -241,22 +236,22 @@ export function ExcelImportModal({
         lastName = getVal("lastName")
       }
 
-      let phone = normalizePhoneNumber(getVal("phone"))
-      let companyTitle = getVal("companyTitle")
-      let email = getVal("email")
-      let taxNumber = getVal("taxNumber")
-      let taxOffice = getVal("taxOffice")
-      let plate = getVal("plate").toUpperCase().replace(/\s+/g, "")
-      let brand = getVal("brand")
-      let model = getVal("model")
+      const phone = normalizePhoneNumber(getVal("phone"))
+      const companyTitle = getVal("companyTitle")
+      const email = getVal("email")
+      const taxNumber = getVal("taxNumber")
+      const taxOffice = getVal("taxOffice")
+      const plate = getVal("plate").toUpperCase().replace(/\s+/g, "")
+      const brand = getVal("brand")
+      const model = getVal("model")
       const rawYear = getVal("year")
-      let year: number | undefined = rawYear ? Number(rawYear.replace(/[^\d]/g, "")) || undefined : undefined
+      const year: number | undefined = rawYear ? Number(rawYear.replace(/[^\d]/g, "")) || undefined : undefined
       const rawKm = getVal("kilometer")
-      let currentKm: number | undefined = rawKm ? Number(rawKm.replace(/[^\d]/g, "")) || undefined : undefined
-      let vin = getVal("vin").toUpperCase()
-      let fuelType = getVal("fuelType")
-      let transmission = getVal("transmission")
-      let notes = getVal("notes")
+      const currentKm: number | undefined = rawKm ? Number(rawKm.replace(/[^\d]/g, "")) || undefined : undefined
+      const vin = getVal("vin").toUpperCase()
+      const fuelType = getVal("fuelType")
+      const transmission = getVal("transmission")
+      const notes = getVal("notes")
 
       // Row validity check
       const hasCustomer = Boolean(firstName || companyTitle || phone)

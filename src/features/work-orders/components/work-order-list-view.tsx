@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useRouter } from "next/navigation"
 import { Search, ArrowUpRight, Wrench } from "lucide-react"
-import { WorkOrder, WorkOrderStatus } from "../types"
+import { WorkOrder } from "../types"
 import { WorkOrderStatusBadge } from "./work-order-status-badge"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { cn } from "@/lib/utils"

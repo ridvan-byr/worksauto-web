@@ -4,26 +4,20 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import {
   X,
-  Calendar,
-  Clock,
-  Car,
   User,
   Phone,
   Wrench,
   CheckCircle2,
-  AlertCircle,
   Play,
   CalendarClock,
   Ban,
   UserX,
-  ArrowRight,
-  Sparkles,
-} from "lucide-react"
+  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Appointment, CancellationReason } from "../types"
 import { AppointmentStatusBadge } from "./appointment-status-badge"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
-import { cn } from "@/lib/utils"
+
 
 interface AppointmentDetailModalProps {
   isOpen: boolean

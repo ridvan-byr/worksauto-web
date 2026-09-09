@@ -11,8 +11,6 @@ import {
   Filter,
   Gauge,
   Calendar,
-  Fuel,
-  Settings2,
   Edit3,
   Users,
   Trash2,
@@ -28,9 +26,9 @@ import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
 import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
-import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
+
 import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
-import { toast } from "@/components/ui/sonner"
+
 import { cn } from "@/lib/utils"
 
 export default function VehiclesPage() {

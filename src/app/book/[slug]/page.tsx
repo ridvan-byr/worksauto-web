@@ -3,21 +3,14 @@
 import * as React from "react"
 import { useParams } from "next/navigation"
 import {
-  Calendar,
-  Clock,
-  Car,
-  User,
-  Phone,
   CheckCircle2,
-  Sparkles,
-  ShieldCheck,
   ArrowRight,
 } from "lucide-react"
 import { BrandLogo } from "@/components/shared/brand-logo"
 import { Button } from "@/components/ui/button"
-import { PlateBadge } from "@/features/customers/components/plate-badge"
-import { useCreateAppointment } from "@/features/appointments/api/use-appointments"
-import { cn } from "@/lib/utils"
+
+
+
 
 interface PublicService {
   id: string
@@ -100,7 +93,7 @@ export default function PublicBookingPage() {
       setPhone("")
       return
     }
-    let formatted = raw.startsWith("0") ? raw.slice(0, 11) : "0" + raw.slice(0, 10)
+    const formatted = raw.startsWith("0") ? raw.slice(0, 11) : "0" + raw.slice(0, 10)
     let res = "0"
     if (formatted.length > 1) res += " (" + formatted.slice(1, 4)
     if (formatted.length >= 4) res += ") " + formatted.slice(4, 7)

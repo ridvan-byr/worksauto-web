@@ -2,7 +2,6 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import Image from "next/image"
 import {
   Camera,
   Plus,
@@ -15,8 +14,7 @@ import {
   CheckCircle2,
   Calendar,
   User,
-  Sparkles,
-} from "lucide-react"
+  } from "lucide-react"
 import { WorkOrderPhoto } from "../types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"

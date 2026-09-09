@@ -11,12 +11,8 @@ import {
   HandCoins,
   FileText,
   TrendingDown,
-  Building2,
-  Phone,
-  ArrowUpRight,
-  ArrowDownRight,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
+  } from "lucide-react"
+
 import { ManualCollectionModal } from "@/features/billing/components/manual-collection-modal"
 import { CariHistoryModal } from "@/features/billing/components/cari-history-modal"
 import { CurrentAccount, PaymentMethod } from "@/features/billing/types"

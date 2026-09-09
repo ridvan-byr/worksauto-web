@@ -12,10 +12,9 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
-  Printer,
   FileText,
 } from "lucide-react"
-import { Button } from "@/components/ui/button"
+
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { InvoiceStatusBadge } from "@/features/billing/components/invoice-status-badge"
 import { RecordPaymentModal } from "@/features/billing/components/record-payment-modal"

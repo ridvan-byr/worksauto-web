@@ -6,9 +6,7 @@ import {
   ShieldCheck,
   Search,
   Wrench,
-  Package,
   Receipt,
-  CreditCard,
   Calendar,
   Users,
   Eye,
@@ -20,8 +18,6 @@ import {
   ArrowRight,
   X,
   AlertTriangle,
-  Clock,
-  CheckCircle2,
   Tag,
   Terminal,
 } from "lucide-react"

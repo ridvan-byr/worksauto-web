@@ -12,7 +12,6 @@ import {
   Package,
   Receipt,
   FileSpreadsheet,
-  Sparkles,
   Settings,
   ChevronLeft,
   ChevronRight,

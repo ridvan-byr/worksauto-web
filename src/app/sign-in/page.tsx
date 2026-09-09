@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation"
 import {
   Phone,
   ShieldCheck,
-  Wrench,
   ArrowRight,
   ArrowLeft,
   Sparkles,
@@ -19,7 +18,7 @@ import { BrandLogo } from "@/components/shared/brand-logo"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/features/auth/auth-context"
-import { cn } from "@/lib/utils"
+
 
 export default function SignInPage() {
   const router = useRouter()

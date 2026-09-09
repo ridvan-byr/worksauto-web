@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Shield, Lock, Mail, ArrowRight, Sparkles, CheckCircle2, AlertCircle } from "lucide-react"
+import { Lock, Mail, ArrowRight, Sparkles, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { BrandLogo } from "@/components/shared/brand-logo"

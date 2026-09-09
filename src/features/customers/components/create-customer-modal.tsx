@@ -8,22 +8,15 @@ import {
   Car,
   Building2,
   User,
-  Phone,
-  Mail,
-  MapPin,
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
-  Sparkles,
-} from "lucide-react"
+  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Customer, Vehicle } from "../types"
 import { PlateBadge } from "./plate-badge"
 import { cn } from "@/lib/utils"
-import {
-  createCustomerStep1Schema,
-  createCustomerStep2Schema,
-} from "../schemas/customer.schema"
+
 
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -145,7 +138,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
       setValue("phone", "", { shouldValidate: true })
       return
     }
-    let formatted = raw.startsWith("0") ? raw.slice(0, 11) : "0" + raw.slice(0, 10)
+    const formatted = raw.startsWith("0") ? raw.slice(0, 11) : "0" + raw.slice(0, 10)
     let res = "0"
     if (formatted.length > 1) res += " (" + formatted.slice(1, 4)
     if (formatted.length >= 4) res += ") " + formatted.slice(4, 7)

@@ -2,12 +2,12 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, Wrench, Play, ArrowRight, ArrowLeft, CheckCircle2, User, Car } from "lucide-react"
+import { X, Wrench, Play, ArrowRight, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkOrder, WorkOrderPriority } from "../types"
 import { useCustomers } from "@/features/customers/api/use-customers"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
-import { cn } from "@/lib/utils"
+
 import {
   createWorkOrderModalStep1Schema,
   createWorkOrderModalStep2Schema,
