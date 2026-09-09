@@ -34,7 +34,7 @@ import {
   analyzeRowSuitability,
   parseRowsFromHeaderIndex,
 } from "../utils/excel-helpers"
-import { useBatchImportCustomers, BatchImportCustomerItem } from "@/features/customers/api/use-customers"
+import { useBatchImportCustomers, type BatchImportCustomerItem, type BatchImportResult } from "@/features/customers/api/use-customers"
 
 import { cn } from "@/lib/utils"
 
@@ -59,10 +59,10 @@ export function ExcelImportModal({
 
   // File state
   const [fileName, setFileName] = React.useState("")
-  const [allRawRows, setAllRawRows] = React.useState<any[][]>([])
+  const [allRawRows, setAllRawRows] = React.useState<unknown[][]>([])
   const [selectedHeaderRowIndex, setSelectedHeaderRowIndex] = React.useState<number>(0)
   const [fileHeaders, setFileHeaders] = React.useState<string[]>([])
-  const [fileRows, setFileRows] = React.useState<Record<string, any>[]>([])
+  const [fileRows, setFileRows] = React.useState<Record<string, unknown>[]>([])
   const [isDragging, setIsDragging] = React.useState(false)
   const [isLoadingFile, setIsLoadingFile] = React.useState(false)
 
@@ -73,14 +73,14 @@ export function ExcelImportModal({
 
   // Transformed preview rows (user editable in step 4)
   const [transformedRows, setTransformedRows] = React.useState<
-    (BatchImportCustomerItem & { _original: Record<string, any>; _isValid: boolean; _errorMsg?: string })[]
+    (BatchImportCustomerItem & { _original: Record<string, unknown>; _isValid: boolean; _errorMsg?: string })[]
   >([])
   const [skipInvalid, setSkipInvalid] = React.useState(true)
   const [previewFilter, setPreviewFilter] = React.useState<"all" | "valid" | "invalid">("all")
   const [previewSearch, setPreviewSearch] = React.useState("")
 
   // Result state
-  const [importResult, setImportResult] = React.useState<any>(null)
+  const [importResult, setImportResult] = React.useState<BatchImportResult | null>(null)
 
   React.useEffect(() => {
     setMounted(true)
@@ -151,8 +151,9 @@ export function ExcelImportModal({
 
       toast.success(`${parsed.allRawRows.length} satırlık dosya yüklendi. Başlık satırını doğrulayın.`)
       setCurrentStep(2)
-    } catch (err: any) {
-      toast.error(err.message || "Excel dosyası okunamadı.")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Excel dosyası okunamadı."
+      toast.error(msg)
     } finally {
       setIsLoadingFile(false)
     }
@@ -299,7 +300,7 @@ export function ExcelImportModal({
   }
 
   // Update inline preview row with real-time cell validation
-  const handleUpdateRowField = (idx: number, field: keyof BatchImportCustomerItem, value: any) => {
+  const handleUpdateRowField = (idx: number, field: keyof BatchImportCustomerItem, value: BatchImportCustomerItem[keyof BatchImportCustomerItem]) => {
     setTransformedRows((prev) => {
       const copy = [...prev]
       const updated = {
@@ -1540,7 +1541,7 @@ export function ExcelImportModal({
                     <span>{importResult.errors.length} satır işlenirken uyarı alındı:</span>
                   </p>
                   <ul className="list-disc list-inside text-[11px] space-y-0.5">
-                    {importResult.errors.slice(0, 3).map((e: any, i: number) => (
+                    {importResult.errors.slice(0, 3).map((e, i: number) => (
                       <li key={i}>Satır {e.row}: {e.reason}</li>
                     ))}
                   </ul>

@@ -63,8 +63,15 @@ export interface QuickLeadDto {
 }
 
 export interface QuickLeadResponse {
-  customer: any;
-  vehicle: any;
+  customer: Customer & { firstName?: string; lastName?: string };
+  vehicle: {
+    id: string;
+    plate: string;
+    brand?: string;
+    model?: string;
+    year?: number;
+    customerId?: string;
+  };
 }
 
 export function useQuickLeadCustomer() {

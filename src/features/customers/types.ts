@@ -1,11 +1,19 @@
 export type CustomerType = "INDIVIDUAL" | "CORPORATE" | "individual" | "corporate"
 
+export interface CurrentAccountMovement {
+  id?: string
+  amount?: number
+  type?: string
+  description?: string
+  createdAt?: string
+}
+
 export interface CurrentAccountInfo {
   id?: string
   balance: number
   totalDebit?: number
   totalCredit?: number
-  movements?: any[]
+  movements?: CurrentAccountMovement[]
 }
 
 export interface Customer {
@@ -46,12 +54,17 @@ export interface Vehicle {
   model: string
   year?: number
   kilometer: number
+  currentKm?: number
+  mileage?: number
   vin?: string // Şasi No
-  fuelType?: "Benzin" | "Dizel" | "LPG" | "Hibrit" | "Elektrik"
-  transmission?: "Manuel" | "Otomatik"
+  fuelType?: "Benzin" | "Dizel" | "LPG" | "Hibrit" | "Elektrik" | string
+  transmission?: "Manuel" | "Otomatik" | string
   color?: string
+  engineNo?: string
   notes?: string
   lastServiceDate?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface AppointmentSummary {

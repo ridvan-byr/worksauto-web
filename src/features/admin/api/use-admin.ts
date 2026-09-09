@@ -12,6 +12,108 @@ export interface AdminUser {
   role: 'SUPER_ADMIN';
 }
 
+export interface AdminStats {
+  totalTenants: number;
+  activeTenants: number;
+  inactiveTenants?: number;
+  suspendedTenants?: number;
+  totalWorkOrders: number;
+  totalCustomers?: number;
+  totalUsers?: number;
+  totalPlatformVolume?: number | string;
+}
+
+export interface AdminTenantListItem {
+  id: string;
+  title: string;
+  legalName?: string;
+  owner?: string;
+  ownerPhone?: string;
+  city?: string;
+  district?: string;
+  isActive: boolean;
+  createdAt: string;
+  stats?: {
+    totalStaff?: number;
+    totalWorkOrders?: number;
+  };
+}
+
+export interface AdminTenantDetail {
+  id: string;
+  title: string;
+  legalName?: string;
+  phone?: string;
+  email?: string;
+  city?: string;
+  district?: string;
+  address?: string;
+  taxNumber?: string;
+  taxOffice?: string;
+  isActive: boolean;
+  createdAt: string;
+  users?: Array<{
+    id: string;
+    name: string;
+    surname?: string;
+    phone: string;
+    role: string;
+  }>;
+  _count?: {
+    workOrders?: number;
+    customers?: number;
+    vehicles?: number;
+  };
+}
+
+export interface AuditLogEntry {
+  id: string;
+  action: string;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  createdAt: string;
+  user?: {
+    id: string;
+    name: string;
+    surname?: string;
+    role: string;
+  } | null;
+  tenant?: {
+    id: string;
+    title: string;
+  } | null;
+  changesBefore?: Record<string, unknown>;
+  changesAfter?: Record<string, unknown>;
+}
+
+export interface AuditLogsResponse {
+  data: AuditLogEntry[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface AdminHealthResponse {
+  status: string;
+  database?: {
+    latencyMs?: number;
+    status?: string;
+  };
+  redis?: {
+    latencyMs?: number;
+    status?: string;
+  };
+}
+
+export interface AdminLoginResponse {
+  success?: boolean;
+  accessToken?: string;
+  user: AdminUser;
+}
+
 export function getAdminUser(): AdminUser | null {
   if (typeof window === 'undefined') return null;
   const raw = localStorage.getItem(ADMIN_USER_KEY);
@@ -26,18 +128,21 @@ export function getAdminUser(): AdminUser | null {
 export function setAdminSession(user: AdminUser) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(user));
+  const isProd = process.env.NODE_ENV === 'production';
+  document.cookie = `worksauto_admin_session=1; path=/; SameSite=Lax${isProd ? '; Secure' : ''}; max-age=${24 * 60 * 60}`;
 }
 
 export function clearAdminSession() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(ADMIN_USER_KEY);
+  document.cookie = 'worksauto_admin_session=; path=/; SameSite=Lax; max-age=0';
 }
 
 export function useAdminStats() {
   const user = getAdminUser();
   return useQuery({
     queryKey: ['admin-stats'],
-    queryFn: () => apiClient.get<any>('/admin/stats'),
+    queryFn: () => apiClient.get<AdminStats>('/admin/stats'),
     enabled: !!user,
     refetchInterval: 15000,
   });
@@ -48,7 +153,7 @@ export function useAdminTenants(params?: { status?: string; search?: string; cit
   return useQuery({
     queryKey: ['admin-tenants', params],
     queryFn: () =>
-      apiClient.get<any[]>('/admin/tenants', {
+      apiClient.get<AdminTenantListItem[]>('/admin/tenants', {
         params,
       }),
     enabled: !!user,
@@ -59,7 +164,7 @@ export function useAdminTenantDetail(id?: string) {
   const user = getAdminUser();
   return useQuery({
     queryKey: ['admin-tenants', id],
-    queryFn: () => apiClient.get<any>(`/admin/tenants/${id}`),
+    queryFn: () => apiClient.get<AdminTenantDetail>(`/admin/tenants/${id}`),
     enabled: !!user && !!id,
   });
 }
@@ -116,16 +221,6 @@ export function useDeleteTenant() {
   });
 }
 
-export interface AuditLogsResponse {
-  data: any[];
-  meta: {
-    page: number;
-    limit: number;
-    total: number;
-    totalPages: number;
-  };
-}
-
 export function useAdminAuditLogs(params?: {
   page?: number;
   limit?: number;
@@ -146,7 +241,7 @@ export function useAdminHealth() {
   const user = getAdminUser();
   return useQuery({
     queryKey: ['admin-health'],
-    queryFn: () => apiClient.get<any>('/admin/health'),
+    queryFn: () => apiClient.get<AdminHealthResponse>('/admin/health'),
     enabled: !!user,
     refetchInterval: 10000,
   });
@@ -155,7 +250,7 @@ export function useAdminHealth() {
 export function useAdminLogin() {
   return useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
-      return apiClient.post<any>('/admin/auth/login', credentials);
+      return apiClient.post<AdminLoginResponse>('/admin/auth/login', credentials);
     },
   });
 }

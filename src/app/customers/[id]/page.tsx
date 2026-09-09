@@ -1,7 +1,7 @@
 "use client"
 
 import { useCustomer } from "@/features/customers/api/use-customers"
-import { useDeleteVehicle } from "@/features/vehicles/api/use-vehicles"
+import { useDeleteVehicle, type VehicleRecord } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
 import Link from "next/link"
@@ -61,7 +61,7 @@ export default function CustomerDetailPage() {
         taxNumber: apiCustomer.taxNumber,
         taxOffice: apiCustomer.taxOffice,
         balance: apiCustomer.currentAccount ? Number(apiCustomer.currentAccount.balance) : 0,
-        vehicles: (apiCustomer.vehicles || []).map((v: any) => ({
+        vehicles: (apiCustomer.vehicles || []).map((v) => ({
           id: v.id,
           tenantId: v.tenantId || 'ten_1',
           customerId: apiCustomer.id,
@@ -69,52 +69,48 @@ export default function CustomerDetailPage() {
           brand: v.brand,
           model: v.model,
           year: v.year,
-          kilometer: v.mileage || 0,
+          kilometer: v.kilometer ?? 0,
           fuelType: v.fuelType,
           transmission: v.transmission,
         })),
-        appointments: (apiCustomer.appointments || []).map((app: any) => ({
+        appointments: (apiCustomer.appointments || []).map((app) => ({
           id: app.id,
-          date: app.appointmentDate ? new Date(app.appointmentDate).toISOString().split('T')[0] : (app.date || '-'),
-          time: app.appointmentTime || app.time || '10:00',
-          serviceName: app.service?.name || app.serviceName || 'Genel Bakım',
-          plate: app.vehicle?.plate || app.plate || '34XX000',
+          date: app.date || '-',
+          time: app.time || '10:00',
+          serviceName: app.serviceName || 'Genel Bakım',
+          plate: app.plate || '34XX000',
           status: app.status || 'CONFIRMED',
-          technicianName: app.technician ? `${app.technician.name} ${app.technician.surname || ''}` : (app.technicianName || 'Atölye Ustası'),
+          technicianName: app.technicianName || 'Atölye Ustası',
         })),
-        workOrders: (apiCustomer.workOrders || []).map((w: any) => ({
+        workOrders: (apiCustomer.workOrders || []).map((w) => ({
           id: w.id,
-          orderNumber: w.workOrderNumber || w.orderNumber || 'İEM-000',
-          date: w.createdAt ? new Date(w.createdAt).toISOString().split('T')[0] : (w.date || '-'),
+          orderNumber: w.orderNumber || 'İEM-000',
+          date: w.date || '-',
           status: w.status || 'OPEN',
-          totalAmount: Number(w.grandTotal ?? w.totalAmount ?? 0),
-          kilometers: Number(w.kmIn ?? w.kilometers ?? w.vehicle?.mileage ?? 0),
-          plate: w.vehicle?.plate || w.plate || w.vehiclePlate || '34XX000',
-          itemsSummary: w.description || w.itemsSummary || (w.items?.length ? `${w.items.length} Kalem İşlem / Parça` : 'Periyodik Bakım & Kontrol'),
-          technician: w.technician ? `${w.technician.name} ${w.technician.surname || ''}` : (w.technicianName || w.technician || 'Atölye Ustası'),
+          totalAmount: Number(w.totalAmount ?? 0),
+          kilometers: Number(w.kilometers ?? 0),
+          plate: w.plate || '34XX000',
+          itemsSummary: w.itemsSummary || 'Periyodik Bakım & Kontrol',
+          technician: w.technician || 'Atölye Ustası',
         })),
-        invoices: (apiCustomer.invoices || []).map((inv: any) => ({
+        invoices: (apiCustomer.invoices || []).map((inv) => ({
           id: inv.id,
           invoiceNumber: inv.invoiceNumber || 'FTR-000',
-          date: inv.issueDate ? new Date(inv.issueDate).toISOString().split('T')[0] : (inv.date || '-'),
-          dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : (inv.date || '-'),
-          plate: inv.workOrder?.vehicle?.plate || inv.plate || '34XX000',
-          totalAmount: Number(inv.grandTotal ?? inv.totalAmount ?? 0),
-          paidAmount: Number(inv.paidAmount ?? (inv.status === 'PAID' ? inv.grandTotal ?? 0 : 0)),
+          date: inv.date || '-',
+          dueDate: inv.dueDate || '-',
+          plate: inv.plate || '34XX000',
+          totalAmount: Number(inv.totalAmount ?? 0),
+          paidAmount: Number(inv.paidAmount ?? 0),
           status: inv.status || 'PAID',
         })),
-        movements: (apiCustomer.currentAccount?.movements || []).map((m: any) => ({
+        movements: (apiCustomer.movements || []).map((m) => ({
           id: m.id,
-          date: m.date
-            ? typeof m.date === 'string' && m.date.includes('T')
-              ? m.date.split('T')[0]
-              : new Date(m.date).toLocaleDateString('tr-TR')
-            : '-',
-          type: (Number(m.debit || 0) > 0 ? 'DEBIT' : 'CREDIT') as 'DEBIT' | 'CREDIT',
-          amount: Number(m.debit || 0) > 0 ? Number(m.debit) : Number(m.credit),
+          date: m.date || '-',
+          type: m.type || 'DEBIT',
+          amount: Number(m.amount || 0),
           balanceAfter: Number(m.balanceAfter || 0),
           description: m.description || '-',
-          documentNo: m.referenceNo || '',
+          documentNo: m.documentNo || '',
         })),
         createdAt: apiCustomer.createdAt,
         updatedAt: apiCustomer.updatedAt || apiCustomer.createdAt,
@@ -132,7 +128,7 @@ export default function CustomerDetailPage() {
     setCustomer(updatedCustomer)
   }
 
-  const handleVehicleUpdated = (updatedVehicle: any) => {
+  const handleVehicleUpdated = (updatedVehicle: VehicleRecord | Vehicle) => {
     if (!customer) return
     const nextVehicles = customer.vehicles.map((v) =>
       v.id === updatedVehicle.id ? { ...v, ...updatedVehicle } : v
@@ -270,7 +266,7 @@ export default function CustomerDetailPage() {
       </div>
 
       {/* Missing VKN Warning for Corporate Customers */}
-      {(customer.type === "corporate" || (customer.type as any) === "CORPORATE") && !customer.taxNumber && (
+      {(customer.type === "corporate" || String(customer.type) === "CORPORATE") && !customer.taxNumber && (
         <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-800 dark:text-amber-200">
           <div className="flex items-start sm:items-center gap-3">
             <span className="text-xl">⚠️</span>

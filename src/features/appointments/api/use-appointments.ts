@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { toast } from '@/components/ui/sonner';
-import { Appointment, AppointmentStatus } from '../types';
+import { Appointment, AppointmentStatus, AppointmentRecord } from '../types';
 import { AppointmentCreateValues } from '../schemas/appointment.schema';
 
 export function useAppointments(date?: string) {
-  return useQuery<Appointment[]>({
+  return useQuery<AppointmentRecord[]>({
     queryKey: ['appointments', date],
-    queryFn: () => apiClient.get<Appointment[]>('/appointments', { params: { date } }),
+    queryFn: () => apiClient.get<AppointmentRecord[]>('/appointments', { params: { date } }),
   });
 }
 

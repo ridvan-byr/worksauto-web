@@ -24,7 +24,9 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { useAuth } from "@/features/auth/auth-context"
-import { useTenantAuditLogs } from "@/features/settings/api/use-settings"
+import { useTenantAuditLogs, type TenantAuditLogsResponse } from "@/features/settings/api/use-settings"
+
+type TenantAuditLogItem = NonNullable<TenantAuditLogsResponse["data"]>[number]
 import {
   formatEntityName,
   formatStatus,
@@ -55,7 +57,7 @@ export default function TenantAuditLogsPage() {
     "ALL" | "work_order" | "finance" | "appointment" | "service" | "staff"
   >("ALL")
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [selectedLog, setSelectedLog] = React.useState<any | null>(null)
+  const [selectedLog, setSelectedLog] = React.useState<TenantAuditLogItem | null>(null)
   const [copied, setCopied] = React.useState(false)
 
   // Map category filter to API parameter
@@ -66,7 +68,7 @@ export default function TenantAuditLogsPage() {
 
   const { data: auditData, isLoading } = useTenantAuditLogs({
     page,
-    limit: 10,
+    limit: 15,
     action: apiAction,
     search: searchQuery || undefined,
   })
@@ -75,13 +77,13 @@ export default function TenantAuditLogsPage() {
 
   const meta = auditData
     ? {
-        total: auditData.total || 0,
-        page: auditData.page || 1,
-        totalPages: auditData.totalPages || 1,
+        total: auditData.meta?.total ?? auditData.total ?? 0,
+        page: auditData.meta?.page ?? auditData.page ?? 1,
+        totalPages: auditData.meta?.totalPages ?? auditData.totalPages ?? 1,
       }
     : { total: 0, page: 1, totalPages: 1 }
 
-  const handleCopyJson = (data: any) => {
+  const handleCopyJson = (data: unknown) => {
     if (!data) return
     navigator.clipboard.writeText(JSON.stringify(data, null, 2))
     setCopied(true)
@@ -249,8 +251,13 @@ export default function TenantAuditLogsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60 text-slate-700 dark:text-slate-200">
-              {filteredLogs.map((log: any) => {
-                const changes = log.changesAfter || log.changesBefore || {}
+              {filteredLogs.map((log) => {
+                const changes = ((log.changesAfter || log.changesBefore || log.details || {}) as unknown) as Record<string, unknown>
+                const plate = typeof changes.plate === "string" ? changes.plate : undefined
+                const displayName = typeof (changes.itemName || changes.name || changes.serviceName) === "string" ? String(changes.itemName || changes.name || changes.serviceName) : undefined
+                const quantity = changes.quantity !== undefined ? String(changes.quantity) : undefined
+                const paymentMethod = typeof changes.paymentMethod === "string" ? changes.paymentMethod : undefined
+                const status = typeof changes.status === "string" ? changes.status : undefined
                 return (
                   <tr
                     key={log.id}
@@ -275,17 +282,17 @@ export default function TenantAuditLogsPage() {
                     </td>
                     <td className="p-4">
                       <div className="space-y-0.5 max-w-xs">
-                        {changes.plate && (
+                        {plate && (
                           <div className="font-mono text-sky-600 dark:text-sky-400 font-bold text-[11px]">
-                            {changes.plate}
+                            {plate}
                           </div>
                         )}
-                        {(changes.itemName || changes.name || changes.serviceName) && (
+                        {displayName && (
                           <div className="font-medium text-slate-900 dark:text-white truncate">
-                            {changes.itemName || changes.name || changes.serviceName}
-                            {changes.quantity && (
+                            {displayName}
+                            {quantity && (
                               <span className="text-slate-500 text-[11px] font-normal ml-1">
-                                ({changes.quantity} adet)
+                                ({quantity} adet)
                               </span>
                             )}
                           </div>
@@ -304,15 +311,15 @@ export default function TenantAuditLogsPage() {
                           <div className="font-mono font-bold text-emerald-600 dark:text-emerald-400 text-[11px]">
                             +₺{Number(changes.amount).toLocaleString("tr-TR")}{" "}
                             <span className="text-[10px] font-normal text-slate-500 font-sans">
-                              ({formatPaymentMethod(changes.paymentMethod)})
+                              ({formatPaymentMethod(paymentMethod)})
                             </span>
                           </div>
                         )}
-                        {changes.status && (
+                        {status && (
                           <div className="text-[11px] text-slate-500 flex items-center gap-1">
                             <span>Durum:</span>
                             <span className="font-semibold text-slate-800 dark:text-slate-200">
-                              {formatStatus(changes.status)}
+                              {formatStatus(status)}
                             </span>
                           </div>
                         )}
@@ -516,8 +523,19 @@ export default function TenantAuditLogsPage() {
 
             {/* Structured Visual Summary */}
             {(() => {
-              const before = selectedLog.changesBefore || {}
-              const after = selectedLog.changesAfter || {}
+              type AuditLogDetailChanges = {
+                itemName?: string
+                name?: string
+                serviceName?: string
+                plate?: string
+                customerName?: string
+                grandTotal?: number | string
+                amount?: number | string
+                status?: string
+                reason?: string
+              }
+              const before = (selectedLog.changesBefore || {}) as AuditLogDetailChanges
+              const after = (selectedLog.changesAfter || {}) as AuditLogDetailChanges
               const hasDiff =
                 Object.keys(before).length > 0 || Object.keys(after).length > 0
               if (!hasDiff) return null

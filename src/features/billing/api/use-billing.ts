@@ -2,17 +2,123 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { toast } from '@/components/ui/sonner';
 
+export interface InvoiceItem {
+  id?: string;
+  name?: string;
+  type?: string;
+  description?: string;
+  quantity: number;
+  unitPrice: number;
+  totalPrice?: number;
+}
+
+export interface InvoiceRecord {
+  id: string;
+  invoiceNumber: string;
+  customerId: string;
+  customer?: {
+    id?: string;
+    name?: string;
+    surname?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    taxNumber?: string;
+    companyTitle?: string;
+  };
+  workOrderId?: string;
+  workOrder?: {
+    items?: InvoiceItem[];
+  };
+  payments?: PaymentRecord[];
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  paidAmount: number;
+  remainingAmount: number;
+  status: 'DRAFT' | 'ISSUED' | 'PAID' | 'PARTIALLY_PAID' | 'CANCELLED';
+  issueDate: string;
+  dueDate?: string;
+  items?: InvoiceItem[];
+}
+
+export interface CreateInvoiceInput {
+  customerId: string;
+  workOrderId?: string;
+  items: InvoiceItem[];
+  taxRate?: number;
+  notes?: string;
+}
+
+export interface PaymentRecord {
+  id: string;
+  paymentNumber?: string;
+  invoiceId?: string;
+  customerId: string;
+  customer?: {
+    name: string;
+    surname?: string;
+    phone?: string;
+  };
+  amount: number;
+  paymentMethod: 'CASH' | 'CREDIT_CARD' | 'BANK_TRANSFER';
+  notes?: string;
+  createdAt: string;
+}
+
+export interface CreatePaymentInput {
+  invoiceId?: string;
+  customerId?: string;
+  amount: number;
+  paymentMethod?: 'CASH' | 'CREDIT_CARD' | 'BANK_TRANSFER' | string;
+  method?: string;
+  notes?: string;
+}
+
+export interface DailyBillingSummary {
+  totalRevenue: number;
+  cashTotal: number;
+  creditCardTotal: number;
+  bankTransferTotal: number;
+  totalInvoicesIssued: number;
+}
+
+export interface CurrentAccountRecord {
+  id: string;
+  customerId: string;
+  customer?: {
+    id?: string;
+    name?: string;
+    surname?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    type?: string;
+    companyTitle?: string;
+    companyName?: string;
+  };
+  totalDebit?: number;
+  totalCredit?: number;
+  totalDebits?: number;
+  totalCredits?: number;
+  creditLimit?: number;
+  balance: number;
+  lastTransactionAt?: string;
+  movements?: Array<Record<string, unknown>>;
+}
+
 export function useInvoices(status?: string) {
   return useQuery({
     queryKey: ['invoices', status],
-    queryFn: () => apiClient.get<any[]>('/invoices', { params: { status } }),
+    queryFn: () => apiClient.get<InvoiceRecord[]>('/invoices', { params: { status } }),
   });
 }
 
 export function useInvoice(id?: string) {
   return useQuery({
     queryKey: ['invoices', id],
-    queryFn: () => apiClient.get<any>(`/invoices/${id}`),
+    queryFn: () => apiClient.get<InvoiceRecord>(`/invoices/${id}`),
     enabled: !!id,
   });
 }
@@ -20,8 +126,8 @@ export function useInvoice(id?: string) {
 export function useCreateInvoice() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => apiClient.post('/invoices', data),
-    onSuccess: (data: any) => {
+    mutationFn: (data: CreateInvoiceInput) => apiClient.post<InvoiceRecord>('/invoices', data),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['current-accounts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
@@ -29,8 +135,9 @@ export function useCreateInvoice() {
         description: data?.invoiceNumber ? `${data.invoiceNumber} cari hesaba işlendi.` : undefined,
       });
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Fatura oluşturulamadı.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Fatura oluşturulamadı.';
+      toast.error(message);
     },
   });
 }
@@ -46,8 +153,9 @@ export function useCancelInvoice() {
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       toast.info('Fatura iptal edildi ve cari hesap bakiyesi dengelendi.');
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Fatura iptal edilemedi.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Fatura iptal edilemedi.';
+      toast.error(message);
     },
   });
 }
@@ -55,15 +163,15 @@ export function useCancelInvoice() {
 export function usePayments() {
   return useQuery({
     queryKey: ['payments'],
-    queryFn: () => apiClient.get<any[]>('/payments'),
+    queryFn: () => apiClient.get<PaymentRecord[]>('/payments'),
   });
 }
 
 export function useCreatePayment() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => apiClient.post('/payments', data),
-    onSuccess: (data: any) => {
+    mutationFn: (data: CreatePaymentInput) => apiClient.post<PaymentRecord>('/payments', data),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['payments'] });
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['current-accounts'] });
@@ -72,8 +180,9 @@ export function useCreatePayment() {
         description: data?.amount ? `${Number(data.amount).toLocaleString('tr-TR')} ₺ hesaba işlendi.` : undefined,
       });
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Tahsilat kaydedilemedi.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Tahsilat kaydedilemedi.';
+      toast.error(message);
     },
   });
 }
@@ -81,21 +190,21 @@ export function useCreatePayment() {
 export function useDailySummary() {
   return useQuery({
     queryKey: ['payments', 'daily-summary'],
-    queryFn: () => apiClient.get<any>('/payments/daily-summary'),
+    queryFn: () => apiClient.get<DailyBillingSummary>('/payments/daily-summary'),
   });
 }
 
 export function useCurrentAccounts() {
   return useQuery({
     queryKey: ['current-accounts'],
-    queryFn: () => apiClient.get<any[]>('/current-accounts'),
+    queryFn: () => apiClient.get<CurrentAccountRecord[]>('/current-accounts'),
   });
 }
 
 export function useCustomerCurrentAccount(customerId?: string) {
   return useQuery({
     queryKey: ['current-accounts', customerId],
-    queryFn: () => apiClient.get<any>(`/current-accounts/customer/${customerId}`),
+    queryFn: () => apiClient.get<CurrentAccountRecord>(`/current-accounts/customer/${customerId}`),
     enabled: !!customerId,
   });
 }

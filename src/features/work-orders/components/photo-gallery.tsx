@@ -139,7 +139,7 @@ export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
               </label>
               <select
                 value={photoType}
-                onChange={(e) => setPhotoType(e.target.value as any)}
+                onChange={(e) => setPhotoType(e.target.value as "CHECKIN" | "DAMAGE" | "COMPLETED")}
                 className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
               >
                 <option value="CHECKIN">Araç Kabul (KM / Ön-Arka)</option>
@@ -320,7 +320,7 @@ export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
                     <span>•</span>
                     <span className="flex items-center gap-1">
                       <Calendar size={12} />
-                      <span>{new Date(activeLightboxPhoto.uploadedAt).toLocaleString("tr-TR")}</span>
+                      <span>{new Date(activeLightboxPhoto.uploadedAt || activeLightboxPhoto.createdAt || Date.now()).toLocaleString("tr-TR")}</span>
                     </span>
                   </div>
                 </div>

@@ -29,7 +29,7 @@ export interface ExcelExportModalProps {
   subtitle?: string
   sheetName?: string
   defaultFileName: string
-  data: Record<string, any>[]
+  data: Record<string, unknown>[]
   availableColumns: ExportColumnDef[]
   authorName?: string
 }
@@ -116,8 +116,9 @@ export function ExcelExportModal({
       triggerDownloadBlob(blob, cleanFileName)
       toast.success(`${data.length} kayıt kurumsal Excel formatında başarıyla indirildi.`)
       onClose()
-    } catch (err: any) {
-      toast.error(err.message || "Excel dosyası oluşturulurken bir hata oluştu.")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Excel dosyası oluşturulurken bir hata oluştu."
+      toast.error(msg)
     } finally {
       setIsExporting(false)
     }

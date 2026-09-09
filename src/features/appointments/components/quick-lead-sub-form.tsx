@@ -6,10 +6,10 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { quickLeadSchema, QuickLeadValues } from "../schemas/appointment.schema"
-import { useQuickLeadCustomer } from "@/features/customers/api/use-customers"
+import { useQuickLeadCustomer, type QuickLeadResponse } from "@/features/customers/api/use-customers"
 
 interface QuickLeadSubFormProps {
-  onSuccess: (customer: any, vehicle: any) => void
+  onSuccess: (customer: QuickLeadResponse["customer"], vehicle: QuickLeadResponse["vehicle"]) => void
   onCancel: () => void
 }
 

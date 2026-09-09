@@ -1,6 +1,6 @@
 "use client"
 
-import { useVehicles, useDeleteVehicle } from "@/features/vehicles/api/use-vehicles"
+import { useVehicles, useDeleteVehicle, type VehicleRecord } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
 import Link from "next/link"
@@ -27,17 +27,15 @@ import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
 import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
 import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
-
 import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
-
 import { cn } from "@/lib/utils"
 
 export default function VehiclesPage() {
-  const [vehicles, setVehicles] = React.useState<any[]>([])
+  const [vehicles, setVehicles] = React.useState<VehicleRecord[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
   const [brandFilter, setBrandFilter] = React.useState<string>("all")
-  const [vehicleToDelete, setVehicleToDelete] = React.useState<any | null>(null)
-  const [vehicleToEdit, setVehicleToEdit] = React.useState<any | null>(null)
+  const [vehicleToDelete, setVehicleToDelete] = React.useState<VehicleRecord | null>(null)
+  const [vehicleToEdit, setVehicleToEdit] = React.useState<VehicleRecord | null>(null)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
 
@@ -78,7 +76,7 @@ export default function VehiclesPage() {
 
   React.useEffect(() => {
     if (apiVehicles) {
-      const mapped = apiVehicles.map((v: any) => ({
+      const mapped = apiVehicles.map((v: VehicleRecord) => ({
         id: v.id,
         tenantId: v.tenantId || 'ten_1',
         plate: v.plate,
@@ -123,10 +121,10 @@ export default function VehiclesPage() {
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase().trim()
       const matchPlate = v.plate.toLowerCase().replace(/\s/g, "").includes(q.replace(/\s/g, ""))
-      const matchModel = `${v.brand} ${v.model}`.toLowerCase().includes(q)
-      const matchCustomer = v.customerName.toLowerCase().includes(q)
+      const matchModel = `${v.brand || ""} ${v.model || ""}`.toLowerCase().includes(q)
+      const matchCustomer = (v.customerName || "").toLowerCase().includes(q)
       const cleanDigits = q.replace(/\D/g, "")
-      const matchPhone = cleanDigits.length >= 3 && v.customerPhone.replace(/\D/g, "").includes(cleanDigits)
+      const matchPhone = cleanDigits.length >= 3 && (v.customerPhone || "").replace(/\D/g, "").includes(cleanDigits)
 
       return matchPlate || matchModel || matchCustomer || matchPhone
     })
@@ -410,7 +408,7 @@ export default function VehiclesPage() {
                     <td className="py-4 px-4 font-mono font-bold text-slate-900 dark:text-slate-100">
                       <div className="flex items-center gap-1.5">
                         <Gauge size={13} className="text-slate-400" />
-                        <span>{v.kilometer.toLocaleString("tr-TR")} KM</span>
+                        <span>{(v.kilometer || 0).toLocaleString("tr-TR")} KM</span>
                       </div>
                     </td>
 

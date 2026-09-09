@@ -15,7 +15,7 @@ import { BrandLogo } from "@/components/shared/brand-logo"
 
 import { ThemeToggle } from "./theme-toggle"
 import { useAuth } from "@/features/auth/auth-context"
-import { useVehicles } from "@/features/vehicles/api/use-vehicles"
+import { useVehicles, type VehicleRecord } from "@/features/vehicles/api/use-vehicles"
 import { restartPageAnimation } from "@/lib/animation"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { NotificationPopover } from "@/features/notifications/components/notification-popover"
@@ -65,18 +65,18 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
 
     const q = searchQuery.toLowerCase().trim()
     const cleanPlateQ = q.replace(/\s/g, "")
-    const allVehicles = (apiVehicles || []).map((v: any) => ({
+    const allVehicles = (apiVehicles || []).map((v: VehicleRecord) => ({
       id: v.id,
       plate: v.plate,
       brand: v.brand,
       model: v.model,
       year: v.year,
       customerId: v.customerId,
-      customerName: v.customer ? `${v.customer.firstName} ${v.customer.lastName}` : "Müşteri",
+      customerName: v.customer ? `${v.customer.firstName || ""} ${v.customer.lastName || ""}`.trim() : "Müşteri",
       customerPhone: v.customer?.phone || "",
     }))
 
-    return allVehicles.filter((v: any) => {
+    return allVehicles.filter((v) => {
       const matchPlate = v.plate.toLowerCase().replace(/\s/g, "").includes(cleanPlateQ)
       const matchModel = `${v.brand} ${v.model}`.toLowerCase().includes(q)
       const matchCustomer = v.customerName.toLowerCase().includes(q)
@@ -87,7 +87,8 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
     }).slice(0, 5) // Top 5 matches
   }, [searchQuery, apiVehicles])
 
-  const handleSelectResult = (customerId: string) => {
+  const handleSelectResult = (customerId?: string) => {
+    if (!customerId) return
     setIsOpen(false)
     setSearchQuery("")
     router.push(`/customers/${customerId}`)

@@ -16,7 +16,7 @@ import {
   Search,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Appointment, CancellationReason } from "@/features/appointments/types"
+import { Appointment, CancellationReason, AppointmentStatus, type AppointmentRecord } from "@/features/appointments/types"
 import { CalendarGrid } from "@/features/appointments/components/calendar-grid"
 import { ListView } from "@/features/appointments/components/list-view"
 import { CreateAppointmentModal } from "@/features/appointments/components/create-appointment-modal"
@@ -51,11 +51,11 @@ export default function AppointmentsPage() {
   // Pure Live API sync (100% PostgreSQL)
   React.useEffect(() => {
     if (apiAppointments) {
-      const mapped: Appointment[] = apiAppointments.map((a: any) => ({
+      const mapped: Appointment[] = apiAppointments.map((a: AppointmentRecord) => ({
         id: a.id,
         tenantId: a.tenantId || 'ten_1',
         customerId: a.customerId,
-        customerName: a.customer ? `${a.customer.firstName} ${a.customer.lastName}` : 'Müşteri',
+        customerName: a.customer ? `${a.customer.firstName || a.customer.name || ""} ${a.customer.lastName || a.customer.surname || ""}`.trim() : 'Müşteri',
         customerPhone: a.customer?.phone || '',
         vehicleId: a.vehicleId,
         plate: a.vehicle?.plate || '34XX000',
@@ -65,10 +65,10 @@ export default function AppointmentsPage() {
         totalDurationMinutes: a.service?.defaultDurationMin || 60,
         totalEstimatedPrice: Number(a.service?.basePrice || 750),
         assignedStaffId: a.assignedMechanicId,
-        assignedStaffName: a.assignedMechanic?.user ? `${a.assignedMechanic.user.name} ${a.assignedMechanic.user.surname}` : 'Usta',
+        assignedStaffName: a.assignedMechanic?.user ? `${a.assignedMechanic.user.name} ${a.assignedMechanic.user.surname || ""}`.trim() : 'Usta',
         date: new Date(a.slotDate).toISOString().split('T')[0],
         time: new Date(a.slotStartTime).toTimeString().substring(0, 5),
-        status: a.status as any,
+        status: (a.status as AppointmentStatus) || "CONFIRMED",
         customerNote: a.customerNotes,
         cancellationReason: a.cancellationReason,
         createdAt: a.createdAt,

@@ -1,6 +1,6 @@
 "use client"
 
-import { useCurrentAccounts, useCreatePayment } from "@/features/billing/api/use-billing"
+import { useCurrentAccounts, useCreatePayment, type CurrentAccountRecord } from "@/features/billing/api/use-billing"
 
 import * as React from "react"
 import {
@@ -40,29 +40,29 @@ export default function CurrentAccountsPage() {
   // Live API sync with mock fallback
   React.useEffect(() => {
     if (apiAccounts && apiAccounts.length > 0) {
-      const mapped: CurrentAccount[] = apiAccounts.map((a: any) => ({
+      const mapped: CurrentAccount[] = apiAccounts.map((a: CurrentAccountRecord) => ({
         id: a.id,
         customerId: a.customerId,
-        customerName: a.customer ? `${a.customer.firstName} ${a.customer.lastName}` : 'Müşteri',
+        customerName: a.customer ? `${a.customer.firstName || a.customer.name || ""} ${a.customer.lastName || a.customer.surname || ""}`.trim() : 'Müşteri',
         customerPhone: a.customer?.phone || '',
         customerType: a.customer?.type === 'CORPORATE' ? 'corporate' : 'individual',
         companyTitle: a.customer?.companyTitle,
         balance: Number(a.balance),
         creditLimit: Number(a.creditLimit || 15000),
-        totalDebits: Number(a.totalDebits),
-        totalCredits: Number(a.totalCredits),
-        lastActivityDate: a.updatedAt || a.createdAt,
-        movements: (a.movements || []).map((m: any) => ({
-          id: m.id,
+        totalDebits: Number(a.totalDebits || a.totalDebit || 0),
+        totalCredits: Number(a.totalCredits || a.totalCredit || 0),
+        lastActivityDate: a.lastTransactionAt || new Date().toISOString(),
+        movements: (a.movements || []).map((m: Record<string, unknown>) => ({
+          id: String(m.id || 'mov_' + Date.now()),
           customerId: a.customerId,
           date: m.date
             ? typeof m.date === 'string' && m.date.includes('T')
               ? m.date.split('T')[0]
-              : new Date(m.date).toLocaleDateString('tr-TR')
+              : new Date(String(m.date)).toLocaleDateString('tr-TR')
             : '-',
-          type: (Number(m.debit) > 0 ? 'INVOICE' : 'PAYMENT') as 'INVOICE' | 'PAYMENT',
-          description: m.description || '-',
-          referenceNo: m.referenceNo || '-',
+          type: (Number(m.debit || 0) > 0 ? 'INVOICE' : 'PAYMENT') as 'INVOICE' | 'PAYMENT',
+          description: String(m.description || '-'),
+          referenceNo: String(m.referenceNo || '-'),
           debit: Number(m.debit || 0),
           credit: Number(m.credit || 0),
           balanceAfter: Number(m.balanceAfter || 0),
@@ -104,7 +104,8 @@ export default function CurrentAccountsPage() {
       await createPaymentMutation.mutateAsync({
         customerId,
         amount,
-        method: method as any,
+        paymentMethod: method,
+        method: method,
         notes: note,
       })
     } catch (e) {
@@ -231,7 +232,7 @@ export default function CurrentAccountsPage() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setFilterType(tab.id as any)}
+              onClick={() => setFilterType(tab.id as "all" | "exceeded" | "has_balance")}
               className={cn(
                 "px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border",
                 filterType === tab.id

@@ -22,31 +22,36 @@ export interface WorkOrderPart {
 
 export interface WorkOrderNote {
   id: string
-  authorName: string
-  text: string
+  authorName?: string
+  authorRole?: string
+  text?: string
+  note?: string
   createdAt: string
-  isInternal: boolean // Müşteriye gösterilmez (Spec Bölüm 19)
+  isInternal?: boolean
 }
 
 export interface WorkOrderPhoto {
   id: string
   url: string
-  caption: string
-  uploadedAt: string
-  uploaderName: string
-  type: "CHECKIN" | "DAMAGE" | "COMPLETED"
+  caption?: string
+  uploadedAt?: string
+  uploaderName?: string
+  uploadedBy?: string
+  type?: "CHECKIN" | "DAMAGE" | "COMPLETED" | string
+  photoType?: string
+  createdAt?: string
 }
 
 export interface WorkOrderItem {
   id: string
   workOrderId?: string
-  itemType: "PART" | "SERVICE"
+  itemType?: "PART" | "SERVICE" | string
   itemId?: string | null
   name: string
   quantity: number
   unitPrice: number
-  kdvRate: number
-  totalPrice: number
+  kdvRate?: number
+  totalPrice?: number
   createdAt?: string
 }
 
@@ -104,7 +109,7 @@ export interface WorkOrder {
   }
 
   // Operations
-  items?: any[]
+  items?: Array<WorkOrderItem | WorkOrderService | WorkOrderPart | Record<string, unknown>>
   services: WorkOrderService[]
   parts: WorkOrderPart[]
   notes: WorkOrderNote[]

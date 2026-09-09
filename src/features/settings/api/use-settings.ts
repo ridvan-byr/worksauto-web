@@ -2,6 +2,34 @@ import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tansta
 import { apiClient } from '@/lib/api-client';
 import { toast } from '@/components/ui/sonner';
 
+export interface TenantAuditLogRecord {
+  id: string;
+  action: string;
+  entityName?: string;
+  entityId?: string;
+  userId?: string;
+  userAgent?: string;
+  changesBefore?: Record<string, unknown>;
+  changesAfter?: Record<string, unknown>;
+  createdAt: string;
+  user?: { name: string; surname?: string; role?: string };
+  ipAddress?: string;
+  details?: Record<string, unknown>;
+}
+
+export interface TenantAuditLogsResponse {
+  data: Array<TenantAuditLogRecord>;
+  meta?: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+  total?: number;
+  page?: number;
+  totalPages?: number;
+}
+
 export function useTenantAuditLogs(params?: {
   page?: number;
   limit?: number;
@@ -11,30 +39,58 @@ export function useTenantAuditLogs(params?: {
 }) {
   return useQuery({
     queryKey: ['tenant-audit-logs', params],
-    queryFn: () => apiClient.get<any>('/audit-logs', { params }),
+    queryFn: () => apiClient.get<TenantAuditLogsResponse>('/audit-logs', { params }),
     placeholderData: keepPreviousData,
   });
+}
+
+export interface ServiceRecord {
+  id: string;
+  name: string;
+  category?: string;
+  basePrice?: number;
+  estimatedMinutes?: number;
+  defaultDurationMin?: number;
+  isActive?: boolean;
+  createdAt?: string;
+}
+
+export interface CreateServiceInput {
+  name: string;
+  category?: string;
+  basePrice: number;
+  estimatedMinutes?: number;
+  isActive?: boolean;
+}
+
+export interface UpdateServiceInput {
+  name?: string;
+  category?: string;
+  basePrice?: number;
+  defaultDurationMin?: number;
+  isActive?: boolean;
 }
 
 export function useServices(params?: { search?: string; category?: string; isActive?: boolean }) {
   return useQuery({
     queryKey: ['services', params],
-    queryFn: () => apiClient.get<any[]>('/services', { params }),
+    queryFn: () => apiClient.get<ServiceRecord[]>('/services', { params }),
   });
 }
 
 export function useCreateService() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => apiClient.post('/services', data),
-    onSuccess: (data: any) => {
+    mutationFn: (data: CreateServiceInput) => apiClient.post<ServiceRecord>('/services', data),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['services'] });
       toast.success('Hizmet tanımı başarıyla kaydedildi.', {
         description: data?.name ? `${data.name} hizmet listesine eklendi.` : undefined,
       });
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Hizmet kaydedilemedi.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Hizmet kaydedilemedi.';
+      toast.error(message);
     },
   });
 }
@@ -42,13 +98,15 @@ export function useCreateService() {
 export function useUpdateService() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiClient.patch(`/services/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateServiceInput }) =>
+      apiClient.patch<ServiceRecord>(`/services/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services'] });
       toast.success('Hizmet bilgileri güncellendi.');
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Hizmet güncellenemedi.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Hizmet güncellenemedi.';
+      toast.error(message);
     },
   });
 }
@@ -61,31 +119,83 @@ export function useDeleteService() {
       queryClient.invalidateQueries({ queryKey: ['services'] });
       toast.success('Hizmet başarıyla kaldırıldı.');
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Hizmet kaldırılamadı.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Hizmet kaldırılamadı.';
+      toast.error(message);
     },
   });
+}
+
+export interface StaffRecord {
+  id: string;
+  name?: string;
+  surname?: string;
+  phone?: string;
+  email?: string;
+  role?: string;
+  isActive?: boolean;
+  assignedLift?: string;
+  specialty?: string;
+  user?: {
+    id: string;
+    name: string;
+    surname?: string;
+    phone: string;
+    email?: string;
+    role: string;
+    isActive?: boolean;
+    mechanic?: {
+      assignedLift?: string;
+      specialty?: string;
+    };
+  };
+  mechanic?: {
+    assignedLift?: string;
+    specialty?: string;
+  };
+}
+
+export interface CreateStaffInput {
+  name: string;
+  surname?: string;
+  phone: string;
+  email?: string;
+  role: string;
+  assignedLift?: string | null;
+  specialty?: string;
+}
+
+export interface UpdateStaffInput {
+  name?: string;
+  surname?: string;
+  phone?: string;
+  email?: string;
+  role?: string;
+  assignedLift?: string | null;
+  specialty?: string;
+  isActive?: boolean;
 }
 
 export function useStaff() {
   return useQuery({
     queryKey: ['staff'],
-    queryFn: () => apiClient.get<any[]>('/staff'),
+    queryFn: () => apiClient.get<StaffRecord[]>('/staff'),
   });
 }
 
 export function useCreateStaff() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => apiClient.post('/staff', data),
-    onSuccess: (data: any) => {
+    mutationFn: (data: CreateStaffInput) => apiClient.post<StaffRecord>('/staff', data),
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast.success('Personel başarıyla eklendi.', {
         description: data?.name ? `${data.name} ${data.surname || ''} kadroya dahil edildi.` : undefined,
       });
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Personel eklenemedi.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Personel eklenemedi.';
+      toast.error(message);
     },
   });
 }
@@ -93,13 +203,15 @@ export function useCreateStaff() {
 export function useUpdateStaff() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: any }) => apiClient.patch(`/staff/${id}`, data),
+    mutationFn: ({ id, data }: { id: string; data: UpdateStaffInput }) =>
+      apiClient.patch<StaffRecord>(`/staff/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast.success('Personel bilgileri güncellendi.');
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Personel güncellenemedi.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Personel güncellenemedi.';
+      toast.error(message);
     },
   });
 }
@@ -112,29 +224,45 @@ export function useDeleteStaff() {
       queryClient.invalidateQueries({ queryKey: ['staff'] });
       toast.success('Personel kaydı başarıyla silindi.');
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Personel silinemedi.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Personel silinemedi.';
+      toast.error(message);
     },
   });
+}
+
+export interface TenantSettings {
+  id: string;
+  title: string;
+  legalName?: string;
+  phone?: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  district?: string;
+  taxOffice?: string;
+  taxNumber?: string;
+  autoInvoiceOnComplete?: boolean;
 }
 
 export function useTenantSettings() {
   return useQuery({
     queryKey: ['tenant-settings'],
-    queryFn: () => apiClient.get<any>('/tenants/current'),
+    queryFn: () => apiClient.get<TenantSettings>('/tenants/current'),
   });
 }
 
 export function useUpdateTenantSettings() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: any) => apiClient.patch('/tenants/current', data),
+    mutationFn: (data: Partial<TenantSettings>) => apiClient.patch<TenantSettings>('/tenants/current', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['tenant-settings'] });
       toast.success('Atölye ayarları başarıyla güncellendi.');
     },
-    onError: (err: any) => {
-      toast.error(err?.message || 'Ayarlar kaydedilemedi.');
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Ayarlar kaydedilemedi.';
+      toast.error(message);
     },
   });
 }

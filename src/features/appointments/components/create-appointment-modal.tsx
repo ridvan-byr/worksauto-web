@@ -16,7 +16,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Appointment, AppointmentServiceItem } from "../types"
-import { useCustomers } from "@/features/customers/api/use-customers"
+import { useCustomers, type QuickLeadResponse } from "@/features/customers/api/use-customers"
 import { useCreateAppointment } from "@/features/appointments/api/use-appointments"
 import { useAuth } from "@/features/auth/auth-context"
 import { cn } from "@/lib/utils"
@@ -60,21 +60,21 @@ export function CreateAppointmentModal({
 
   const customers: CustomerOption[] = React.useMemo(() => {
     if (!apiCustomers) return []
-    return apiCustomers.map((c: any) => ({
+    return apiCustomers.map((c) => ({
       id: c.id,
-      name: c.firstName,
-      surname: c.lastName,
+      name: c.firstName || c.name,
+      surname: c.lastName || c.surname,
       phone: c.phone,
       isLead: Boolean(c.isLead),
-      type: c.type === "CORPORATE" ? ("corporate" as const) : ("individual" as const),
+      type: (c.type === "CORPORATE" || c.type === "corporate") ? ("corporate" as const) : ("individual" as const),
       companyTitle: c.companyTitle,
-      vehicles: (c.vehicles || []).map((v: any) => ({
+      vehicles: (c.vehicles || []).map((v) => ({
         id: v.id,
         plate: v.plate,
         brand: v.brand,
         model: v.model,
         year: v.year,
-        kilometer: Number(v.currentKm ?? v.kilometer ?? v.mileage ?? 0),
+        kilometer: Number(v.kilometer ?? 0),
       })),
     }))
   }, [apiCustomers])
@@ -150,7 +150,7 @@ export function CreateAppointmentModal({
     }
   }
 
-  const handleQuickLeadSuccess = (customer: any, vehicle: any) => {
+  const handleQuickLeadSuccess = (customer: QuickLeadResponse["customer"], vehicle: QuickLeadResponse["vehicle"]) => {
     setValue("customerId", customer.id)
     setValue("vehicleId", vehicle.id)
     setCustomerMode("search")
@@ -172,7 +172,7 @@ export function CreateAppointmentModal({
     try {
       const primaryServiceId = selectedServices.length > 0 ? selectedServices[0].id : undefined
 
-      const createdApp: any = await createAppointmentMutation.mutateAsync({
+      const createdApp = await createAppointmentMutation.mutateAsync({
         customerId: selectedCustomer.id,
         vehicleId: selectedVehicle.id,
         serviceId: primaryServiceId,
@@ -211,7 +211,7 @@ export function CreateAppointmentModal({
         assignedStaffName: values.assignedStaffId || "Ahmet Usta",
         date: values.date || "",
         time: values.time || "10:00",
-        status: "CONFIRMED" as any,
+        status: "CONFIRMED",
         customerNote: values.customerNote?.trim() || undefined,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -221,7 +221,7 @@ export function CreateAppointmentModal({
       reset()
       setSelectedServices([])
       onClose()
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Appointment creation error:", err)
     }
   }

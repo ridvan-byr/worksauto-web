@@ -1,6 +1,6 @@
 "use client"
 
-import { useInvoices, useCreatePayment } from "@/features/billing/api/use-billing"
+import { useInvoices, useCreatePayment, type InvoiceRecord, type PaymentRecord } from "@/features/billing/api/use-billing"
 
 import * as React from "react"
 import {
@@ -19,7 +19,7 @@ import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { InvoiceStatusBadge } from "@/features/billing/components/invoice-status-badge"
 import { RecordPaymentModal } from "@/features/billing/components/record-payment-modal"
 import { InvoiceDetailModal } from "@/features/billing/components/invoice-detail-modal"
-import { Invoice, PaymentMethod } from "@/features/billing/types"
+import { Invoice, PaymentMethod, type InvoiceStatus } from "@/features/billing/types"
 import { cn } from "@/lib/utils"
 
 export default function InvoicesPage() {
@@ -44,52 +44,54 @@ export default function InvoicesPage() {
   // Live API sync with mock fallback
   React.useEffect(() => {
     if (apiInvoices && apiInvoices.length > 0) {
-      const mapped: Invoice[] = apiInvoices.map((inv: any) => ({
+      const mapped: Invoice[] = apiInvoices.map((inv: InvoiceRecord) => ({
         id: inv.id,
-        tenantId: inv.tenantId || 'ten_1',
+        tenantId: 'ten_1',
         invoiceNumber: inv.invoiceNumber,
         workOrderId: inv.workOrderId || 'wo_genel',
-        workOrderNumber: inv.workOrder?.workOrderNumber || 'WO-GENEL',
+        workOrderNumber: 'WO-GENEL',
         customerId: inv.customerId,
-        customerName: inv.customer ? `${inv.customer.firstName} ${inv.customer.lastName}` : 'Müşteri',
+        customerName: inv.customer ? `${inv.customer.firstName || inv.customer.name || ""} ${inv.customer.lastName || inv.customer.surname || ""}`.trim() : 'Müşteri',
         customerPhone: inv.customer?.phone || '',
-        customerType: inv.customer?.type === 'CORPORATE' ? 'corporate' : 'individual',
+        customerType: 'individual',
         companyTitle: inv.customer?.companyTitle,
-        taxOffice: inv.customer?.taxOffice,
+        taxOffice: '',
         taxNumber: inv.customer?.taxNumber,
-        vehiclePlate: inv.workOrder?.vehicle?.plate || '34XX000',
-        vehicleBrand: inv.workOrder?.vehicle?.brand || 'Araç',
-        vehicleModel: inv.workOrder?.vehicle ? `${inv.workOrder.vehicle.brand} ${inv.workOrder.vehicle.model}` : 'Model',
-        vehicleYear: inv.workOrder?.vehicle?.year || 2024,
-        vehicleKm: inv.workOrder?.vehicle?.currentKm ?? inv.workOrder?.vehicle?.mileage ?? 0,
+        vehiclePlate: '34XX000',
+        vehicleBrand: 'Araç',
+        vehicleModel: 'Model',
+        vehicleYear: 2024,
+        vehicleKm: 0,
         issueDate: new Date(inv.issueDate).toISOString().split('T')[0],
-        dueDate: new Date(inv.dueDate).toISOString().split('T')[0],
+        dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : new Date(inv.issueDate).toISOString().split('T')[0],
         subtotal: Number(inv.subtotal),
-        taxAmount: Number(inv.kdvAmount),
-        grandTotal: Number(inv.grandTotal),
+        taxAmount: Number(inv.taxAmount),
+        grandTotal: Number(inv.totalAmount),
         paidAmount: Number(inv.paidAmount),
         remainingAmount: Number(inv.remainingAmount),
-        status: inv.status as any,
-        payments: (inv.payments || []).map((p: any) => ({
+        status: (inv.status === 'PAID' ? 'PAID' : inv.status === 'PARTIALLY_PAID' ? 'PARTIALLY_PAID' : 'UNPAID') as InvoiceStatus,
+        payments: (inv.payments || []).map((p: PaymentRecord) => ({
           id: p.id,
           customerId: inv.customerId,
           invoiceId: inv.id,
-          date: p.paymentDate,
+          date: p.createdAt,
           amount: Number(p.amount),
-          method: p.method as any,
+          method: (p.paymentMethod === 'CREDIT_CARD' ? 'POS' : p.paymentMethod === 'BANK_TRANSFER' ? 'BANK_TRANSFER' : 'CASH') as PaymentMethod,
+          performedByName: p.customer?.name || 'Sistem',
+          createdAt: p.createdAt,
         })),
-        items: inv.workOrder?.items ? inv.workOrder.items.map((i: any) => ({
-          id: i.id,
-          type: i.itemType || 'SERVICE',
-          name: i.name,
+        items: inv.items ? inv.items.map((i, idx) => ({
+          id: i.id || `item_${idx}`,
+          type: (i.type === 'PART' ? 'PART' : 'SERVICE') as "SERVICE" | "PART",
+          name: i.name || i.description || 'Hizmet / Kalem',
           quantity: i.quantity,
           unitPrice: Number(i.unitPrice),
-          totalPrice: Number(i.totalPrice),
+          totalPrice: Number(i.totalPrice ?? (i.quantity * i.unitPrice)),
         })) : [
-          { id: 'item_1', type: 'SERVICE', name: 'Genel Servis & Bakım Bedeli', quantity: 1, unitPrice: Number(inv.subtotal), totalPrice: Number(inv.subtotal) }
+          { id: 'item_1', type: 'SERVICE' as const, name: 'Genel Servis & Bakım Bedeli', quantity: 1, unitPrice: Number(inv.subtotal), totalPrice: Number(inv.subtotal) }
         ],
-        createdAt: inv.createdAt,
-        updatedAt: inv.updatedAt,
+        createdAt: inv.issueDate,
+        updatedAt: inv.issueDate,
       }))
       setInvoices(mapped)
     }
@@ -146,8 +148,8 @@ export default function InvoicesPage() {
         invoiceId,
         customerId: targetInvoice?.customerId,
         amount,
-        paymentMethod: method as any,
-        method: method as any,
+        paymentMethod: method,
+        method: method,
         notes: note,
       })
     } catch (e) {

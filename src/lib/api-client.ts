@@ -2,6 +2,39 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/a
 const ACCESS_TOKEN_KEY = 'worksauto_access_token';
 const REFRESH_TOKEN_KEY = 'worksauto_refresh_token';
 
+let inMemoryAccessToken: string | null = null;
+
+export function getAccessToken(): string | null {
+  if (inMemoryAccessToken) return inMemoryAccessToken;
+  if (typeof window !== 'undefined') {
+    const legacy = localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (legacy) {
+      inMemoryAccessToken = legacy;
+      localStorage.removeItem(ACCESS_TOKEN_KEY);
+      return legacy;
+    }
+  }
+  return null;
+}
+
+export function setAccessToken(token: string | null): void {
+  inMemoryAccessToken = token;
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(ACCESS_TOKEN_KEY);
+    setSessionCookie(Boolean(token));
+  }
+}
+
+export function setSessionCookie(active: boolean) {
+  if (typeof document === 'undefined') return;
+  if (active) {
+    const isProd = process.env.NODE_ENV === 'production';
+    document.cookie = `worksauto_session=1; path=/; SameSite=Lax${isProd ? '; Secure' : ''}; max-age=${30 * 24 * 60 * 60}`;
+  } else {
+    document.cookie = 'worksauto_session=; path=/; SameSite=Lax; max-age=0';
+  }
+}
+
 let isRefreshing = false;
 let failedQueue: Array<{
   resolve: (value?: unknown) => void;
@@ -26,9 +59,9 @@ export interface RequestOptions extends RequestInit {
 export class ApiError extends Error {
   statusCode: number;
   errorCode?: string;
-  data?: any;
+  data?: unknown;
 
-  constructor(message: string, statusCode: number, errorCode?: string, data?: any) {
+  constructor(message: string, statusCode: number, errorCode?: string, data?: unknown) {
     super(message);
     this.name = 'ApiError';
     this.statusCode = statusCode;
@@ -37,7 +70,7 @@ export class ApiError extends Error {
   }
 }
 
-async function refreshAccessToken(): Promise<string> {
+export async function refreshAccessToken(): Promise<string> {
   const legacyRefreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
 
   const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
@@ -53,6 +86,8 @@ async function refreshAccessToken(): Promise<string> {
       const errMsg = (errData.message || '').toLowerCase();
       const isSuspended = errMsg.includes('askıya') || errMsg.includes('lisans') || errMsg.includes('aktif değil');
 
+      setAccessToken(null);
+      setSessionCookie(false);
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       localStorage.removeItem(REFRESH_TOKEN_KEY);
       localStorage.removeItem('worksauto_auth_session');
@@ -64,16 +99,16 @@ async function refreshAccessToken(): Promise<string> {
   }
 
   const data = await response.json();
+  setAccessToken(data.accessToken);
+  setSessionCookie(true);
   if (typeof window !== 'undefined') {
-    localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken);
-    // Refresh token is now stored securely in httpOnly cookie; clean legacy key from localStorage
     localStorage.removeItem(REFRESH_TOKEN_KEY);
   }
 
   return data.accessToken;
 }
 
-export async function apiRequest<T = any>(
+export async function apiRequest<T = unknown>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
@@ -94,7 +129,7 @@ export async function apiRequest<T = any>(
     }
   }
 
-  const token = typeof window !== 'undefined' ? localStorage.getItem(ACCESS_TOKEN_KEY) : null;
+  const token = getAccessToken();
 
   const requestHeaders: HeadersInit = {
     'Content-Type': 'application/json',
@@ -128,6 +163,8 @@ export async function apiRequest<T = any>(
 
       if (isSuspended) {
         if (typeof window !== 'undefined') {
+          setAccessToken(null);
+          setSessionCookie(false);
           localStorage.removeItem(ACCESS_TOKEN_KEY);
           localStorage.removeItem(REFRESH_TOKEN_KEY);
           localStorage.removeItem('worksauto_auth_session');
@@ -161,9 +198,9 @@ export async function apiRequest<T = any>(
             throw new ApiError(errData.message || 'İstek başarısız oldu.', retryRes.status, errData.errorCode, errData);
           }
           return await retryRes.json();
-        } catch (refreshErr: any) {
+        } catch (refreshErr: unknown) {
           isRefreshing = false;
-          processQueue(refreshErr);
+          processQueue(refreshErr instanceof Error ? refreshErr : new Error(String(refreshErr)));
           throw refreshErr;
         }
       } else {
@@ -206,39 +243,40 @@ export async function apiRequest<T = any>(
     }
 
     return await response.json();
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof ApiError) {
       throw error;
     }
-    throw new ApiError(error.message || 'Sunucuya bağlanılamadı.', 500);
+    const message = error instanceof Error ? error.message : 'Sunucuya bağlanılamadı.';
+    throw new ApiError(message, 500);
   }
 }
 
 export const apiClient = {
-  get: <T = any>(endpoint: string, options?: RequestOptions) =>
+  get: <T = unknown>(endpoint: string, options?: RequestOptions) =>
     apiRequest<T>(endpoint, { ...options, method: 'GET' }),
 
-  post: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
+  post: <T = unknown>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: 'POST',
       body: body ? JSON.stringify(body) : undefined,
     }),
 
-  patch: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
+  patch: <T = unknown>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: 'PATCH',
       body: body ? JSON.stringify(body) : undefined,
     }),
 
-  put: <T = any>(endpoint: string, body?: any, options?: RequestOptions) =>
+  put: <T = unknown>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: 'PUT',
       body: body ? JSON.stringify(body) : undefined,
     }),
 
-  delete: <T = any>(endpoint: string, options?: RequestOptions) =>
+  delete: <T = unknown>(endpoint: string, options?: RequestOptions) =>
     apiRequest<T>(endpoint, { ...options, method: 'DELETE' }),
 };

@@ -19,7 +19,7 @@ interface ModalVehicle {
   plate: string
   brand: string
   model: string
-  year: number
+  year?: number
   kilometer: number
   vin?: string
 }
@@ -47,20 +47,20 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
 
   const customers: ModalCustomer[] = React.useMemo(() => {
     if (!apiCustomers) return []
-    return apiCustomers.map((c: any) => ({
+    return apiCustomers.map((c) => ({
       id: c.id,
-      name: c.firstName,
-      surname: c.lastName,
+      name: c.firstName || c.name,
+      surname: c.lastName || c.surname,
       phone: c.phone,
-      type: c.type === "CORPORATE" ? "corporate" : "individual",
+      type: (c.type === "CORPORATE" || c.type === "corporate") ? "corporate" : "individual",
       companyTitle: c.companyTitle,
-      vehicles: (c.vehicles || []).map((v: any) => ({
+      vehicles: (c.vehicles || []).map((v) => ({
         id: v.id,
         plate: v.plate,
         brand: v.brand,
         model: v.model,
         year: v.year,
-        kilometer: Number(v.currentKm ?? v.kilometer ?? v.mileage ?? 0),
+        kilometer: Number(v.kilometer ?? 0),
         vin: v.vin,
       })),
     }))

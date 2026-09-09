@@ -17,6 +17,7 @@ interface PublicService {
   name: string
   durationMinutes: number
   laborPrice: number
+  price?: number
   category?: string
 }
 
@@ -129,8 +130,9 @@ export default function PublicBookingPage() {
       }
 
       setIsSuccess(true)
-    } catch (err: any) {
-      alert(err.message || "Randevu talebi gönderilirken bir hata oluştu.")
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Randevu talebi gönderilirken bir hata oluştu."
+      alert(message)
     } finally {
       setIsSubmitting(false)
     }
@@ -173,7 +175,7 @@ export default function PublicBookingPage() {
               <div className="flex justify-between">
                 <span className="text-slate-400">Tahmini İşçilik:</span>
                 <span className="font-bold text-sky-600 dark:text-sky-400">
-                  {selectedService.laborPrice ?? (selectedService as any).price ?? 0} ₺
+                  {selectedService.laborPrice ?? selectedService.price ?? 0} ₺
                 </span>
               </div>
             </div>
@@ -281,7 +283,7 @@ export default function PublicBookingPage() {
               >
                 {services.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name} (~{s.durationMinutes} dk • {s.laborPrice ?? (s as any).price} ₺)
+                    {s.name} (~{s.durationMinutes} dk • {s.laborPrice ?? s.price} ₺)
                   </option>
                 ))}
               </select>

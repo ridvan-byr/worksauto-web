@@ -26,7 +26,7 @@ export interface AestheticExcelOptions {
   subtitle?: string
   sheetName?: string
   columns: ExportColumnDef[]
-  data: Record<string, any>[]
+  data: Record<string, unknown>[]
   author?: string
   logoConfig?: typeof LOGO_CONFIG
 }

@@ -5,6 +5,20 @@ import { apiClient } from "@/lib/api-client";
 import { NotificationItem } from "../types";
 import { useAuth } from "@/features/auth/auth-context";
 
+interface NotificationsApiResponse {
+  data?: NotificationItem[] | { items?: NotificationItem[] };
+  items?: NotificationItem[];
+  meta?: { total?: number; unreadCount?: number };
+  total?: number;
+  unreadCount?: number;
+}
+
+interface UnreadCountResponse {
+  count?: number;
+  unreadCount?: number;
+  data?: { count?: number; unreadCount?: number };
+}
+
 export function useNotifications(options?: {
   page?: number;
   limit?: number;
@@ -21,7 +35,7 @@ export function useNotifications(options?: {
   return useQuery<{ items: NotificationItem[]; total: number; unreadCount: number }>({
     queryKey: ["notifications", user?.id || "guest", { page, limit, unreadOnly, category }],
     queryFn: async () => {
-      const res = await apiClient.get<any>("/notifications", {
+      const res = await apiClient.get<NotificationsApiResponse | NotificationItem[]>("/notifications", {
         params: {
           page,
           limit,
@@ -31,14 +45,16 @@ export function useNotifications(options?: {
       });
 
       // Normalize array or object structure safely
-      const rawList = Array.isArray(res)
+      const rawList: NotificationItem[] = Array.isArray(res)
         ? res
         : Array.isArray(res?.data)
         ? res.data
-        : res?.data?.items || res?.items || [];
+        : (res?.data && typeof res.data === "object" && "items" in res.data && Array.isArray(res.data.items))
+        ? res.data.items
+        : res?.items || [];
 
-      const total = res?.meta?.total ?? res?.total ?? rawList.length;
-      const unreadCount = res?.meta?.unreadCount ?? res?.unreadCount ?? 0;
+      const total = Array.isArray(res) ? rawList.length : (res?.meta?.total ?? res?.total ?? rawList.length);
+      const unreadCount = Array.isArray(res) ? 0 : (res?.meta?.unreadCount ?? res?.unreadCount ?? 0);
 
       return {
         items: rawList,
@@ -58,17 +74,16 @@ export function useUnreadNotificationCount(options?: { enabled?: boolean }) {
   return useQuery<{ count: number }>({
     queryKey: ["notifications", user?.id || "guest", "unread-count"],
     queryFn: async () => {
-      const res = await apiClient.get<any>("/notifications/unread-count");
-      const rawCount =
-        typeof res?.count === "number"
-          ? res.count
-          : typeof res?.unreadCount === "number"
-          ? res.unreadCount
-          : typeof res?.data?.count === "number"
-          ? res.data.count
-          : typeof res?.data?.unreadCount === "number"
-          ? res.data.unreadCount
-          : Number(res) || 0;
+      const res = await apiClient.get<UnreadCountResponse | number>("/notifications/unread-count");
+      let rawCount = 0;
+      if (typeof res === "number") {
+        rawCount = res;
+      } else if (res && typeof res === "object") {
+        if (typeof res.count === "number") rawCount = res.count;
+        else if (typeof res.unreadCount === "number") rawCount = res.unreadCount;
+        else if (typeof res.data?.count === "number") rawCount = res.data.count;
+        else if (typeof res.data?.unreadCount === "number") rawCount = res.data.unreadCount;
+      }
 
       return { count: rawCount };
     },
@@ -82,8 +97,8 @@ export function useMarkNotificationRead() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiClient.patch<any>(`/notifications/${id}/read`);
-      return res?.data ?? res;
+      const res = await apiClient.patch<{ data?: unknown } | unknown>(`/notifications/${id}/read`);
+      return (res && typeof res === "object" && "data" in res) ? (res as { data: unknown }).data : res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
@@ -96,8 +111,8 @@ export function useMarkAllNotificationsRead() {
 
   return useMutation({
     mutationFn: async () => {
-      const res = await apiClient.patch<any>("/notifications/read-all");
-      return res?.data ?? res;
+      const res = await apiClient.patch<{ data?: unknown } | unknown>("/notifications/read-all");
+      return (res && typeof res === "object" && "data" in res) ? (res as { data: unknown }).data : res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
@@ -110,8 +125,8 @@ export function useDeleteNotification() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      const res = await apiClient.delete<any>(`/notifications/${id}`);
-      return res?.data ?? res;
+      const res = await apiClient.delete<{ data?: unknown } | unknown>(`/notifications/${id}`);
+      return (res && typeof res === "object" && "data" in res) ? (res as { data: unknown }).data : res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
@@ -124,8 +139,8 @@ export function useSendTestNotification() {
 
   return useMutation({
     mutationFn: async () => {
-      const res = await apiClient.post<any>("/notifications/test");
-      return res?.data ?? res;
+      const res = await apiClient.post<{ data?: unknown } | unknown>("/notifications/test");
+      return (res && typeof res === "object" && "data" in res) ? (res as { data: unknown }).data : res;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });

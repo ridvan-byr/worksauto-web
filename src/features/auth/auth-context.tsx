@@ -4,6 +4,7 @@ import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@/components/ui/sonner"
+import { getAccessToken, setAccessToken, refreshAccessToken, setSessionCookie } from "@/lib/api-client"
 import { User, Tenant } from "./types"
 
 const AUTH_STORAGE_KEY = "worksauto_auth_session"
@@ -38,31 +39,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     const initAuth = async () => {
       try {
-        const saved = localStorage.getItem(AUTH_STORAGE_KEY)
-        let token = localStorage.getItem(ACCESS_TOKEN_KEY)
+        const saved = typeof window !== "undefined" ? localStorage.getItem(AUTH_STORAGE_KEY) : null
+        const hasSessionCookie = typeof document !== "undefined" && document.cookie.includes("worksauto_session=1")
+        let token = getAccessToken()
 
-        // Sessiz Yenileme: Eğer access token yoksa veya süresi dolmuşsa httpOnly cookie ile arka planda yenile
-        if (!token) {
+        // Sessiz Yenileme: Eğer in-memory token yoksa ama session cookie varsa httpOnly cookie ile yenile
+        if (!token && hasSessionCookie) {
           try {
-            const res = await fetch(`${API_BASE_URL}/auth/refresh`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              credentials: "include",
-              body: "{}",
-            })
-            if (res.ok) {
-              const data = await res.json()
-              token = data.accessToken
-              if (token) {
-                localStorage.setItem(ACCESS_TOKEN_KEY, token)
-              }
-            }
+            token = await refreshAccessToken()
           } catch {
-            // Sessiz yenileme başarısızsa unauthenticated devam eder
+            setSessionCookie(false)
           }
         }
 
-        if (saved && token) {
+        if (saved && (token || hasSessionCookie)) {
           const parsed = JSON.parse(saved)
           if (parsed.user && parsed.tenant) {
             if (parsed.user.role === "tenant_admin") {
@@ -94,7 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Proactive live session verification & auto-kick on license suspension
   React.useEffect(() => {
     const verifyLiveSession = async () => {
-      const token = typeof window !== "undefined" ? localStorage.getItem(ACCESS_TOKEN_KEY) : null
+      const token = getAccessToken()
       if (!token) return
 
       try {
@@ -111,6 +101,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (res.status === 401 && (errMsg.includes("askıya") || errMsg.includes("lisans") || errMsg.includes("aktif değil"))) {
             setUser(null)
             setTenant(null)
+            setAccessToken(null)
+            setSessionCookie(false)
             localStorage.removeItem(AUTH_STORAGE_KEY)
             localStorage.removeItem(ACCESS_TOKEN_KEY)
             localStorage.removeItem(REFRESH_TOKEN_KEY)
@@ -129,9 +121,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("focus", verifyLiveSession)
 
     // Listen to immediate custom event from api-client
-    const handleSuspended = (_e: any) => {
+    const handleSuspended = (_e: Event) => {
       setUser(null)
       setTenant(null)
+      setAccessToken(null)
+      setSessionCookie(false)
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY)
         localStorage.removeItem(ACCESS_TOKEN_KEY)
@@ -277,11 +271,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         setUser(liveUser)
         setTenant(liveTenant)
+        setAccessToken(data.accessToken)
+        setSessionCookie(true)
 
-        // Store 30-day session and access token; refresh token is safely isolated in httpOnly cookie
+        // Store 30-day non-sensitive profile session in localStorage; bearer token is stored strictly in-memory
         try {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: liveUser, tenant: liveTenant }))
-          localStorage.setItem(ACCESS_TOKEN_KEY, data.accessToken)
+          localStorage.removeItem(ACCESS_TOKEN_KEY)
           localStorage.removeItem(REFRESH_TOKEN_KEY)
         } catch {
           // ignore
@@ -312,6 +308,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setUser(null)
       setTenant(null)
+      setAccessToken(null)
+      setSessionCookie(false)
       try {
         localStorage.removeItem(AUTH_STORAGE_KEY)
         localStorage.removeItem(ACCESS_TOKEN_KEY)

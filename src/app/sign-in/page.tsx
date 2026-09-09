@@ -113,7 +113,7 @@ export default function SignInPage() {
       toast.success("Doğrulama kodu gönderildi.", {
         description: `${phone} numarasına 6 haneli SMS kodu iletildi.`,
       })
-      if (res.devCode) {
+      if (process.env.NODE_ENV === "development" && res.devCode) {
         setOtpCode(res.devCode)
       }
     } else {

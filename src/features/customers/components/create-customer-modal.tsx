@@ -18,7 +18,7 @@ import { PlateBadge } from "./plate-badge"
 import { cn } from "@/lib/utils"
 
 
-import { useForm } from "react-hook-form"
+import { useForm, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 
@@ -89,7 +89,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
     reset,
     formState: { errors },
   } = useForm<FullCustomerFormValues>({
-    resolver: zodResolver(fullCustomerFormSchema) as any,
+    resolver: zodResolver(fullCustomerFormSchema) as Resolver<FullCustomerFormValues>,
     defaultValues: {
       customerType: "individual",
       name: "",

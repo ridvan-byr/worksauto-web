@@ -1,6 +1,7 @@
 export type AppointmentStatus =
   | "PENDING"
   | "APPROVED"
+  | "CONFIRMED"
   | "RESCHEDULE_REQUESTED"
   | "CANCELLED"
   | "NO_SHOW"
@@ -52,4 +53,44 @@ export interface Appointment {
   workOrderNumber?: string
   createdAt: string
   updatedAt: string
+}
+
+export interface AppointmentRecord {
+  id: string;
+  tenantId?: string;
+  customerId: string;
+  customer?: {
+    firstName?: string;
+    lastName?: string;
+    name?: string;
+    surname?: string;
+    phone?: string;
+  };
+  vehicleId: string;
+  vehicle?: {
+    plate?: string;
+    brand?: string;
+    model?: string;
+  };
+  service?: {
+    id: string;
+    name: string;
+    defaultDurationMin?: number;
+    basePrice?: number;
+  };
+  assignedMechanicId?: string;
+  assignedMechanic?: {
+    user?: {
+      name: string;
+      surname?: string;
+    };
+  };
+  slotDate: string;
+  slotStartTime: string;
+  slotEndTime?: string;
+  status: AppointmentStatus | string;
+  customerNotes?: string;
+  cancellationReason?: CancellationReason;
+  createdAt: string;
+  updatedAt: string;
 }

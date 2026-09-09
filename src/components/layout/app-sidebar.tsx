@@ -25,10 +25,12 @@ import { useDashboardSummary } from "@/features/dashboard/api/use-dashboard-summ
 import { restartPageAnimation } from "@/lib/animation"
 import { cn } from "@/lib/utils"
 
+import type { LucideIcon } from "lucide-react"
+
 interface NavSubItem {
   title: string
   href: string
-  icon: any
+  icon: LucideIcon | React.ComponentType<{ className?: string }>
   badge?: string
   badgeVariant?: "accent" | "warning" | "danger"
 }
@@ -36,7 +38,7 @@ interface NavSubItem {
 interface NavItem {
   title: string
   href: string
-  icon: any
+  icon: LucideIcon | React.ComponentType<{ className?: string }>
   badge?: string
   badgeVariant?: "accent" | "warning" | "danger"
   highlight?: boolean

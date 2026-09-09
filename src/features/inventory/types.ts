@@ -47,6 +47,6 @@ export interface Product {
 
   active: boolean
   movements: StockMovement[]
-  createdAt: string
-  updatedAt: string
+  createdAt?: string
+  updatedAt?: string
 }

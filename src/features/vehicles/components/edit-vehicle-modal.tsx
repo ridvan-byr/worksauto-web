@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
-import { useUpdateVehicle } from "../api/use-vehicles"
+import { useUpdateVehicle, type VehicleRecord } from "../api/use-vehicles"
 import {
   editVehicleSchema,
   EditVehicleFormValues,
@@ -25,9 +25,9 @@ import {
 
 export interface EditVehicleModalProps {
   isOpen: boolean
-  vehicle: any | null
+  vehicle: VehicleRecord | null
   onClose: () => void
-  onUpdated?: (updatedVehicle: any) => void
+  onUpdated?: (updatedVehicle: VehicleRecord) => void
 }
 
 const FUEL_OPTIONS = ["Benzin", "Dizel", "LPG", "Hibrit", "Elektrik"] as const

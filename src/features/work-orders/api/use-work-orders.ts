@@ -108,7 +108,7 @@ export function useRemoveWorkOrderItem() {
 
 export function useAddWorkOrderPhoto() {
   const queryClient = useQueryClient();
-  return useMutation<any, Error, { workOrderId: string; data: { url: string; caption: string; photoType: string } }>({
+  return useMutation<unknown, Error, { workOrderId: string; data: { url: string; caption: string; photoType: string } }>({
     mutationFn: ({ workOrderId, data }) =>
       apiClient.post(`/work-orders/${workOrderId}/photos`, data),
     onSuccess: (_, variables) => {

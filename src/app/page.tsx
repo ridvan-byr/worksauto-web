@@ -25,7 +25,22 @@ import { Card, CardContent } from "@/components/ui/card"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
 import { useWorkOrders } from "@/features/work-orders/api/use-work-orders"
+import type { WorkOrder, WorkOrderStatus } from "@/features/work-orders/types"
 import { useAuth } from "@/features/auth/auth-context"
+
+interface DashboardRecentOrder {
+  id: string
+  plate: string
+  brand: string
+  model: string
+  year: number
+  customerName: string
+  assignedMechanicName: string
+  assignedLift: string
+  status: WorkOrderStatus
+  grandTotal: number
+  services: { name: string }[]
+}
 
 export default function DashboardPage() {
   const { user } = useAuth()
@@ -37,21 +52,32 @@ export default function DashboardPage() {
   const isTechnician = userRole === "TECHNICIAN"
 
   // Map real database work orders
-  const recentOrders = React.useMemo(() => {
+  const recentOrders: DashboardRecentOrder[] = React.useMemo(() => {
     if (!apiWorkOrders) return []
-    return apiWorkOrders.map((w: any) => ({
-      id: w.id,
-      plate: w.vehicle?.plate || "34XX000",
-      brand: w.vehicle?.brand || "Araç",
-      model: w.vehicle?.model || "",
-      year: w.vehicle?.year || 2024,
-      customerName: w.customer ? `${w.customer.firstName} ${w.customer.lastName}` : "Müşteri",
-      assignedMechanicName: w.assignedMechanic?.user ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname}` : "Usta",
-      assignedLift: w.assignedLift || "Lift-1",
-      status: w.status,
-      grandTotal: Number(w.grandTotal || 0),
-      services: (w.items || []).filter((i: any) => i.itemType === "SERVICE").map((i: any) => ({ name: i.name })),
-    }))
+    return apiWorkOrders.map((w: WorkOrder) => {
+      const parsedServices = (w.services && w.services.length > 0)
+        ? w.services.map((s) => ({ name: s.name }))
+        : (w.items || [])
+            .map((i) => {
+              const item = i as { itemType?: string; name?: string }
+              return item.name ? { name: item.name } : null
+            })
+            .filter((item): item is { name: string } => item !== null)
+
+      return {
+        id: w.id,
+        plate: w.vehicle?.plate || w.plate || "34XX000",
+        brand: w.vehicle?.brand || w.brand || "Araç",
+        model: w.vehicle?.model || w.model || "",
+        year: w.vehicle?.year || w.year || 2024,
+        customerName: w.customer ? `${w.customer.firstName ?? w.customer.name ?? ""} ${w.customer.lastName ?? w.customer.surname ?? ""}`.trim() : (w.customerName || "Müşteri"),
+        assignedMechanicName: w.assignedMechanic?.user ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname || ""}`.trim() : (w.assignedMechanicName || "Usta"),
+        assignedLift: w.assignedLift || "Lift-1",
+        status: w.status,
+        grandTotal: Number(w.grandTotal || 0),
+        services: parsedServices,
+      }
+    })
   }, [apiWorkOrders])
 
   // Dynamic Live KPIs (Directly from PostgreSQL summary API)
@@ -139,7 +165,7 @@ export default function DashboardPage() {
                   {activeWOCount} İş Emri
                 </p>
                 <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
-                  <Clock size={12} /> {recentOrders.filter((w: any) => w.status === "COMPLETED").length} araç teslime hazır
+                  <Clock size={12} /> {recentOrders.filter((w) => w.status === "COMPLETED").length} araç teslime hazır
                 </p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-105 transition-transform">
@@ -177,7 +203,7 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tamamlanan İşler</p>
                   <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                    {recentOrders.filter((w: any) => w.status === "COMPLETED").length} Araç
+                    {recentOrders.filter((w) => w.status === "COMPLETED").length} Araç
                   </p>
                   <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
                     <CheckCircle2 size={12} /> Teslimata hazır
@@ -253,7 +279,7 @@ export default function DashboardPage() {
                             </span>
                           </div>
                           <p className="text-xs text-slate-600 dark:text-slate-300 mt-1">
-                            {wo.services.map((s: any) => s.name).join(", ") || "Genel Bakım ve Kontrol"}
+                            {wo.services.map((s) => s.name).join(", ") || "Genel Bakım ve Kontrol"}
                           </p>
                           <p className="text-[11px] text-slate-400 mt-0.5">
                             Müşteri: <strong className="text-slate-700 dark:text-slate-300">{wo.customerName}</strong> • Usta: {wo.assignedMechanicName || "Belirlenmedi"} ({wo.assignedLift || "Lift-"})

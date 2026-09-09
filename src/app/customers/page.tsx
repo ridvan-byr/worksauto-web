@@ -2,6 +2,7 @@
 
 import { useCustomers, useCreateCustomer } from "@/features/customers/api/use-customers"
 import { useCreateVehicle } from "@/features/vehicles/api/use-vehicles"
+import { useQueryClient } from "@tanstack/react-query"
 
 import * as React from "react"
 import Link from "next/link"
@@ -29,6 +30,7 @@ import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
 import { cn } from "@/lib/utils"
 
 export default function CustomersPage() {
+  const queryClient = useQueryClient()
   const [customers, setCustomers] = React.useState<Customer[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
@@ -42,12 +44,12 @@ export default function CustomersPage() {
   // Pure live API customers sync (100% PostgreSQL)
   React.useEffect(() => {
     if (apiCustomers) {
-      const mapped: Customer[] = apiCustomers.map((c: any) => ({
+      const mapped: Customer[] = apiCustomers.map((c) => ({
         id: c.id,
         tenantId: c.tenantId || 'ten_1',
-        type: c.type === 'CORPORATE' ? 'corporate' : 'individual',
-        name: c.firstName,
-        surname: c.lastName,
+        type: (c.type === 'CORPORATE' || c.type === 'corporate') ? 'corporate' : 'individual',
+        name: c.firstName || c.name,
+        surname: c.lastName || c.surname,
         isLead: Boolean(c.isLead),
         companyTitle: c.companyTitle,
         phone: c.phone,
@@ -55,7 +57,7 @@ export default function CustomersPage() {
         taxNumber: c.taxNumber,
         taxOffice: c.taxOffice,
         balance: c.currentAccount ? Number(c.currentAccount.balance) : 0,
-        vehicles: (c.vehicles || []).map((v: any) => ({
+        vehicles: (c.vehicles || []).map((v) => ({
           id: v.id,
           tenantId: v.tenantId || 'ten_1',
           customerId: c.id,
@@ -496,6 +498,10 @@ export default function CustomersPage() {
       <ExcelImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ["customers"] })
+          queryClient.invalidateQueries({ queryKey: ["vehicles"] })
+        }}
       />
 
       {/* Excel Export Modal */}

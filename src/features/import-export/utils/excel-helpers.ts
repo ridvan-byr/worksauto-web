@@ -227,7 +227,7 @@ export function guessTargetField(columnHeader: string): string {
 /**
  * Verilen sütun başlığı için dosyadaki satırlardan ilk birkaç boş olmayan örnek veriyi çeker
  */
-export function getColumnSampleValues(header: string, rows: Record<string, any>[], maxCount = 2): string[] {
+export function getColumnSampleValues(header: string, rows: Record<string, unknown>[], maxCount = 2): string[] {
   if (!header || !rows || rows.length === 0) return []
   const samples: string[] = []
   for (const row of rows) {
@@ -271,7 +271,7 @@ export interface RowSuitabilityAnalysis {
 /**
  * Bir satırın başlık mı, müşteri verisi mi yoksa boş/çöp satır mı olduğunu analiz eder
  */
-export function analyzeRowSuitability(row: any[]): RowSuitabilityAnalysis {
+export function analyzeRowSuitability(row: unknown[]): RowSuitabilityAnalysis {
   if (!row || row.length === 0) {
     return {
       isLikelyHeader: false,
@@ -341,22 +341,22 @@ export function analyzeRowSuitability(row: any[]): RowSuitabilityAnalysis {
 /**
  * Seçilen başlık satırı indeksine göre Excel satırlarını nesneye (Object) dönüştürür
  */
-export function parseRowsFromHeaderIndex(allRawRows: any[][], headerRowIndex: number): {
+export function parseRowsFromHeaderIndex(allRawRows: unknown[][], headerRowIndex: number): {
   headers: string[]
-  rows: Record<string, any>[]
+  rows: Record<string, unknown>[]
   totalCount: number
 } {
   const headerRow = allRawRows[headerRowIndex] || []
-  const headers = headerRow.map((h: any, idx: number) => {
+  const headers = headerRow.map((h: unknown, idx: number) => {
     const s = String(h || "").trim()
     return s || `Sütun_${idx + 1}`
   })
 
   const rawDataRows = allRawRows.slice(headerRowIndex + 1)
-  const objectRows: Record<string, any>[] = rawDataRows
-    .filter((r) => r && r.some((c: any) => c !== "" && c !== undefined && c !== null))
+  const objectRows: Record<string, unknown>[] = rawDataRows
+    .filter((r) => r && r.some((c: unknown) => c !== "" && c !== undefined && c !== null))
     .map((r) => {
-      const obj: Record<string, any> = {}
+      const obj: Record<string, unknown> = {}
       headers.forEach((h, cIdx) => {
         obj[h] = r[cIdx] !== undefined ? r[cIdx] : ""
       })
@@ -380,8 +380,8 @@ export function parseRowsFromHeaderIndex(allRawRows: any[][], headerRowIndex: nu
  */
 export async function readExcelFile(file: File): Promise<{
   headers: string[]
-  rows: Record<string, any>[]
-  allRawRows: any[][]
+  rows: Record<string, unknown>[]
+  allRawRows: unknown[][]
   detectedHeaderRowIndex: number
   sheetName: string
   totalCount: number
@@ -399,7 +399,7 @@ export async function readExcelFile(file: File): Promise<{
         }
 
         const worksheet = workbook.Sheets[sheetName]
-        const allRawRows: any[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" })
+        const allRawRows: unknown[][] = XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" })
 
         if (allRawRows.length === 0) {
           throw new Error("Seçilen Excel dosyası boş.")
@@ -426,8 +426,9 @@ export async function readExcelFile(file: File): Promise<{
           sheetName,
           totalCount: parsed.totalCount,
         })
-      } catch (err: any) {
-        reject(new Error(err?.message || "Excel dosyası okunamadı. Lütfen geçerli bir .xlsx veya .xls dosyası seçin."))
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Excel dosyası okunamadı. Lütfen geçerli bir .xlsx veya .xls dosyası seçin."
+        reject(new Error(msg))
       }
     }
 
@@ -519,7 +520,7 @@ export async function downloadSampleTemplate(_type: "all" | "customer" | "vehicl
 /**
  * Tablodaki Verileri Excel Dosyası Olarak İndirir (Export)
  */
-export function exportToExcel(data: any[], fileName: string, sheetName: string = "Veriler") {
+export function exportToExcel(data: Record<string, unknown>[], fileName: string, sheetName: string = "Veriler") {
   if (!data || data.length === 0) {
     throw new Error("Dışa aktarılacak veri bulunamadı.")
   }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useProducts, useCreateProduct, useStockMovement } from "@/features/inventory/api/use-inventory"
+import { useProducts, useCreateProduct, useStockMovement, type ProductRecord } from "@/features/inventory/api/use-inventory"
 
 import * as React from "react"
 import {
@@ -11,7 +11,7 @@ import {
   TrendingUp,
   } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Product, StockMovementType } from "@/features/inventory/types"
+import { Product, StockMovementType, ProductCategory } from "@/features/inventory/types"
 import { ProductTable } from "@/features/inventory/components/product-table"
 import { CreateProductModal } from "@/features/inventory/components/create-product-modal"
 import { StockMovementModal } from "@/features/inventory/components/stock-movement-modal"
@@ -40,23 +40,21 @@ export default function InventoryPage() {
   // Pure live API sync (100% PostgreSQL)
   React.useEffect(() => {
     if (apiProducts) {
-      const mapped: Product[] = apiProducts.map((p: any) => ({
+      const mapped: Product[] = apiProducts.map((p: ProductRecord) => ({
         id: p.id,
-        tenantId: p.tenantId || 'ten_1',
+        tenantId: 'ten_1',
         name: p.name,
-        sku: p.oemCode || p.oemNumber || p.id.substring(0, 8),
+        sku: p.oemCode || p.code || p.id.substring(0, 8),
         barcode: p.barcode || '',
-        category: p.category as any,
+        category: (p.category || "GENERAL") as ProductCategory,
         unit: 'ADET',
         shelfLocation: p.shelfLocation || 'Depo',
         purchasePrice: Number(p.purchasePrice || 0),
         salePrice: Number(p.salePrice || 0),
         currentStock: Number(p.stockQuantity || 0),
-        minimumStock: Number(p.minStockLevel ?? p.minStockThreshold ?? 5),
+        minimumStock: Number(p.minStockLevel ?? 5),
         active: true,
         movements: [],
-        createdAt: p.createdAt,
-        updatedAt: p.updatedAt,
       }))
       setProducts(mapped)
     }
@@ -106,7 +104,7 @@ export default function InventoryPage() {
     note?: string
   ) => {
     try {
-      const updated: any = await stockMovementMutation.mutateAsync({
+      const updated = await stockMovementMutation.mutateAsync({
         productId,
         data: {
           movementType,
@@ -116,8 +114,9 @@ export default function InventoryPage() {
         },
       })
       if (updated?.stockQuantity !== undefined) {
+        const newStock = updated.stockQuantity
         setProducts((prev) =>
-          prev.map((p) => (p.id === productId ? { ...p, currentStock: updated.stockQuantity } : p))
+          prev.map((p) => (p.id === productId ? { ...p, currentStock: newStock } : p))
         )
       }
     } catch (e) {

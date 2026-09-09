@@ -108,9 +108,7 @@ export function NotificationPopover() {
 
   const allItems: NotificationItem[] = React.useMemo(() => {
     if (!notifData) return [];
-    if (Array.isArray(notifData)) return notifData;
-    if (Array.isArray((notifData as any).items)) return (notifData as any).items;
-    return [];
+    return notifData.items || [];
   }, [notifData]);
 
   const unreadCount = unreadData?.count ?? allItems.filter((i) => !i.isRead).length;

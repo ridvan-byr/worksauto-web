@@ -26,6 +26,7 @@ export default function AdminLoginPage() {
   }, [router])
 
   const handleFillDemo = () => {
+    if (process.env.NODE_ENV !== "development") return
     setEmail("admin@worksauto.com")
     setPassword("WorksAuto2026!*")
     setErrorMsg(null)
@@ -55,8 +56,8 @@ export default function AdminLoginPage() {
         setErrorMsg(msg)
         toast.error(msg)
       }
-    } catch (err: any) {
-      const msg = err.message || "Giriş başarısız. Lütfen bilgilerinizi kontrol ediniz."
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Giriş başarısız. Lütfen bilgilerinizi kontrol ediniz."
       setErrorMsg(msg)
       toast.error(msg)
     }
@@ -142,17 +143,19 @@ export default function AdminLoginPage() {
               </Button>
             </form>
 
-            {/* Quick Demo Credentials Autofill */}
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={handleFillDemo}
-                className="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 text-[11px] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                <Sparkles size={12} className="text-amber-500" />
-                <span>Kurucu Super Admin Bilgilerini Doldur (admin@worksauto.com)</span>
-              </button>
-            </div>
+            {/* Quick Demo Credentials Autofill (Development Only) */}
+            {process.env.NODE_ENV === "development" && (
+              <div className="pt-3 border-t border-slate-200 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={handleFillDemo}
+                  className="w-full py-2 px-3 rounded-xl bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 border border-slate-200 dark:border-white/5 text-[11px] text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Sparkles size={12} className="text-amber-500" />
+                  <span>[DEV] Kurucu Super Admin Bilgilerini Doldur</span>
+                </button>
+              </div>
+            )}
           </CardContent>
         </Card>
 
