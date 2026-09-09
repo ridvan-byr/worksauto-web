@@ -60,11 +60,11 @@ export default function AdminDashboardPage() {
     setMounted(true)
   }, [])
 
-  const { data: stats, isLoading: isStatsLoading } = useAdminStats()
+  const { data: stats } = useAdminStats()
   const [searchQuery, setSearchQuery] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL")
 
-  const { data: tenants, isLoading: isTenantsLoading } = useAdminTenants({
+  const { data: tenants } = useAdminTenants({
     search: searchQuery || undefined,
     status: statusFilter === "ALL" ? undefined : statusFilter,
   })

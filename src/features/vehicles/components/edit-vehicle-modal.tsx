@@ -2,6 +2,8 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 import {
   X,
   Car,
@@ -16,6 +18,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { useUpdateVehicle } from "../api/use-vehicles"
+import {
+  editVehicleSchema,
+  EditVehicleFormValues,
+} from "../schemas/vehicle.schema"
 
 export interface EditVehicleModalProps {
   isOpen: boolean
@@ -27,7 +33,7 @@ export interface EditVehicleModalProps {
 const FUEL_OPTIONS = ["Benzin", "Dizel", "LPG", "Hibrit", "Elektrik"] as const
 const TRANSMISSION_OPTIONS = ["Otomatik", "Manuel"] as const
 
-function mapFuelToTR(fuel?: string): string {
+function mapFuelToTR(fuel?: string): (typeof FUEL_OPTIONS)[number] {
   if (!fuel) return "Benzin"
   const upper = fuel.toUpperCase()
   if (upper === "GASOLINE" || upper === "BENZIN") return "Benzin"
@@ -35,7 +41,7 @@ function mapFuelToTR(fuel?: string): string {
   if (upper === "LPG") return "LPG"
   if (upper === "HYBRID" || upper === "HIBRIT") return "Hibrit"
   if (upper === "ELECTRIC" || upper === "ELEKTRIK") return "Elektrik"
-  return fuel
+  return "Benzin"
 }
 
 function mapFuelToEnum(fuel: string): string {
@@ -55,7 +61,7 @@ function mapFuelToEnum(fuel: string): string {
   }
 }
 
-function mapTransToTR(trans?: string): string {
+function mapTransToTR(trans?: string): (typeof TRANSMISSION_OPTIONS)[number] {
   if (!trans) return "Otomatik"
   const upper = trans.toUpperCase()
   if (upper === "MANUAL" || upper === "MANUEL") return "Manuel"
@@ -73,35 +79,42 @@ export function EditVehicleModal({
   onUpdated,
 }: EditVehicleModalProps) {
   const [mounted, setMounted] = React.useState(false)
-  const [plate, setPlate] = React.useState("")
-  const [brand, setBrand] = React.useState("")
-  const [model, setModel] = React.useState("")
-  const [year, setYear] = React.useState<number>(new Date().getFullYear())
-  const [kilometer, setKilometer] = React.useState<number | "">(0)
-  const [fuelType, setFuelType] = React.useState<string>("Benzin")
-  const [transmission, setTransmission] = React.useState<string>("Otomatik")
-  const [color, setColor] = React.useState("")
-  const [vin, setVin] = React.useState("")
-  const [engineNo, setEngineNo] = React.useState("")
-
-  const [errors, setErrors] = React.useState<Record<string, string>>({})
-  const [isSubmitting, setIsSubmitting] = React.useState(false)
-
   const updateVehicleMutation = useUpdateVehicle()
   const maxYear = new Date().getFullYear() + 1
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<EditVehicleFormValues>({
+    resolver: zodResolver(editVehicleSchema),
+    defaultValues: {
+      plate: "",
+      brand: "",
+      model: "",
+      year: new Date().getFullYear(),
+      kilometer: 0,
+      fuelType: "Benzin",
+      transmission: "Otomatik",
+      color: "",
+      vin: "",
+      engineNo: "",
+    },
+  })
+
+  const currentPlate = watch("plate")
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Sync state with incoming vehicle
+  // Sync form with incoming vehicle
   React.useEffect(() => {
     if (vehicle) {
-      setPlate(vehicle.plate || "")
-      setBrand(vehicle.brand || "")
-      setModel(vehicle.model || "")
-      setYear(Number(vehicle.year) || new Date().getFullYear())
-      setKilometer(
+      const initialKm =
         vehicle.kilometer !== undefined
           ? vehicle.kilometer
           : vehicle.currentKm !== undefined
@@ -109,15 +122,21 @@ export function EditVehicleModal({
           : vehicle.mileage !== undefined
           ? vehicle.mileage
           : 0
-      )
-      setFuelType(mapFuelToTR(vehicle.fuelType))
-      setTransmission(mapTransToTR(vehicle.transmission))
-      setColor(vehicle.color || "")
-      setVin(vehicle.vin || "")
-      setEngineNo(vehicle.engineNo || "")
-      setErrors({})
+
+      reset({
+        plate: vehicle.plate || "",
+        brand: vehicle.brand || "",
+        model: vehicle.model || "",
+        year: Number(vehicle.year) || new Date().getFullYear(),
+        kilometer: Number(initialKm) || 0,
+        fuelType: mapFuelToTR(vehicle.fuelType),
+        transmission: mapTransToTR(vehicle.transmission),
+        color: vehicle.color || "",
+        vin: vehicle.vin || "",
+        engineNo: vehicle.engineNo || "",
+      })
     }
-  }, [vehicle, isOpen])
+  }, [vehicle, reset, isOpen])
 
   // Body scroll lock
   React.useEffect(() => {
@@ -131,48 +150,21 @@ export function EditVehicleModal({
 
   if (!isOpen || !mounted || !vehicle) return null
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const errs: Record<string, string> = {}
+  const onSubmit = async (values: EditVehicleFormValues) => {
+    const cleanPlate = values.plate.toUpperCase().trim()
 
-    const cleanPlate = plate.toUpperCase().trim()
-    if (!cleanPlate) {
-      errs.plate = "Plaka zorunludur."
-    } else if (cleanPlate.length < 2) {
-      errs.plate = "Plaka en az 2 karakter olmalıdır."
-    }
-
-    if (!brand.trim()) errs.brand = "Marka zorunludur."
-    if (!model.trim()) errs.model = "Model zorunludur."
-
-    if (!year || year < 1950 || year > maxYear) {
-      errs.year = `Model yılı 1950 ile ${maxYear} arasında olmalıdır.`
-    }
-
-    if (kilometer !== "" && Number(kilometer) < 0) {
-      errs.kilometer = "Kilometre negatif olamaz."
-    }
-
-    if (vin.trim() && vin.trim().length !== 17) {
-      errs.vin = "Şasi numarası (VIN) 17 karakter olmalıdır."
-    }
-
-    setErrors(errs)
-    if (Object.keys(errs).length > 0) return
-
-    setIsSubmitting(true)
     try {
       const payload = {
         plate: cleanPlate,
-        brand: brand.trim(),
-        model: model.trim(),
-        year: Number(year),
-        currentKm: Number(kilometer) || 0,
-        fuelType: mapFuelToEnum(fuelType),
-        transmission: mapTransToEnum(transmission),
-        color: color.trim() || undefined,
-        vin: vin.trim().toUpperCase() || undefined,
-        engineNo: engineNo.trim().toUpperCase() || undefined,
+        brand: values.brand.trim(),
+        model: values.model.trim(),
+        year: Number(values.year),
+        currentKm: Number(values.kilometer) || 0,
+        fuelType: mapFuelToEnum(values.fuelType),
+        transmission: mapTransToEnum(values.transmission),
+        color: values.color?.trim() || undefined,
+        vin: values.vin?.trim().toUpperCase() || undefined,
+        engineNo: values.engineNo?.trim().toUpperCase() || undefined,
       }
 
       const updated = await updateVehicleMutation.mutateAsync({
@@ -184,16 +176,16 @@ export function EditVehicleModal({
         ...vehicle,
         ...updated,
         plate: cleanPlate,
-        brand: brand.trim(),
-        model: model.trim(),
-        year: Number(year),
-        kilometer: Number(kilometer) || 0,
-        currentKm: Number(kilometer) || 0,
-        fuelType,
-        transmission,
-        color: color.trim(),
-        vin: vin.trim().toUpperCase(),
-        engineNo: engineNo.trim().toUpperCase(),
+        brand: values.brand.trim(),
+        model: values.model.trim(),
+        year: Number(values.year),
+        kilometer: Number(values.kilometer) || 0,
+        currentKm: Number(values.kilometer) || 0,
+        fuelType: values.fuelType,
+        transmission: values.transmission,
+        color: values.color?.trim(),
+        vin: values.vin?.trim().toUpperCase(),
+        engineNo: values.engineNo?.trim().toUpperCase(),
       }
 
       if (onUpdated) {
@@ -203,8 +195,6 @@ export function EditVehicleModal({
       onClose()
     } catch {
       // Error handled by mutation toast
-    } finally {
-      setIsSubmitting(false)
     }
   }
 
@@ -236,10 +226,10 @@ export function EditVehicleModal({
         </div>
 
         {/* Body Form */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
-          {plate && (
+        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          {currentPlate && (
             <div className="flex justify-center pb-1">
-              <PlateBadge plate={plate} size="md" />
+              <PlateBadge plate={currentPlate} size="md" />
             </div>
           )}
 
@@ -252,11 +242,11 @@ export function EditVehicleModal({
               <input
                 type="text"
                 placeholder="34 ABC 123"
-                value={plate}
-                onChange={(e) => setPlate(e.target.value.toUpperCase())}
-                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-mono font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-sky-500"
+                {...register("plate")}
+                onChange={(e) => setValue("plate", e.target.value.toUpperCase())}
+                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm font-mono font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
-              {errors.plate && <p className="text-[10px] text-rose-500">{errors.plate}</p>}
+              {errors.plate && <p className="text-[10px] text-rose-500">{errors.plate.message}</p>}
             </div>
 
             {/* Brand & Model */}
@@ -268,11 +258,10 @@ export function EditVehicleModal({
                 <input
                   type="text"
                   placeholder="Örn: Volkswagen"
-                  value={brand}
-                  onChange={(e) => setBrand(e.target.value)}
+                  {...register("brand")}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                {errors.brand && <p className="text-[10px] text-rose-500">{errors.brand}</p>}
+                {errors.brand && <p className="text-[10px] text-rose-500">{errors.brand.message}</p>}
               </div>
 
               <div className="space-y-1">
@@ -282,11 +271,10 @@ export function EditVehicleModal({
                 <input
                   type="text"
                   placeholder="Örn: Golf"
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
+                  {...register("model")}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                {errors.model && <p className="text-[10px] text-rose-500">{errors.model}</p>}
+                {errors.model && <p className="text-[10px] text-rose-500">{errors.model.message}</p>}
               </div>
             </div>
 
@@ -301,11 +289,10 @@ export function EditVehicleModal({
                   type="number"
                   min={1950}
                   max={maxYear}
-                  value={year}
-                  onChange={(e) => setYear(Number(e.target.value))}
+                  {...register("year", { valueAsNumber: true })}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono text-center focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                {errors.year && <p className="text-[10px] text-rose-500">{errors.year}</p>}
+                {errors.year && <p className="text-[10px] text-rose-500">{errors.year.message}</p>}
               </div>
 
               <div className="space-y-1">
@@ -316,11 +303,12 @@ export function EditVehicleModal({
                 <input
                   type="number"
                   min={0}
-                  value={kilometer}
-                  onChange={(e) => setKilometer(e.target.value === "" ? "" : Number(e.target.value))}
+                  {...register("kilometer", { valueAsNumber: true })}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                {errors.kilometer && <p className="text-[10px] text-rose-500">{errors.kilometer}</p>}
+                {errors.kilometer && (
+                  <p className="text-[10px] text-rose-500">{errors.kilometer.message}</p>
+                )}
               </div>
             </div>
 
@@ -332,8 +320,7 @@ export function EditVehicleModal({
                   <span>Yakıt Türü</span>
                 </label>
                 <select
-                  value={fuelType}
-                  onChange={(e) => setFuelType(e.target.value)}
+                  {...register("fuelType")}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
                 >
                   {FUEL_OPTIONS.map((opt) => (
@@ -350,8 +337,7 @@ export function EditVehicleModal({
                   <span>Şanzıman</span>
                 </label>
                 <select
-                  value={transmission}
-                  onChange={(e) => setTransmission(e.target.value)}
+                  {...register("transmission")}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
                 >
                   {TRANSMISSION_OPTIONS.map((opt) => (
@@ -374,11 +360,11 @@ export function EditVehicleModal({
                   type="text"
                   placeholder="17 Haneli Şasi No"
                   maxLength={17}
-                  value={vin}
-                  onChange={(e) => setVin(e.target.value.toUpperCase())}
+                  {...register("vin")}
+                  onChange={(e) => setValue("vin", e.target.value.toUpperCase())}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono uppercase focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
-                {errors.vin && <p className="text-[10px] text-rose-500">{errors.vin}</p>}
+                {errors.vin && <p className="text-[10px] text-rose-500">{errors.vin.message}</p>}
               </div>
 
               <div className="space-y-1">
@@ -389,10 +375,10 @@ export function EditVehicleModal({
                 <input
                   type="text"
                   placeholder="Örn: Beyaz, Metalik Gri"
-                  value={color}
-                  onChange={(e) => setColor(e.target.value)}
+                  {...register("color")}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
+                {errors.color && <p className="text-[10px] text-rose-500">{errors.color.message}</p>}
               </div>
             </div>
           </div>

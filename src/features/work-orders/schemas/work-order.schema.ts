@@ -45,3 +45,21 @@ export const createWorkOrderModalStep2Schema = z.object({
   assignedLift: z.string().min(1, 'Lift seçimi zorunludur.'),
   assignedMechanic: z.string().min(1, 'Usta seçimi zorunludur.'),
 });
+
+export const createWorkOrderModalSchema = z.object({
+  customerId: z.string().min(1, 'Lütfen bir müşteri seçiniz.'),
+  vehicleId: z.string().min(1, 'Lütfen aracı seçiniz.'),
+  serviceName: z.string().min(2, 'İşlem/Hizmet adı en az 2 karakter olmalıdır.'),
+  laborPrice: z
+    .number({ message: 'İşçilik ücreti sayı olmalıdır' })
+    .min(0, 'İşçilik ücreti negatif olamaz.'),
+  assignedLift: z.string().min(1, 'Lift seçimi zorunludur.'),
+  assignedMechanic: z.string().min(1, 'Usta seçimi zorunludur.'),
+  priority: z.enum(['NORMAL', 'HIGH', 'URGENT']),
+  initialNote: z.string().max(500).optional().or(z.literal('')),
+});
+
+export type CreateWorkOrderModalValues = z.infer<typeof createWorkOrderModalSchema>;
+export type CreateWorkOrderModalStep1Values = z.infer<typeof createWorkOrderModalStep1Schema>;
+export type CreateWorkOrderModalStep2Values = z.infer<typeof createWorkOrderModalStep2Schema>;
+
