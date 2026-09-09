@@ -1,6 +1,7 @@
 "use client"
 
 import { useWorkOrder, useAddWorkOrderItem, useUpdateWorkOrderStatus } from "@/features/work-orders/api/use-work-orders"
+import { useProducts, type ProductRecord } from "@/features/inventory/api/use-inventory"
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -15,6 +16,12 @@ import {
   Plus,
   Receipt,
   FileText,
+  Search,
+  Package,
+  Boxes,
+  AlertTriangle,
+  Check,
+  ExternalLink,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -40,6 +47,36 @@ export default function WorkOrderDetailPage() {
   const [newPartQty, setNewPartQty] = React.useState<number>(1)
   const [newPartPrice, setNewPartPrice] = React.useState<number | "">(450)
   const [isAddingPart, setIsAddingPart] = React.useState(false)
+  const [isCustomPartMode, setIsCustomPartMode] = React.useState(false)
+  const [selectedProduct, setSelectedProduct] = React.useState<ProductRecord | null>(null)
+  const [productSearch, setProductSearch] = React.useState("")
+  const [isSearchOpen, setIsSearchOpen] = React.useState(false)
+
+  const { data: apiProducts } = useProducts()
+
+  const filteredProducts = React.useMemo(() => {
+    if (!apiProducts) return []
+    if (!productSearch.trim()) return apiProducts.slice(0, 8)
+    const q = productSearch.toLowerCase()
+    return apiProducts
+      .filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.code && p.code.toLowerCase().includes(q)) ||
+          (p.oemCode && p.oemCode.toLowerCase().includes(q)) ||
+          (p.barcode && p.barcode.toLowerCase().includes(q))
+      )
+      .slice(0, 8)
+  }, [apiProducts, productSearch])
+
+  const handleSelectProduct = (prod: ProductRecord) => {
+    setSelectedProduct(prod)
+    setNewPartName(prod.name)
+    setNewPartNumber(prod.oemCode || prod.code || "")
+    setNewPartPrice(prod.salePrice)
+    setProductSearch(`${prod.name} (${prod.code || prod.oemCode || ""})`)
+    setIsSearchOpen(false)
+  }
 
   const { data: apiOrder } = useWorkOrder(id)
   const addItemMutation = useAddWorkOrderItem()
@@ -171,11 +208,14 @@ export default function WorkOrderDetailPage() {
     if (!newPartName.trim() || newPartPrice === "") return
     const qty = Number(newPartQty) || 1
     const price = Number(newPartPrice)
+    const itemId = !isCustomPartMode && selectedProduct ? selectedProduct.id : undefined
+
     try {
       await addItemMutation.mutateAsync({
-        workOrderId: order.id,
+        workOrderId: order?.id || id,
         item: {
           itemType: 'PART',
+          itemId,
           name: newPartName.trim(),
           quantity: qty,
           unitPrice: price,
@@ -185,6 +225,7 @@ export default function WorkOrderDetailPage() {
     } catch (e) {
       console.warn('API add part error:', e)
     }
+
     setOrder((prev) => {
       if (!prev) return null
       const lineTotal = qty * price
@@ -195,7 +236,7 @@ export default function WorkOrderDetailPage() {
           {
             id: 'part_' + Date.now(),
             name: newPartName.trim(),
-            partNumber: newPartNumber.trim().toUpperCase() || "GENERIC-PART",
+            partNumber: newPartNumber.trim().toUpperCase() || (selectedProduct?.code || "GENERIC-PART"),
             quantity: qty,
             unitPrice: price,
             totalPrice: lineTotal,
@@ -205,9 +246,13 @@ export default function WorkOrderDetailPage() {
         grandTotal: prev.grandTotal + lineTotal * 1.2,
       }
     })
+
     setNewPartName("")
     setNewPartNumber("")
+    setSelectedProduct(null)
+    setProductSearch("")
     setIsAddingPart(false)
+    setIsCustomPartMode(false)
   }
 
   const handleAddNote = (text: string) => {
@@ -477,49 +522,255 @@ export default function WorkOrderDetailPage() {
 
             {/* Inline Add Part Form */}
             {isAddingPart && (
-              <form onSubmit={handleAddPart} className="p-3.5 rounded-2xl bg-indigo-500/5 border border-indigo-500/20 space-y-2 animate-in fade-in duration-200">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="Parça Adı (Örn: Bosch Ön Balata)..."
-                    value={newPartName}
-                    onChange={(e) => setNewPartName(e.target.value)}
-                    className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs"
-                    required
-                  />
-                  <input
-                    type="text"
-                    placeholder="Parça No / OEM Kodu..."
-                    value={newPartNumber}
-                    onChange={(e) => setNewPartNumber(e.target.value)}
-                    className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono uppercase"
-                  />
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 items-center justify-between">
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <input
-                      type="number"
-                      min={1}
-                      placeholder="Adet"
-                      value={newPartQty}
-                      onChange={(e) => setNewPartQty(Number(e.target.value))}
-                      className="w-20 h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-center"
-                      required
-                    />
-                    <input
-                      type="number"
-                      placeholder="Birim Fiyat (TL)"
-                      value={newPartPrice}
-                      onChange={(e) => setNewPartPrice(e.target.value === "" ? "" : Number(e.target.value))}
-                      className="w-32 h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono font-bold"
-                      required
-                    />
+              <form onSubmit={handleAddPart} className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/20 space-y-3 animate-in fade-in duration-200">
+                {/* Source Selection Tabs */}
+                <div className="flex items-center justify-between pb-2 border-b border-indigo-500/10">
+                  <div className="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-xl">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomPartMode(false)
+                        setSelectedProduct(null)
+                        setProductSearch("")
+                        setNewPartName("")
+                        setNewPartNumber("")
+                      }}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+                        !isCustomPartMode
+                          ? "bg-indigo-600 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                      }`}
+                    >
+                      <Boxes size={13} />
+                      <span>Depo Stoğundan Seç</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomPartMode(true)
+                        setSelectedProduct(null)
+                        setProductSearch("")
+                        setNewPartName("")
+                        setNewPartNumber("")
+                      }}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors flex items-center gap-1.5 cursor-pointer ${
+                        isCustomPartMode
+                          ? "bg-indigo-600 text-white shadow-xs"
+                          : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                      }`}
+                    >
+                      <ExternalLink size={13} />
+                      <span>Dış Tedarik / Serbest Giriş</span>
+                    </button>
                   </div>
-                  <div className="flex gap-1.5 self-end sm:self-auto">
-                    <Button type="button" variant="ghost" size="sm" onClick={() => setIsAddingPart(false)} className="h-9 text-xs">
+
+                  {!isCustomPartMode && (
+                    <span className="text-[11px] text-indigo-600 dark:text-indigo-400 font-medium flex items-center gap-1">
+                      <Package size={12} />
+                      <span>Otomatik Stok Düşümü Aktif</span>
+                    </span>
+                  )}
+                </div>
+
+                {!isCustomPartMode ? (
+                  /* Autocomplete Dropdown Mode */
+                  <div className="space-y-2">
+                    <div className="relative">
+                      <div className="relative flex items-center">
+                        <Search size={14} className="absolute left-3 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Depoda parça adı, OEM kodu veya barkod ile arayın..."
+                          value={productSearch}
+                          onFocus={() => setIsSearchOpen(true)}
+                          onChange={(e) => {
+                            setProductSearch(e.target.value)
+                            setIsSearchOpen(true)
+                          }}
+                          className="w-full h-9.5 pl-9 pr-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        />
+                      </div>
+
+                      {/* Dropdown Results */}
+                      {isSearchOpen && (
+                        <div className="absolute left-0 right-0 top-11 z-50 p-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl max-h-60 overflow-y-auto space-y-1 animate-in fade-in zoom-in-95">
+                          {filteredProducts.length === 0 ? (
+                            <div className="p-4 text-center">
+                              <p className="text-xs text-slate-500">Depoda eşleşen parça bulunamadı.</p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsCustomPartMode(true)
+                                  setNewPartName(productSearch)
+                                  setIsSearchOpen(false)
+                                }}
+                                className="mt-1.5 text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold cursor-pointer"
+                              >
+                                Dış tedarik olarak serbest ekle
+                              </button>
+                            </div>
+                          ) : (
+                            filteredProducts.map((p) => {
+                              const isOutOfStock = p.stockQuantity <= 0
+                              return (
+                                <button
+                                  key={p.id}
+                                  type="button"
+                                  onClick={() => handleSelectProduct(p)}
+                                  className="w-full p-2.5 rounded-xl text-left hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors flex items-center justify-between gap-3 group cursor-pointer"
+                                >
+                                  <div className="min-w-0">
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                                        {p.name}
+                                      </p>
+                                      {p.oemCode && (
+                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                          {p.oemCode}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">
+                                      Kod: {p.code} {p.shelfLocation ? `• Raf: ${p.shelfLocation}` : ""}
+                                    </p>
+                                  </div>
+                                  <div className="text-right shrink-0">
+                                    <span
+                                      className={`inline-block px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                        isOutOfStock
+                                          ? "bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                          : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                      }`}
+                                    >
+                                      {isOutOfStock ? "Tükendi" : `Stok: ${p.stockQuantity}`}
+                                    </span>
+                                    <p className="text-xs font-bold text-slate-900 dark:text-slate-100 mt-0.5">
+                                      {p.salePrice.toLocaleString("tr-TR")} ₺
+                                    </p>
+                                  </div>
+                                </button>
+                              )
+                            })
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Selected Product Banner */}
+                    {selectedProduct && (
+                      <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2">
+                          <Check size={14} className="text-emerald-600 dark:text-emerald-400" />
+                          <span className="font-semibold text-slate-900 dark:text-slate-100">
+                            {selectedProduct.name}
+                          </span>
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 font-mono">
+                            Raf: {selectedProduct.shelfLocation || "Genel"}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                            Mevcut Stok: {selectedProduct.stockQuantity}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedProduct(null)
+                            setProductSearch("")
+                            setNewPartName("")
+                            setNewPartNumber("")
+                          }}
+                          className="text-[11px] text-slate-400 hover:text-rose-500 cursor-pointer"
+                        >
+                          Seçimi Kaldır
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Low/Insufficient Stock Warning */}
+                    {selectedProduct && newPartQty > selectedProduct.stockQuantity && (
+                      <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-1.5">
+                        <AlertTriangle size={14} className="shrink-0" />
+                        <span>
+                          Dikkat: Girilen miktar ({newPartQty}) mevcut depo stoğunu ({selectedProduct.stockQuantity}) aşıyor!
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  /* Custom Part Free-Text Mode */
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        placeholder="Parça Adı (Örn: Bosch Ön Balata)..."
+                        value={newPartName}
+                        onChange={(e) => setNewPartName(e.target.value)}
+                        className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                        required
+                      />
+                      <input
+                        type="text"
+                        placeholder="Parça No / OEM Kodu..."
+                        value={newPartNumber}
+                        onChange={(e) => setNewPartNumber(e.target.value)}
+                        className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono uppercase focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                      />
+                    </div>
+                    <p className="text-[10px] text-slate-400 italic">
+                      * Bu parça depoda kayıtlı değildir; yalnızca bu iş emrine sarfiyat olarak eklenecektir.
+                    </p>
+                  </div>
+                )}
+
+                {/* Quantity, Price and Actions */}
+                <div className="flex flex-col sm:flex-row gap-2 items-center justify-between pt-1">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Adet</label>
+                      <input
+                        type="number"
+                        min={1}
+                        placeholder="Adet"
+                        value={newPartQty}
+                        onChange={(e) => setNewPartQty(Math.max(1, Number(e.target.value)))}
+                        className="w-20 h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-center font-bold"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-500 mb-0.5">Birim Fiyat (TL)</label>
+                      <input
+                        type="number"
+                        placeholder="Birim Fiyat (TL)"
+                        value={newPartPrice}
+                        onChange={(e) => setNewPartPrice(e.target.value === "" ? "" : Number(e.target.value))}
+                        className="w-32 h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono font-bold"
+                        required
+                      />
+                    </div>
+                    <div className="pt-3.5 text-xs text-slate-500 font-mono">
+                      Toplam: <strong className="text-slate-900 dark:text-slate-100">{(Number(newPartQty || 1) * Number(newPartPrice || 0)).toLocaleString("tr-TR")} ₺</strong>
+                    </div>
+                  </div>
+                  <div className="flex gap-1.5 self-end sm:self-auto pt-3 sm:pt-0">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setIsAddingPart(false)
+                        setSelectedProduct(null)
+                        setProductSearch("")
+                      }}
+                      className="h-9 text-xs"
+                    >
                       Vazgeç
                     </Button>
-                    <Button type="submit" size="sm" className="h-9 px-3.5 text-xs font-bold">
+                    <Button
+                      type="submit"
+                      size="sm"
+                      className="h-9 px-4 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer"
+                    >
                       Parçayı Ekle
                     </Button>
                   </div>
