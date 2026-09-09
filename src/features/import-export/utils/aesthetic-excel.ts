@@ -391,3 +391,78 @@ export function triggerDownloadBlob(blob: Blob, fileName: string) {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
+
+/**
+ * Finansal ve Operasyonel Raporu Estetik Excel (.xlsx) Olarak İndirir
+ */
+export async function exportFinancialReportToExcel(
+  report: {
+    period: string
+    startDate: string
+    endDate: string
+    summary: {
+      totalRevenue: number
+      totalLabourRevenue: number
+      totalPartsRevenue: number
+      totalPartsCost: number
+      netProfit: number
+      profitMargin: number
+      cashCollected: number
+      unpaidReceivables: number
+      completedWorkOrdersCount: number
+      averageOrderValue: number
+      totalVehiclesServiced: number
+    }
+    recentCompletedOrders: Array<{
+      workOrderNumber: string
+      completedAt: string
+      plate: string
+      vehicle: string
+      customerName: string
+      labourTotal: number
+      partsTotal: number
+      partsCost: number
+      grandTotal: number
+      estimatedProfit: number
+      profitMargin: number
+    }>
+  },
+  tenantName: string = "WorksAuto"
+) {
+  const sDate = new Date(report.startDate).toLocaleDateString("tr-TR")
+  const eDate = new Date(report.endDate).toLocaleDateString("tr-TR")
+  const subtitle = `${tenantName} — Finansal ve Atölye Kârlılık İcmali (${sDate} - ${eDate})`
+
+  const columns: ExportColumnDef[] = [
+    { key: "workOrderNumber", label: "İş Emri No", width: 16 },
+    { key: "completedAtFormatted", label: "Tamamlanma Tarihi", width: 18 },
+    { key: "plate", label: "Plaka", type: "plate", width: 16 },
+    { key: "vehicle", label: "Araç", width: 22 },
+    { key: "customerName", label: "Müşteri", width: 24 },
+    { key: "labourTotal", label: "İşçilik Tutarı (₺)", type: "currency", width: 18 },
+    { key: "partsTotal", label: "Yedek Parça Tutarı (₺)", type: "currency", width: 20 },
+    { key: "partsCost", label: "Parça Maliyeti (₺)", type: "currency", width: 18 },
+    { key: "grandTotal", label: "Toplam Ciro (₺)", type: "currency", width: 18 },
+    { key: "estimatedProfit", label: "Net Kâr (₺)", type: "currency", width: 18 },
+    { key: "profitMarginFormatted", label: "Kâr Marjı", width: 14 },
+  ]
+
+  const data = report.recentCompletedOrders.map((row) => ({
+    ...row,
+    completedAtFormatted: new Date(row.completedAt).toLocaleDateString("tr-TR"),
+    profitMarginFormatted: `%${row.profitMargin}`,
+  }))
+
+  const blob = await generateAestheticExcel({
+    title: "FİNANSAL VE ATÖLYE KÂRLILIK RAPORU",
+    subtitle,
+    sheetName: "Finansal Rapor",
+    columns,
+    data,
+    author: `${tenantName} Yönetimi`,
+  })
+
+  const fileName = `WorksAuto_Finansal_Rapor_${report.period}_${new Date().toISOString().slice(0, 10)}.xlsx`
+  triggerDownloadBlob(blob, fileName)
+}
+

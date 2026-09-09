@@ -18,6 +18,7 @@ import {
   ChevronDown,
   ShieldCheck,
   LogOut,
+  BarChart3,
 } from "lucide-react"
 import { BrandLogo } from "@/components/shared/brand-logo"
 import { useAuth } from "@/features/auth/auth-context"
@@ -166,6 +167,12 @@ export function AppSidebar({
         title: "Cari Hesaplar",
         href: "/current-accounts",
         icon: FileSpreadsheet,
+        roles: ["OWNER", "SERVICE_MANAGER", "CASHIER", "tenant_admin"],
+      },
+      {
+        title: "Raporlar & Analiz",
+        href: "/reports",
+        icon: BarChart3,
         roles: ["OWNER", "SERVICE_MANAGER", "CASHIER", "tenant_admin"],
       },
       {
@@ -351,7 +358,7 @@ export function AppSidebar({
                           className={cn(
                             "flex items-center gap-2.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all cursor-pointer",
                             isSubActive
-                              ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 font-bold border border-sky-500/30"
+                              ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 font-bold"
                               : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/50"
                           )}
                         >
