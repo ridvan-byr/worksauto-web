@@ -22,7 +22,7 @@ import { useAuth } from "@/features/auth/auth-context"
 
 export default function SignInPage() {
   const router = useRouter()
-  const { login, sendOtp, verifyOtp, isAuthenticated, tenant } = useAuth()
+  const { sendOtp, verifyOtp, isAuthenticated, tenant } = useAuth()
 
   // Steps: 1 = Phone Number, 2 = SMS OTP Verification
   const [step, setStep] = React.useState<1 | 2>(1)

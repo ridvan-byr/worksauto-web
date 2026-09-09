@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { useRouter } from "next/navigation"
 import Image from "next/image"
 import {
   Building2,
@@ -60,7 +59,6 @@ const PRESET_COLORS = [
 ]
 
 export default function OnboardingPage() {
-  const router = useRouter()
   const { user, tenant, completeOnboarding } = useAuth()
 
   const [currentStep, setCurrentStep] = React.useState(1)
@@ -106,7 +104,7 @@ export default function OnboardingPage() {
         const parsed = JSON.parse(draft)
         setFormData((prev) => ({ ...prev, ...parsed }))
       }
-    } catch (e) {
+    } catch {
       // ignore
     }
   }, [])
@@ -116,7 +114,7 @@ export default function OnboardingPage() {
       const next = { ...prev, ...fields }
       try {
         localStorage.setItem(ONBOARDING_STORAGE_KEY, JSON.stringify(next))
-      } catch (e) {
+      } catch {
         // ignore
       }
       return next
@@ -186,7 +184,7 @@ export default function OnboardingPage() {
   const handleFinish = () => {
     try {
       localStorage.removeItem(ONBOARDING_STORAGE_KEY)
-    } catch (e) {
+    } catch {
       // ignore
     }
     completeOnboarding(formData)

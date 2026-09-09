@@ -442,7 +442,7 @@ export async function readExcelFile(file: File): Promise<{
 /**
  * WorksAuto Kurumsal Tasarımlı Örnek Excel Şablonu Üretip İndirir
  */
-export async function downloadSampleTemplate(type: "all" | "customer" | "vehicle" = "all"): Promise<void> {
+export async function downloadSampleTemplate(_type: "all" | "customer" | "vehicle" = "all"): Promise<void> {
   const columns: ExportColumnDef[] = [
     { key: "fullName", label: "Müşteri Adı Soyadı", type: "text" },
     { key: "phone", label: "Telefon Numarası", type: "phone" },

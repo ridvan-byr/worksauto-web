@@ -1,6 +1,6 @@
 "use client"
 
-import { useAppointments, useCreateAppointment, useMarkNoShow, useCancelAppointment } from "@/features/appointments/api/use-appointments"
+import { useAppointments, useMarkNoShow, useCancelAppointment } from "@/features/appointments/api/use-appointments"
 
 import * as React from "react"
 import {
@@ -47,7 +47,6 @@ export default function AppointmentsPage() {
   const { data: apiAppointments } = useAppointments()
   const markNoShowMutation = useMarkNoShow()
   const cancelAppointmentMutation = useCancelAppointment()
-  const createAppointmentMutation = useCreateAppointment()
 
   // Pure Live API sync (100% PostgreSQL)
   React.useEffect(() => {

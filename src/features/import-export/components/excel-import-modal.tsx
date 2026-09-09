@@ -49,7 +49,7 @@ export function ExcelImportModal({
   isOpen,
   onClose,
   onSuccess,
-  defaultMode = "all",
+  defaultMode: _defaultMode = "all",
 }: ExcelImportModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const batchImportMutation = useBatchImportCustomers()

@@ -26,6 +26,7 @@ import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
 import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
+import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
 
 import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
 
@@ -37,13 +38,6 @@ export default function VehiclesPage() {
   const [brandFilter, setBrandFilter] = React.useState<string>("all")
   const [vehicleToDelete, setVehicleToDelete] = React.useState<any | null>(null)
   const [vehicleToEdit, setVehicleToEdit] = React.useState<any | null>(null)
-
-  const handleVehicleUpdated = (updatedVehicle: any) => {
-    setVehicles((prev) =>
-      prev.map((v) => (v.id === updatedVehicle.id ? { ...v, ...updatedVehicle } : v))
-    )
-    setVehicleToEdit(null)
-  }
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
 
@@ -548,6 +542,15 @@ export default function VehiclesPage() {
         data={exportData}
         availableColumns={vehicleExportColumns}
       />
+
+      {/* Edit Vehicle Modal */}
+      {vehicleToEdit && (
+        <EditVehicleModal
+          isOpen={!!vehicleToEdit}
+          vehicle={vehicleToEdit}
+          onClose={() => setVehicleToEdit(null)}
+        />
+      )}
     </div>
   )
 }

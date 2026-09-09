@@ -402,7 +402,7 @@ export function getStoredCustomers(): Customer[] {
     if (raw) {
       return JSON.parse(raw)
     }
-  } catch (e) {
+  } catch (_e) {
     // fallback
   }
   return INITIAL_CUSTOMERS
@@ -412,7 +412,7 @@ export function saveStoredCustomers(customers: Customer[]): void {
   if (typeof window === "undefined") return
   try {
     localStorage.setItem(CUSTOMERS_KEY, JSON.stringify(customers))
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
 }

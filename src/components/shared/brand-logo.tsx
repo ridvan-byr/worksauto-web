@@ -42,7 +42,7 @@ export function BrandLogo({
     ? "/brand/worksauto-icon-white-tight.png"
     : "/brand/worksauto-icon-black-tight.png"
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (_e: React.MouseEvent) => {
     if (pathname === "/") {
       restartPageAnimation()
     }

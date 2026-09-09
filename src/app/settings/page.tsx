@@ -48,15 +48,15 @@ export default function SettingsPage() {
   const isOwner = userRole === "OWNER" || userRole === "SERVICE_MANAGER" || userRole === "TENANT_ADMIN"
 
   // Data Hooks
-  const { data: tenantData, isLoading: isTenantLoading } = useTenantSettings()
+  const { data: tenantData } = useTenantSettings()
   const updateTenantMutation = useUpdateTenantSettings()
 
-  const { data: servicesData, isLoading: isServicesLoading } = useServices()
+  const { data: servicesData } = useServices()
   const createServiceMutation = useCreateService()
   const updateServiceMutation = useUpdateService()
   const deleteServiceMutation = useDeleteService()
 
-  const { data: staffData, isLoading: isStaffLoading } = useStaff()
+  const { data: staffData } = useStaff()
   const createStaffMutation = useCreateStaff()
   const updateStaffMutation = useUpdateStaff()
   const deleteStaffMutation = useDeleteStaff()

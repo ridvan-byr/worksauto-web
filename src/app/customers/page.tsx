@@ -35,7 +35,7 @@ export default function CustomersPage() {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [filterType, setFilterType] = React.useState<"all" | "individual" | "corporate" | "debtors" | "leads">("all")
 
-  const { data: apiCustomers, isLoading } = useCustomers(searchQuery)
+  const { data: apiCustomers } = useCustomers(searchQuery)
   const createCustomerMutation = useCreateCustomer()
   const createVehicleMutation = useCreateVehicle()
 

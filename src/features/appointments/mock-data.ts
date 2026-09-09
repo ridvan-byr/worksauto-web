@@ -163,7 +163,7 @@ export function getStoredAppointments(): Appointment[] {
     if (raw) {
       return JSON.parse(raw)
     }
-  } catch (e) {
+  } catch (_e) {
     // fallback
   }
   return INITIAL_APPOINTMENTS
@@ -173,7 +173,7 @@ export function saveStoredAppointments(appointments: Appointment[]): void {
   if (typeof window === "undefined") return
   try {
     localStorage.setItem(APPOINTMENTS_STORAGE_KEY, JSON.stringify(appointments))
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
 }

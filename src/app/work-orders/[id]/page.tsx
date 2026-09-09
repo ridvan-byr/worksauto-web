@@ -1,6 +1,6 @@
 "use client"
 
-import { useWorkOrder, useAddWorkOrderItem, useRemoveWorkOrderItem, useUpdateWorkOrderStatus, useRollbackWorkOrder } from "@/features/work-orders/api/use-work-orders"
+import { useWorkOrder, useAddWorkOrderItem, useUpdateWorkOrderStatus } from "@/features/work-orders/api/use-work-orders"
 
 import * as React from "react"
 import { useParams, useRouter } from "next/navigation"
@@ -43,9 +43,7 @@ export default function WorkOrderDetailPage() {
 
   const { data: apiOrder } = useWorkOrder(id)
   const addItemMutation = useAddWorkOrderItem()
-  const removeItemMutation = useRemoveWorkOrderItem()
   const updateStatusMutation = useUpdateWorkOrderStatus()
-  const rollbackMutation = useRollbackWorkOrder()
 
   React.useEffect(() => {
     if (apiOrder) {

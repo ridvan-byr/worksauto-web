@@ -296,7 +296,7 @@ export function getStoredInvoices(): Invoice[] {
   try {
     const raw = localStorage.getItem(INVOICES_STORAGE_KEY)
     if (raw) return JSON.parse(raw)
-  } catch (e) {}
+  } catch (_e) {}
   return INITIAL_INVOICES
 }
 
@@ -304,7 +304,7 @@ export function saveStoredInvoices(invoices: Invoice[]): void {
   if (typeof window === "undefined") return
   try {
     localStorage.setItem(INVOICES_STORAGE_KEY, JSON.stringify(invoices))
-  } catch (e) {}
+  } catch (_e) {}
 }
 
 export function getInvoiceById(id: string): Invoice | undefined {
@@ -317,7 +317,7 @@ export function getStoredCurrentAccounts(): CurrentAccount[] {
   try {
     const raw = localStorage.getItem(CARI_STORAGE_KEY)
     if (raw) return JSON.parse(raw)
-  } catch (e) {}
+  } catch (_e) {}
   return INITIAL_CURRENT_ACCOUNTS
 }
 
@@ -325,7 +325,7 @@ export function saveStoredCurrentAccounts(accounts: CurrentAccount[]): void {
   if (typeof window === "undefined") return
   try {
     localStorage.setItem(CARI_STORAGE_KEY, JSON.stringify(accounts))
-  } catch (e) {}
+  } catch (_e) {}
 }
 
 export function recordInvoicePayment(

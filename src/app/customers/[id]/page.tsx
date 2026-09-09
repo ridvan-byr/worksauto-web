@@ -1,7 +1,7 @@
 "use client"
 
-import { useCustomer, useCustomerStats } from "@/features/customers/api/use-customers"
-import { useCreateVehicle, useDeleteVehicle } from "@/features/vehicles/api/use-vehicles"
+import { useCustomer } from "@/features/customers/api/use-customers"
+import { useDeleteVehicle } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
 import Link from "next/link"
@@ -44,8 +44,6 @@ export default function CustomerDetailPage() {
   const [vehicleToEdit, setVehicleToEdit] = React.useState<Vehicle | null>(null)
 
   const { data: apiCustomer } = useCustomer(customerId)
-  const { data: customerStats } = useCustomerStats(customerId)
-  const createVehicleMutation = useCreateVehicle()
   const deleteVehicleMutation = useDeleteVehicle()
 
   // Load customer data with live API sync and mock fallback

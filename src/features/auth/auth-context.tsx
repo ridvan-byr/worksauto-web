@@ -129,7 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("focus", verifyLiveSession)
 
     // Listen to immediate custom event from api-client
-    const handleSuspended = (e: any) => {
+    const handleSuspended = (_e: any) => {
       setUser(null)
       setTenant(null)
       try {

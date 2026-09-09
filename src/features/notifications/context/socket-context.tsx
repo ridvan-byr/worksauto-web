@@ -31,6 +31,7 @@ export function useSocket() {
 
 export function SocketProvider({ children }: { children: React.ReactNode }) {
   const [socket, setSocket] = React.useState<Socket | null>(null);
+  const socketRef = React.useRef<Socket | null>(null);
   const [isConnected, setIsConnected] = React.useState(false);
   const [isMuted, setIsMuted] = React.useState(false);
   const isMutedRef = React.useRef(isMuted);
@@ -71,8 +72,9 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
   // Connect / Disconnect socket based on auth state
   React.useEffect(() => {
     if (typeof window === "undefined" || !isAuthenticated) {
-      if (socket) {
-        socket.disconnect();
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
         setSocket(null);
         setIsConnected(false);
       }
@@ -185,13 +187,15 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
     });
 
+    socketRef.current = newSocket;
     setSocket(newSocket);
 
     return () => {
       newSocket.disconnect();
+      socketRef.current = null;
       setIsConnected(false);
     };
-  }, [isAuthenticated, user?.id, tenant?.id, isMuted, queryClient, router]);
+  }, [isAuthenticated, user?.id, tenant?.id, queryClient, router]);
 
   return (
     <SocketContext.Provider

@@ -216,7 +216,7 @@ export function getStoredProducts(): Product[] {
     if (raw) {
       return JSON.parse(raw)
     }
-  } catch (e) {
+  } catch (_e) {
     // fallback
   }
   return INITIAL_PRODUCTS
@@ -226,7 +226,7 @@ export function saveStoredProducts(products: Product[]): void {
   if (typeof window === "undefined") return
   try {
     localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(products))
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
 }

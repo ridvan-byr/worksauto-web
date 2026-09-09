@@ -195,7 +195,7 @@ export function getStoredWorkOrders(): WorkOrder[] {
     if (raw) {
       return JSON.parse(raw)
     }
-  } catch (e) {
+  } catch (_e) {
     // fallback
   }
   return INITIAL_WORK_ORDERS
@@ -205,7 +205,7 @@ export function saveStoredWorkOrders(orders: WorkOrder[]): void {
   if (typeof window === "undefined") return
   try {
     localStorage.setItem(WORK_ORDERS_STORAGE_KEY, JSON.stringify(orders))
-  } catch (e) {
+  } catch (_e) {
     // ignore
   }
 }

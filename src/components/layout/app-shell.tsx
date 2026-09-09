@@ -30,7 +30,7 @@ export function AppShell({ children, defaultCollapsed = false }: AppShellProps) 
       try {
         document.cookie = `${COOKIE_NAME}=${next}; path=/; max-age=31536000; SameSite=Lax`
         localStorage.setItem("worksauto-sidebar-collapsed", JSON.stringify(next))
-      } catch (e) {
+      } catch {
         // ignore
       }
       return next

@@ -163,7 +163,7 @@ export function useBatchImportCustomers() {
   const queryClient = useQueryClient();
   return useMutation<BatchImportResult, Error, { items: BatchImportCustomerItem[] }>({
     mutationFn: (data) => apiClient.post<BatchImportResult>('/customers/batch-import', data),
-    onSuccess: (res) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });

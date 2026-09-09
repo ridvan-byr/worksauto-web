@@ -28,9 +28,9 @@ import { useWorkOrders } from "@/features/work-orders/api/use-work-orders"
 import { useAuth } from "@/features/auth/auth-context"
 
 export default function DashboardPage() {
-  const { user, tenant } = useAuth()
-  const { data: summary, isLoading: isSummaryLoading } = useDashboardSummary()
-  const { data: apiWorkOrders, isLoading: isOrdersLoading } = useWorkOrders()
+  const { user } = useAuth()
+  const { data: summary } = useDashboardSummary()
+  const { data: apiWorkOrders } = useWorkOrders()
 
   const userName = user ? `${user.name} ${user.surname || ""}`.trim() : "Yetkili"
   const userRole = (user?.role || "").toUpperCase()
@@ -60,8 +60,6 @@ export default function DashboardPage() {
   const criticalStock = summary?.criticalStockCount ?? 0
   const openInvoicesCount = summary?.unpaidInvoicesCount ?? 0
   const totalReceivables = summary?.unpaidTotal ?? 0
-  const todayRevenue = summary?.todayRevenue ?? 0
-  const monthlyRevenue = summary?.monthlyRevenue ?? 0
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 pb-12">

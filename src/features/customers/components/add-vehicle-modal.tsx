@@ -33,9 +33,9 @@ export function AddVehicleModal({
   const [model, setModel] = React.useState("")
   const [year, setYear] = React.useState(currentYear)
   const [kilometer, setKilometer] = React.useState<number | "">(50000)
-  const [vin, setVin] = React.useState("")
-  const [fuelType, setFuelType] = React.useState<"Benzin" | "Dizel" | "LPG" | "Hibrit" | "Elektrik">("Benzin")
-  const [transmission, setTransmission] = React.useState<"Manuel" | "Otomatik">("Otomatik")
+  const [vin] = React.useState("")
+  const [fuelType] = React.useState<"Benzin" | "Dizel" | "LPG" | "Hibrit" | "Elektrik">("Benzin")
+  const [transmission] = React.useState<"Manuel" | "Otomatik">("Otomatik")
 
   const [errors, setErrors] = React.useState<Record<string, string>>({})
   const createVehicleMutation = useCreateVehicle()

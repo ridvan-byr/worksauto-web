@@ -42,9 +42,9 @@ export default function PublicBookingPage() {
   const params = useParams()
   const slug = params.slug as string // e.g. "yildiz-oto-servis"
 
-  const [tenant, setTenant] = React.useState<PublicTenant | null>(null)
+  const [_tenant, setTenant] = React.useState<PublicTenant | null>(null)
   const [services, setServices] = React.useState<PublicService[]>(FALLBACK_SERVICES)
-  const [isLoadingServices, setIsLoadingServices] = React.useState(true)
+  const [_isLoadingServices, setIsLoadingServices] = React.useState(true)
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const [name, setName] = React.useState("")
@@ -54,7 +54,7 @@ export default function PublicBookingPage() {
   const [selectedServiceId, setSelectedServiceId] = React.useState("")
   const [date, setDate] = React.useState(new Date().toISOString().split("T")[0])
   const [time, setTime] = React.useState("10:00")
-  const [note, setNote] = React.useState("")
+  const [note, _setNote] = React.useState("")
   const [isSuccess, setIsSuccess] = React.useState(false)
 
   // Fetch real tenant info & services catalogue
