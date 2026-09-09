@@ -1,5 +1,3 @@
-"use client"
-
 import * as React from "react"
 import { createPortal } from "react-dom"
 import {
@@ -10,7 +8,8 @@ import {
   Square,
   Eye,
   Settings2,
-  } from "lucide-react"
+  ChevronDown,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/features/auth/auth-context"
@@ -56,6 +55,7 @@ export function ExcelExportModal({
   const [fileName, setFileName] = React.useState(defaultFileName)
   const [selectedColumnKeys, setSelectedColumnKeys] = React.useState<string[]>([])
   const [isExporting, setIsExporting] = React.useState(false)
+  const [showAdvanced, setShowAdvanced] = React.useState(false)
 
   React.useEffect(() => {
     setMounted(true)
@@ -66,6 +66,7 @@ export function ExcelExportModal({
     if (isOpen) {
       setFileName(defaultFileName)
       setSelectedColumnKeys(availableColumns.map((c) => c.key))
+      setShowAdvanced(false)
     }
   }, [isOpen, defaultFileName, availableColumns])
 
@@ -129,7 +130,10 @@ export function ExcelExportModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-4xl bg-white dark:bg-[#0b1120] border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+      <div className={cn(
+        "relative w-full bg-white dark:bg-[#0b1120] border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden transition-all duration-300",
+        showAdvanced ? "max-w-4xl" : "max-w-lg"
+      )}>
         
         {/* Modal Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50">
@@ -140,14 +144,16 @@ export function ExcelExportModal({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  {title} — Önizleme & İndir
+                  {title}
                 </h2>
-                <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                   {data.length} Kayıt
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Sütunları özelleştirin, önizlemeyi inceleyin ve kurumsal tasarımlı Excel dosyasını indirin.
+                {showAdvanced
+                  ? "Sütunları özelleştirin, önizlemeyi inceleyin ve Excel dosyasını indirin."
+                  : "Dosya adını belirleyip tek tıkla kurumsal Excel dosyasını indirin."}
               </p>
             </div>
           </div>
@@ -162,13 +168,13 @@ export function ExcelExportModal({
         </div>
 
         {/* Modal Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div className="flex-1 overflow-y-auto p-6 space-y-5">
           
           {/* Top Config: File Name */}
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800/80 space-y-2">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                <Settings2 size={13} className="text-sky-500" />
+                <FileSpreadsheet size={14} className="text-emerald-500" />
                 <span>İndirilecek Dosya Adı</span>
               </label>
               <span className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -181,220 +187,265 @@ export function ExcelExportModal({
                 value={fileName}
                 onChange={(e) => setFileName(e.target.value)}
                 placeholder="Dosya adı girin..."
-                className="flex-1 h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="flex-1 h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-950 text-xs font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <span className="text-xs font-mono font-bold text-slate-400">.xlsx</span>
             </div>
           </div>
 
-          {/* Column Selector */}
-          <div className="space-y-2.5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                  Aktarılacak Sütunlar
-                </span>
-                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                  ({selectedColumnKeys.length} / {availableColumns.length} Seçili)
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={selectAll}
-                  className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 hover:underline cursor-pointer"
-                >
-                  Tümünü Seç
-                </button>
-                <span className="text-slate-300 dark:text-slate-700">•</span>
-                <button
-                  type="button"
-                  onClick={deselectAll}
-                  className="text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:underline cursor-pointer"
-                >
-                  Sadece İlkini Bırak
-                </button>
-              </div>
+          {/* Quick Features Info Pills */}
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Toplam Kayıt</span>
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono">{data.length} Satır</span>
             </div>
-
-            <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200/80 dark:border-slate-800/80">
-              {availableColumns.map((col) => {
-                const isSelected = selectedColumnKeys.includes(col.key)
-                return (
-                  <button
-                    key={col.key}
-                    type="button"
-                    onClick={() => toggleColumn(col.key)}
-                    className={cn(
-                      "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border",
-                      isSelected
-                        ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30 shadow-2xs"
-                        : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 opacity-60 hover:opacity-100"
-                    )}
-                  >
-                    {isSelected ? (
-                      <CheckSquare size={13} className="text-sky-500" />
-                    ) : (
-                      <Square size={13} className="text-slate-400" />
-                    )}
-                    <span>{col.label}</span>
-                  </button>
-                )
-              })}
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Dahil Sütunlar</span>
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                {selectedColumnKeys.length} / {availableColumns.length} Sütun
+              </span>
+            </div>
+            <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Tasarım Düzeni</span>
+              <span className="text-xs font-bold text-sky-600 dark:text-sky-400 font-mono">A4 / Fit to Page</span>
             </div>
           </div>
 
-          {/* Live Table Preview */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Eye size={14} className="text-slate-400" />
-                <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                  Excel Çıktısı Canlı Önizleme
-                </span>
-                <span className="text-[10px] text-slate-500 dark:text-slate-400">
-                  (İlk {previewRows.length} kayıt gösterilmektedir)
-                </span>
-              </div>
+          {/* Collapsible Trigger for Advanced Options */}
+          <button
+            type="button"
+            onClick={() => setShowAdvanced((prev) => !prev)}
+            className="w-full flex items-center justify-between p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/50 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors cursor-pointer"
+          >
+            <span className="flex items-center gap-2">
+              <Settings2 size={14} className="text-sky-500" />
+              <span>Gelişmiş Seçenekler (Sütun Çıkar / Ekle & Canlı Önizleme)</span>
+            </span>
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-normal">
+              <span>{showAdvanced ? "Basit Görünüme Dön" : "Özelleştir"}</span>
+              <ChevronDown size={14} className={cn("transition-transform duration-200", showAdvanced && "rotate-180")} />
             </div>
+          </button>
 
-            {/* Mock Excel Sheet Shell */}
-            <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs bg-white dark:bg-slate-950">
-              <div className="overflow-x-auto max-h-[460px] scrollbar-thin">
-                <div className="min-w-fit">
-                  {/* Mock Banner (Excel Satır 1-2, Toplam 85px: Satır 1 = 51px, Satır 2 = 34px) */}
-                  <div className="bg-[#0F172A] text-white border-b border-slate-800 flex h-[85px] relative">
-                    {/* Sol: Sütun A (Excel A1:A2 Birleşik Hücresi - 1:1 Excel Görünümü) */}
-                    <div
-                      className="shrink-0 h-full relative border-r border-slate-800/80 bg-[#0F172A]"
-                      style={{
-                        width: `${Math.max(LOGO_CONFIG.colAWidth * 7.5, LOGO_CONFIG.width + 40)}px`,
-                      }}
+          {/* Collapsible Advanced Panel */}
+          {showAdvanced && (
+            <div className="space-y-5 animate-in fade-in slide-in-from-top-2 duration-200 pt-1">
+              {/* Column Selector */}
+              <div className="space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Aktarılacak Sütunlar
+                    </span>
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                      ({selectedColumnKeys.length} / {availableColumns.length} Seçili)
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={selectAll}
+                      className="text-[11px] font-semibold text-sky-600 hover:text-sky-700 dark:text-sky-400 hover:underline cursor-pointer"
                     >
-                      <img
-                        src="/brand/worksauto-logo-white.png"
-                        alt="WorksAuto"
-                        style={{
-                          position: "absolute",
-                          left: `${Math.round(LOGO_CONFIG.colOffset * 65)}px`,
-                          top: `${Math.round(LOGO_CONFIG.rowOffset * 40)}px`,
-                          width: `${LOGO_CONFIG.width}px`,
-                          height: `${LOGO_CONFIG.height}px`,
-                        }}
-                        className="object-contain brightness-110 select-none"
-                      />
-                    </div>
-
-                    {/* Sütun B..N: Excel B1:N2 Birleşik Başlık ve Alt Başlık */}
-                    <div className="flex-1 h-full min-w-[500px] flex flex-col justify-center items-center px-6">
-                      {/* Satır 1 Başlık (51px yüksekliğinde tam ortalı) */}
-                      <div className="h-[51px] flex items-center justify-center">
-                        <h4 className="text-base font-bold text-white tracking-wide text-center">
-                          {title.toLocaleUpperCase("tr-TR")}
-                        </h4>
-                      </div>
-                      {/* Satır 2 Alt Başlık (34px yüksekliğinde tam ortalı) */}
-                      <div className="h-[34px] flex items-center justify-center">
-                        <p className="text-xs text-sky-300 font-medium text-center">
-                          {subtitle}
-                        </p>
-                      </div>
-                    </div>
+                      Tümünü Seç
+                    </button>
+                    <span className="text-slate-300 dark:text-slate-700">•</span>
+                    <button
+                      type="button"
+                      onClick={deselectAll}
+                      className="text-[11px] font-semibold text-slate-500 hover:text-slate-700 dark:text-slate-400 hover:underline cursor-pointer"
+                    >
+                      Sadece İlkini Bırak
+                    </button>
                   </div>
+                </div>
 
-                  {/* Bilgi Şeridi (Excel Satır 3 - Sola Dayalı) */}
-                  <div className="bg-[#1E293B] text-slate-300 px-4 py-2 text-xs italic border-b border-slate-700/80 text-left flex items-center justify-start gap-x-3">
-                    <span>Rapor Tarihi: {new Date().toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-                    <span className="text-slate-500">|</span>
-                    <span>Toplam Kayıt: {data.length} Adet</span>
-                    <span className="text-slate-500">|</span>
-                    <span>Oluşturan: {effectiveAuthor}</span>
-                  </div>
-
-                  {/* Kurumsal Vurgu Çizgisi */}
-                  <div className="h-1 w-full bg-sky-600" />
-
-                  {/* Table - Birebir Excel Sütunları */}
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead>
-                      <tr className="bg-sky-600 text-white font-bold">
-                        {activeColumns.map((col, idx) => (
-                          <th
-                            key={col.key}
-                            style={idx === 0 ? { width: `${Math.max(LOGO_CONFIG.colAWidth * 7.5, LOGO_CONFIG.width + 40)}px` } : undefined}
-                            className={cn(
-                              "py-2.5 px-4 border-r border-slate-700 last:border-r-0 whitespace-nowrap text-[11px]",
-                              col.type === "currency" || col.type === "number" ? "text-right" : col.type === "plate" ? "text-center" : "text-left"
-                            )}
-                          >
-                            {col.label}
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {previewRows.map((row, rIdx) => {
-                        const isEven = rIdx % 2 === 0
-                        return (
-                          <tr
-                            key={rIdx}
-                            className={cn(
-                              "border-b border-slate-200 dark:border-slate-800 font-medium",
-                              isEven ? "bg-white dark:bg-slate-950" : "bg-slate-50 dark:bg-slate-900/50"
-                            )}
-                          >
-                            {activeColumns.map((col, cIdx) => {
-                              const val = row[col.key]
-                              return (
-                                <td
-                                  key={col.key}
-                                  style={cIdx === 0 ? { width: `${Math.max(LOGO_CONFIG.colAWidth * 7.5, LOGO_CONFIG.width + 40)}px` } : undefined}
-                                  className={cn(
-                                    "py-2 px-4 border-r border-slate-200 dark:border-slate-800 last:border-r-0 whitespace-nowrap text-[11px]",
-                                    col.type === "currency" || col.type === "number" ? "text-right font-mono" : col.type === "plate" ? "text-center font-mono font-bold" : "text-left"
-                                  )}
-                                >
-                                  {col.type === "currency" ? (
-                                    Number(val) > 0 ? (
-                                      <span className="text-rose-600 dark:text-rose-400 font-bold">
-                                        {Number(val).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
-                                      </span>
-                                    ) : (
-                                      <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                                        0.00 ₺
-                                      </span>
-                                    )
-                                  ) : col.type === "plate" ? (
-                                    <span className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
-                                      {String(val || "-")}
-                                    </span>
-                                  ) : (
-                                    <span className="text-slate-700 dark:text-slate-300">
-                                      {val !== undefined && val !== null && val !== "" ? String(val) : "-"}
-                                    </span>
-                                  )}
-                                </td>
-                              )
-                            })}
-                          </tr>
-                        )
-                      })}
-                    </tbody>
-                  </table>
+                <div className="flex flex-wrap gap-2 p-3 rounded-2xl bg-slate-50/50 dark:bg-slate-900/30 border border-slate-200/80 dark:border-slate-800/80">
+                  {availableColumns.map((col) => {
+                    const isSelected = selectedColumnKeys.includes(col.key)
+                    return (
+                      <button
+                        key={col.key}
+                        type="button"
+                        onClick={() => toggleColumn(col.key)}
+                        className={cn(
+                          "flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer border",
+                          isSelected
+                            ? "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/30 shadow-2xs"
+                            : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-800 opacity-60 hover:opacity-100"
+                        )}
+                      >
+                        {isSelected ? (
+                          <CheckSquare size={13} className="text-sky-500" />
+                        ) : (
+                          <Square size={13} className="text-slate-400" />
+                        )}
+                        <span>{col.label}</span>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
 
-              {/* Table Footer hint */}
-              <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-                <span>
-                  İndirildiğinde filtrelenen toplam <strong>{data.length}</strong> satırın tamamı ve dip toplam satırı yer alacaktır.
-                </span>
-                <span className="font-mono text-[10px] text-slate-400">
-                  Freeze Panes Aktif
-                </span>
+              {/* Live Table Preview */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Eye size={14} className="text-slate-400" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Excel Çıktısı Canlı Önizleme
+                    </span>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400">
+                      (İlk {previewRows.length} kayıt gösterilmektedir)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mock Excel Sheet Shell */}
+                <div className="rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xs bg-white dark:bg-slate-950">
+                  <div className="overflow-x-auto max-h-[380px] scrollbar-thin">
+                    <div className="min-w-fit">
+                      {/* Mock Banner */}
+                      <div className="bg-[#0F172A] text-white border-b border-slate-800 flex h-[85px] relative">
+                        <div
+                          className="shrink-0 h-full relative border-r border-slate-800/80 bg-[#0F172A]"
+                          style={{
+                            width: `${Math.max(LOGO_CONFIG.colAWidth * 7.5, LOGO_CONFIG.width + 40)}px`,
+                          }}
+                        >
+                          <img
+                            src="/brand/worksauto-logo-white.png"
+                            alt="WorksAuto"
+                            style={{
+                              position: "absolute",
+                              left: `${Math.round(LOGO_CONFIG.colOffset * 65)}px`,
+                              top: `${Math.round(LOGO_CONFIG.rowOffset * 40)}px`,
+                              width: `${LOGO_CONFIG.width}px`,
+                              height: `${LOGO_CONFIG.height}px`,
+                            }}
+                            className="object-contain brightness-110 select-none"
+                          />
+                        </div>
+
+                        <div className="flex-1 h-full min-w-[500px] flex flex-col justify-center items-center px-6">
+                          <div className="h-[51px] flex items-center justify-center">
+                            <h4 className="text-base font-bold text-white tracking-wide text-center">
+                              {title.toLocaleUpperCase("tr-TR")}
+                            </h4>
+                          </div>
+                          <div className="h-[34px] flex items-center justify-center">
+                            <p className="text-xs text-sky-300 font-medium text-center">
+                              {subtitle}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Info Banner */}
+                      <div className="bg-[#1E293B] text-slate-300 px-4 py-2 text-xs italic border-b border-slate-700/80 text-left flex items-center justify-start gap-x-3">
+                        <span>Rapor Tarihi: {new Date().toLocaleString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                        <span className="text-slate-500">|</span>
+                        <span>Toplam Kayıt: {data.length} Adet</span>
+                        <span className="text-slate-500">|</span>
+                        <span>Oluşturan: {effectiveAuthor}</span>
+                      </div>
+
+                      <div className="h-1 w-full bg-sky-600" />
+
+                      {/* Table */}
+                      <table className="w-full text-xs text-left border-collapse">
+                        <thead>
+                          <tr className="bg-sky-600 text-white font-bold">
+                            {activeColumns.map((col, idx) => (
+                              <th
+                                key={col.key}
+                                style={idx === 0 ? { width: `${Math.max(LOGO_CONFIG.colAWidth * 7.5, LOGO_CONFIG.width + 40)}px` } : undefined}
+                                className={cn(
+                                  "py-2.5 px-4 border-r border-slate-700 last:border-r-0 whitespace-nowrap text-[11px]",
+                                  col.type === "currency" || col.type === "number" ? "text-right" : col.type === "plate" ? "text-center" : "text-left"
+                                )}
+                              >
+                                {col.label}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {previewRows.map((row, rIdx) => {
+                            const isEven = rIdx % 2 === 0
+                            return (
+                              <tr
+                                key={rIdx}
+                                className={cn(
+                                  "border-b border-slate-200 dark:border-slate-800 font-medium",
+                                  isEven ? "bg-white dark:bg-slate-950" : "bg-slate-50 dark:bg-slate-900/50"
+                                )}
+                              >
+                                {activeColumns.map((col, cIdx) => {
+                                  const val = row[col.key]
+                                  return (
+                                    <td
+                                      key={col.key}
+                                      style={cIdx === 0 ? { width: `${Math.max(LOGO_CONFIG.colAWidth * 7.5, LOGO_CONFIG.width + 40)}px` } : undefined}
+                                      className={cn(
+                                        "py-2 px-4 border-r border-slate-200 dark:border-slate-800 last:border-r-0 whitespace-nowrap text-[11px]",
+                                        col.type === "currency" || col.type === "number" ? "text-right font-mono" : col.type === "plate" ? "text-center font-mono font-bold" : "text-left"
+                                      )}
+                                    >
+                                      {col.type === "currency" ? (
+                                        Number(val) > 0 ? (
+                                          <span className="text-rose-600 dark:text-rose-400 font-bold">
+                                            {Number(val).toLocaleString("tr-TR", { minimumFractionDigits: 2 })} ₺
+                                          </span>
+                                        ) : (
+                                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                                            0.00 ₺
+                                          </span>
+                                        )
+                                      ) : col.type === "plate" ? (
+                                        <span className="px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
+                                          {String(val || "-")}
+                                        </span>
+                                      ) : (
+                                        <span className="text-slate-700 dark:text-slate-300">
+                                          {val !== undefined && val !== null && val !== "" ? String(val) : "-"}
+                                        </span>
+                                      )}
+                                    </td>
+                                  )
+                                })}
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900/80 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+                    <span>
+                      İndirildiğinde toplam <strong>{data.length}</strong> satırın tamamı ve otomatik hesaplanan dip toplam satırı yer alacaktır.
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-400">
+                      Freeze Panes Aktif
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowAdvanced(false)}
+                  className="h-8 px-3 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:text-sky-700 hover:bg-sky-50 dark:hover:bg-sky-950/50 cursor-pointer"
+                >
+                  ↑ Basit Görünüme Geri Dön
+                </Button>
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Modal Footer */}

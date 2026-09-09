@@ -161,14 +161,16 @@ export interface BatchImportResult {
   totalRows: number;
   importedCustomersCount: number;
   existingCustomersCount: number;
+  updatedCustomersCount?: number;
   importedVehiclesCount: number;
   existingVehiclesCount: number;
+  updatedVehiclesCount?: number;
   errors: { row: number; reason: string }[];
 }
 
 export function useBatchImportCustomers() {
   const queryClient = useQueryClient();
-  return useMutation<BatchImportResult, Error, { items: BatchImportCustomerItem[] }>({
+  return useMutation<BatchImportResult, Error, { items: BatchImportCustomerItem[]; updateExisting?: boolean }>({
     mutationFn: (data) => apiClient.post<BatchImportResult>('/customers/batch-import', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });

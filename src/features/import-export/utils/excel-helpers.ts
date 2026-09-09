@@ -149,8 +149,9 @@ export function guessTargetField(columnHeader: string): string {
   }
 
   // 8. Müşteri Adı Soyadı (Birleşik veya tek sütun)
-  const hasAd = norm.includes("ad") || norm.includes("isim") || norm.includes("name")
   const hasSoyad = norm.includes("soyad") || norm.includes("surname") || norm.includes("soyisim")
+  const normWithoutSoyad = norm.replace(/soyad/g, "").replace(/soyisim/g, "").replace(/surname/g, "")
+  const hasAd = normWithoutSoyad.includes("ad") || normWithoutSoyad.includes("isim") || normWithoutSoyad.includes("name")
   const hasMusteri = norm.includes("musteri") || norm.includes("müşteri") || norm.includes("cari")
 
   if (
@@ -530,4 +531,39 @@ export function exportToExcel(data: Record<string, unknown>[], fileName: string,
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
 
   XLSX.writeFile(workbook, `${fileName}_${new Date().toISOString().split("T")[0]}.xlsx`)
+}
+
+/**
+ * Otomatik eşleştirmenin temel zorunlu alanları karşılayıp karşılamadığını denetler
+ */
+export function checkMappingSufficiency(
+  mappings: Record<string, string>,
+  nameMode: "single" | "split" = "single"
+): { isSufficient: boolean; missingRequired: string[] } {
+  const missing: string[] = []
+
+  // 1. Plaka zorunludur
+  if (!mappings.plate) {
+    missing.push("Araç Plakası")
+  }
+
+  // 2. İletişim: Telefon veya Şirket Ünvanı
+  if (!mappings.phone && !mappings.companyTitle) {
+    missing.push("Telefon Numarası")
+  }
+
+  // 3. İsim: fullName veya (firstName || lastName) veya Şirket Ünvanı
+  const hasName =
+    nameMode === "single"
+      ? Boolean(mappings.fullName)
+      : Boolean(mappings.firstName || mappings.lastName)
+
+  if (!hasName && !mappings.companyTitle) {
+    missing.push("Müşteri Adı Soyadı")
+  }
+
+  return {
+    isSufficient: missing.length === 0,
+    missingRequired: missing,
+  }
 }
