@@ -141,7 +141,9 @@ export default function PublicBookingPage() {
         customerPhone: phone.replace(/\D/g, ""),
         plate: plate.toUpperCase().replace(/\s/g, ""),
         brandModel: brandModel.trim() || undefined,
-        serviceId: selectedServiceId || undefined,
+        serviceId: selectedServiceId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedServiceId)
+          ? selectedServiceId
+          : undefined,
         slotDate: date,
         slotStartTime: startTimeDate.toISOString(),
         slotEndTime: endTimeDate.toISOString(),
