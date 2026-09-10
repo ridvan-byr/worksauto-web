@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Building2, Wrench, Users, Shield, Check } from "lucide-react"
+import { Building2, Wrench, Users, Shield, Check, Layers } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/features/auth/auth-context"
 import {
@@ -15,6 +15,10 @@ import {
   useCreateStaff,
   useUpdateStaff,
   useDeleteStaff,
+  useWorkshopBays,
+  useCreateWorkshopBay,
+  useUpdateWorkshopBay,
+  useDeleteWorkshopBay,
   type TenantSettings,
   type ServiceRecord,
   type StaffRecord,
@@ -24,6 +28,7 @@ import {
 import { TenantProfileTab } from "@/features/settings/components/tenant-profile-tab"
 import { ServicesTab } from "@/features/settings/components/services-tab"
 import { StaffTab } from "@/features/settings/components/staff-tab"
+import { WorkshopBaysTab } from "@/features/settings/components/workshop-bays-tab"
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -44,8 +49,13 @@ export default function SettingsPage() {
   const updateStaffMutation = useUpdateStaff()
   const deleteStaffMutation = useDeleteStaff()
 
+  const { data: baysData } = useWorkshopBays()
+  const createBayMutation = useCreateWorkshopBay()
+  const updateBayMutation = useUpdateWorkshopBay()
+  const deleteBayMutation = useDeleteWorkshopBay()
+
   // Tab State
-  const [activeTab, setActiveTab] = React.useState<"profile" | "services" | "staff">("profile")
+  const [activeTab, setActiveTab] = React.useState<"profile" | "services" | "staff" | "bays">("profile")
   const [saveSuccess, setSaveSuccess] = React.useState(false)
 
   // Local soft-delete tracking
@@ -286,6 +296,19 @@ export default function SettingsPage() {
           <Users size={15} />
           <span>Personel & Atölye Ustaları</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("bays")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === "bays"
+              ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          }`}
+        >
+          <Layers size={15} />
+          <span>İstasyonlar & Liftler</span>
+        </button>
       </div>
 
       {/* Tab Contents */}
@@ -324,6 +347,24 @@ export default function SettingsPage() {
           isCreating={createStaffMutation.isPending}
           isUpdating={updateStaffMutation.isPending}
           isDeleting={deleteStaffMutation.isPending}
+        />
+      )}
+
+      {activeTab === "bays" && (
+        <WorkshopBaysTab
+          bays={baysData || []}
+          onCreateBay={async (data) => {
+            await createBayMutation.mutateAsync(data)
+          }}
+          onUpdateBay={async (id, data) => {
+            await updateBayMutation.mutateAsync({ id, data })
+          }}
+          onDeleteBay={async (id) => {
+            await deleteBayMutation.mutateAsync(id)
+          }}
+          isCreating={createBayMutation.isPending}
+          isUpdating={updateBayMutation.isPending}
+          isDeleting={deleteBayMutation.isPending}
         />
       )}
     </div>

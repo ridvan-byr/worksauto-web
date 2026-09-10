@@ -5,7 +5,7 @@ import { createPortal } from "react-dom"
 import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DEFAULT_LIFTS } from "@/lib/workshop-constants"
-import { StaffRecord } from "@/features/settings/api/use-settings"
+import { StaffRecord, useWorkshopBays } from "@/features/settings/api/use-settings"
 
 interface StaffModalProps {
   isOpen: boolean
@@ -41,6 +41,22 @@ export function StaffModal({
   const [lift, setLift] = React.useState("Lift 1")
   const [specialty, setSpecialty] = React.useState("Genel Mekanik")
   const [isActive, setIsActive] = React.useState(true)
+
+  const { data: baysData } = useWorkshopBays()
+  const liftOptions = React.useMemo(() => {
+    if (baysData && baysData.length > 0) {
+      return [
+        ...baysData
+          .filter((b) => b.isActive)
+          .map((b) => ({
+            id: b.name,
+            label: b.code ? `${b.name} (${b.code})` : b.name,
+          })),
+        { id: "Atanmamış", label: "Atanmamış (Ortak Havuz / Gezici)" },
+      ]
+    }
+    return DEFAULT_LIFTS
+  }, [baysData])
 
   React.useEffect(() => {
     if (editingStaff) {
@@ -180,12 +196,12 @@ export function StaffModal({
                   onChange={(e) => setLift(e.target.value)}
                   className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
                 >
-                  {lift && !DEFAULT_LIFTS.some((l) => l.id === lift || l.label.startsWith(lift)) && (
+                  {lift && !liftOptions.some((l) => l.id === lift || l.label.startsWith(lift)) && (
                     <option value={lift}>
                       {lift} (Mevcut)
                     </option>
                   )}
-                  {DEFAULT_LIFTS.map((l) => (
+                  {liftOptions.map((l) => (
                     <option key={l.id} value={l.id}>
                       {l.label}
                     </option>

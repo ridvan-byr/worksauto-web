@@ -282,3 +282,93 @@ export function useUpdateTenantSettings() {
     },
   });
 }
+
+// -------------------------------------------------------------
+// WORKSHOP BAYS & LIFTS
+// -------------------------------------------------------------
+
+export interface WorkshopBayRecord {
+  id: string;
+  tenantId: string;
+  name: string;
+  code?: string | null;
+  category: string;
+  isActive: boolean;
+  isAvailableForOnline: boolean;
+  orderIndex: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateWorkshopBayInput {
+  name: string;
+  code?: string;
+  category?: string;
+  isAvailableForOnline?: boolean;
+  orderIndex?: number;
+}
+
+export interface UpdateWorkshopBayInput {
+  name?: string;
+  code?: string;
+  category?: string;
+  isActive?: boolean;
+  isAvailableForOnline?: boolean;
+  orderIndex?: number;
+}
+
+export function useWorkshopBays() {
+  return useQuery({
+    queryKey: ['workshop-bays'],
+    queryFn: () => apiClient.get<WorkshopBayRecord[]>('/tenants/bays'),
+  });
+}
+
+export function useCreateWorkshopBay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateWorkshopBayInput) => apiClient.post<WorkshopBayRecord>('/tenants/bays', data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['workshop-bays'] });
+      toast.success('İstasyon / Lift başarıyla eklendi', {
+        description: `${data.name} atölye kapasitesine tanımlandı.`,
+      });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'İstasyon eklenirken hata oluştu.';
+      toast.error(message);
+    },
+  });
+}
+
+export function useUpdateWorkshopBay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateWorkshopBayInput }) =>
+      apiClient.patch<WorkshopBayRecord>(`/tenants/bays/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workshop-bays'] });
+      toast.success('İstasyon / Lift bilgileri güncellendi.');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'İstasyon güncellenemedi.';
+      toast.error(message);
+    },
+  });
+}
+
+export function useDeleteWorkshopBay() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete(`/tenants/bays/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workshop-bays'] });
+      toast.success('İstasyon / Lift kaydı silindi.');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'İstasyon silinemedi.';
+      toast.error(message);
+    },
+  });
+}
+
