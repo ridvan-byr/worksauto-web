@@ -22,11 +22,13 @@ export interface WorkOrderPart {
 
 export interface WorkOrderNote {
   id: string
+  authorId?: string | null
   authorName?: string
   authorRole?: string
   text?: string
   note?: string
   createdAt: string
+  updatedAt?: string | null
   isInternal?: boolean
 }
 
@@ -38,8 +40,9 @@ export interface WorkOrderPhoto {
   uploaderName?: string
   uploadedBy?: string
   type?: "CHECKIN" | "DAMAGE" | "COMPLETED" | string
-  photoType?: string
+  photoType?: "CHECKIN" | "DAMAGE" | "COMPLETED" | string
   createdAt?: string
+  updatedAt?: string | null
 }
 
 export interface WorkOrderItem {

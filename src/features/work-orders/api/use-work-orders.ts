@@ -123,6 +123,117 @@ export function useUpdateWorkOrderItemQuantity() {
   });
 }
 
+export function useUpdateWorkOrderItem() {
+  const queryClient = useQueryClient();
+  return useMutation<WorkOrder, Error, { workOrderId: string; itemId: string; data: { name?: string; unitPrice?: number; quantity?: number } }>({
+    mutationFn: ({ workOrderId, itemId, data }) =>
+      apiClient.patch<WorkOrder>(`/work-orders/${workOrderId}/items/${itemId}`, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
+      toast.success('İşçilik/Kalem başarıyla güncellendi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Kalem güncellenirken hata oluştu.');
+    },
+  });
+}
+
+export function useAddWorkOrderNote() {
+  const queryClient = useQueryClient();
+  return useMutation<unknown, Error, { workOrderId: string; text: string; isInternal?: boolean }>({
+    mutationFn: ({ workOrderId, text, isInternal }) =>
+      apiClient.post(`/work-orders/${workOrderId}/notes`, { text, isInternal }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
+      toast.success('Not eklendi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Not eklenemedi.');
+    },
+  });
+}
+
+export function useUpdateWorkOrderNote() {
+  const queryClient = useQueryClient();
+  return useMutation<unknown, Error, { workOrderId: string; noteId: string; text: string }>({
+    mutationFn: ({ workOrderId, noteId, text }) =>
+      apiClient.patch(`/work-orders/${workOrderId}/notes/${noteId}`, { text }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
+      toast.success('Not güncellendi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Not güncellenemedi.');
+    },
+  });
+}
+
+export function useDeleteWorkOrderNote() {
+  const queryClient = useQueryClient();
+  return useMutation<unknown, Error, { workOrderId: string; noteId: string }>({
+    mutationFn: ({ workOrderId, noteId }) =>
+      apiClient.delete(`/work-orders/${workOrderId}/notes/${noteId}`),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
+      toast.success('Not silindi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Not silinemedi.');
+    },
+  });
+}
+
+export function useUploadWorkOrderPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation<unknown, Error, { workOrderId: string; file: File; caption?: string; photoType?: string }>({
+    mutationFn: ({ workOrderId, file, caption, photoType }) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      if (caption) formData.append('caption', caption);
+      if (photoType) formData.append('photoType', photoType);
+      return apiClient.upload(`/media/work-orders/${workOrderId}/photos`, formData);
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
+      toast.success('Fotoğraf başarıyla yüklendi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Fotoğraf yüklenemedi.');
+    },
+  });
+}
+
+export function useUpdateWorkOrderPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation<unknown, Error, { workOrderId: string; photoId: string; caption?: string; photoType?: string }>({
+    mutationFn: ({ photoId, caption, photoType }) =>
+      apiClient.patch(`/media/work-orders/photos/${photoId}`, { caption, photoType }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
+      toast.success('Fotoğraf bilgileri güncellendi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Fotoğraf güncellenemedi.');
+    },
+  });
+}
+
+export function useDeleteWorkOrderPhoto() {
+  const queryClient = useQueryClient();
+  return useMutation<unknown, Error, { workOrderId: string; photoId: string }>({
+    mutationFn: ({ photoId }) =>
+      apiClient.delete(`/media/work-orders/photos/${photoId}`),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
+      toast.success('Fotoğraf silindi.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Fotoğraf silinemedi.');
+    },
+  });
+}
+
 export function useAddWorkOrderPhoto() {
   const queryClient = useQueryClient();
   return useMutation<unknown, Error, { workOrderId: string; data: { url: string; caption: string; photoType: string } }>({

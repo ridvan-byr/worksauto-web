@@ -172,11 +172,12 @@ export async function apiRequest<T = unknown>(
   }
 
   const token = getAccessToken(endpoint);
+  const isFormData = typeof FormData !== 'undefined' && rest.body instanceof FormData;
 
-  const requestHeaders: HeadersInit = {
-    'Content-Type': 'application/json',
+  const requestHeaders: Record<string, string> = {
+    ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...headers,
+    ...(headers as Record<string, string>),
   };
 
   try {
@@ -300,11 +301,20 @@ export const apiClient = {
   get: <T = unknown>(endpoint: string, options?: RequestOptions) =>
     apiRequest<T>(endpoint, { ...options, method: 'GET' }),
 
-  post: <T = unknown>(endpoint: string, body?: unknown, options?: RequestOptions) =>
+  post: <T = unknown>(endpoint: string, body?: unknown, options?: RequestOptions) => {
+    const isFormData = typeof FormData !== 'undefined' && body instanceof FormData;
+    return apiRequest<T>(endpoint, {
+      ...options,
+      method: 'POST',
+      body: isFormData ? (body as FormData) : body ? JSON.stringify(body) : undefined,
+    });
+  },
+
+  upload: <T = unknown>(endpoint: string, formData: FormData, options?: RequestOptions) =>
     apiRequest<T>(endpoint, {
       ...options,
       method: 'POST',
-      body: body ? JSON.stringify(body) : undefined,
+      body: formData,
     }),
 
   patch: <T = unknown>(endpoint: string, body?: unknown, options?: RequestOptions) =>

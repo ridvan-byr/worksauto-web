@@ -14,52 +14,67 @@ import {
   CheckCircle2,
   Calendar,
   User,
-  } from "lucide-react"
+  UploadCloud,
+  Edit2,
+  Trash2,
+  Loader2,
+  Check,
+  Filter,
+} from "lucide-react"
 import { WorkOrderPhoto } from "../types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 interface PhotoGalleryProps {
   photos: WorkOrderPhoto[]
-  onAddPhoto: (caption: string, type: "CHECKIN" | "DAMAGE" | "COMPLETED", url?: string) => void
+  onUploadPhoto: (file: File, caption: string, photoType: "CHECKIN" | "DAMAGE" | "COMPLETED") => Promise<void>
+  onUpdatePhoto?: (photoId: string, caption: string, photoType: "CHECKIN" | "DAMAGE" | "COMPLETED") => Promise<void>
+  onDeletePhoto?: (photoId: string) => Promise<void>
+  isLocked?: boolean
 }
 
-const SAMPLE_PRESETS = [
-  {
-    label: "Araç Kabul Ön / Plaka",
-    url: "https://images.unsplash.com/photo-1617814076367-b759c7d7e738?q=80&w=1200&auto=format&fit=crop",
-    type: "CHECKIN" as const,
-  },
-  {
-    label: "KM Gösterge Paneli",
-    url: "https://images.unsplash.com/photo-1590362891991-f776e747a588?q=80&w=1200&auto=format&fit=crop",
-    type: "CHECKIN" as const,
-  },
-  {
-    label: "Fren / Disk Hasar Tespiti",
-    url: "https://images.unsplash.com/photo-1486006920555-c77dce18193b?q=80&w=1200&auto=format&fit=crop",
-    type: "DAMAGE" as const,
-  },
-  {
-    label: "Motor Bölümü Bakımı",
-    url: "https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?q=80&w=1200&auto=format&fit=crop",
-    type: "COMPLETED" as const,
-  },
-]
+function getDisplayUrl(url?: string): string {
+  if (!url) return "/brand/worksauto-icon-white-tight.png"
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
+    return url
+  }
+  return `/api/v1/media/files/${url}`
+}
 
-export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
+export function PhotoGallery({
+  photos,
+  onUploadPhoto,
+  onUpdatePhoto,
+  onDeletePhoto,
+  isLocked = false,
+}: PhotoGalleryProps) {
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
-  const [captionInput, setCaptionInput] = React.useState("")
-  const [photoType, setPhotoType] = React.useState<"CHECKIN" | "DAMAGE" | "COMPLETED">("CHECKIN")
-  const [selectedPresetUrl, setSelectedPresetUrl] = React.useState<string>(SAMPLE_PRESETS[0].url)
+  const [activeTab, setActiveTab] = React.useState<"ALL" | "CHECKIN" | "DAMAGE" | "COMPLETED">("ALL")
   const [isAdding, setIsAdding] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
+
+  // Upload Form State
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = React.useState<string | null>(null)
+  const [captionInput, setCaptionInput] = React.useState("")
+  const [photoType, setPhotoType] = React.useState<"CHECKIN" | "DAMAGE" | "COMPLETED">("CHECKIN")
+  const [isUploading, setIsUploading] = React.useState(false)
+
+  // Edit Modal State
+  const [editingPhoto, setEditingPhoto] = React.useState<WorkOrderPhoto | null>(null)
+  const [editCaption, setEditCaption] = React.useState("")
+  const [editType, setEditType] = React.useState<"CHECKIN" | "DAMAGE" | "COMPLETED">("CHECKIN")
+  const [isUpdating, setIsUpdating] = React.useState(false)
+
+  // Deleting State
+  const [deletingId, setDeletingId] = React.useState<string | null>(null)
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
-  // Keyboard navigation for lightbox (Arrow keys & Escape)
+  // Keyboard navigation for lightbox
   React.useEffect(() => {
     if (lightboxIndex === null) return
 
@@ -81,31 +96,116 @@ export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
     }
   }, [lightboxIndex, photos.length])
 
-  const handleSimulateUpload = (e: React.FormEvent) => {
+  // Filter photos by tab
+  const filteredPhotos = React.useMemo(() => {
+    if (activeTab === "ALL") return photos
+    return photos.filter((p) => (p.type || p.photoType || "CHECKIN") === activeTab)
+  }, [photos, activeTab])
+
+  const counts = React.useMemo(() => {
+    return {
+      ALL: photos.length,
+      CHECKIN: photos.filter((p) => (p.type || p.photoType || "CHECKIN") === "CHECKIN").length,
+      DAMAGE: photos.filter((p) => (p.type || p.photoType) === "DAMAGE").length,
+      COMPLETED: photos.filter((p) => (p.type || p.photoType) === "COMPLETED").length,
+    }
+  }, [photos])
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setSelectedFile(file)
+    setPreviewUrl(URL.createObjectURL(file))
+    if (!captionInput.trim()) {
+      setCaptionInput(
+        photoType === "CHECKIN"
+          ? "Araç kabul görseli"
+          : photoType === "DAMAGE"
+          ? "Kaporta hasar tespiti"
+          : "İşlem tamamlandı kontrolü"
+      )
+    }
+  }
+
+  const handleClearSelectedFile = () => {
+    setSelectedFile(null)
+    if (previewUrl) {
+      URL.revokeObjectURL(previewUrl)
+      setPreviewUrl(null)
+    }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ""
+    }
+  }
+
+  const handleUploadSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    onAddPhoto(
-      captionInput.trim() || "Araç kabul / hasar fotoğrafı",
-      photoType,
-      selectedPresetUrl
-    )
-    setCaptionInput("")
-    setIsAdding(false)
+    if (!selectedFile || isUploading) return
+
+    setIsUploading(true)
+    try {
+      await onUploadPhoto(
+        selectedFile,
+        captionInput.trim() || "Araç görseli",
+        photoType
+      )
+      handleClearSelectedFile()
+      setCaptionInput("")
+      setIsAdding(false)
+    } finally {
+      setIsUploading(false)
+    }
+  }
+
+  const handleOpenEdit = (photo: WorkOrderPhoto, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    setEditingPhoto(photo)
+    setEditCaption(photo.caption || "")
+    setEditType((photo.type || photo.photoType || "CHECKIN") as "CHECKIN" | "DAMAGE" | "COMPLETED")
+  }
+
+  const handleSaveEdit = async () => {
+    if (!editingPhoto || !onUpdatePhoto || isUpdating) return
+    setIsUpdating(true)
+    try {
+      await onUpdatePhoto(editingPhoto.id, editCaption.trim(), editType)
+      setEditingPhoto(null)
+    } finally {
+      setIsUpdating(false)
+    }
+  }
+
+  const handleDeletePhoto = async (photoId: string, e?: React.MouseEvent) => {
+    e?.stopPropagation()
+    if (!onDeletePhoto || deletingId) return
+    if (!window.confirm("Bu fotoğrafı kalıcı olarak silmek istediğinize emin misiniz?")) return
+
+    setDeletingId(photoId)
+    try {
+      await onDeletePhoto(photoId)
+      if (lightboxIndex !== null) {
+        setLightboxIndex(null)
+      }
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   const activeLightboxPhoto = lightboxIndex !== null ? photos[lightboxIndex] : null
 
   return (
     <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs space-y-4">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-200/70 dark:border-slate-800/70">
-        <div className="flex items-center gap-2">
+      {/* Top Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/70 dark:border-slate-800/70">
+        <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
             <Camera size={16} />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <span>Araç Kabul & Hasar Fotoğrafları</span>
-              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
                 {photos.length}
               </span>
             </h3>
@@ -115,23 +215,131 @@ export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
           </div>
         </div>
 
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => setIsAdding(!isAdding)}
-          className="h-8 px-3 text-xs font-semibold gap-1.5 cursor-pointer"
-        >
-          <Plus size={13} />
-          <span>Fotoğraf Çek / Yükle</span>
-        </Button>
+        {!isLocked && (
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => setIsAdding(!isAdding)}
+            className="h-8 px-3 text-xs font-semibold gap-1.5 cursor-pointer bg-sky-600 hover:bg-sky-700 text-white self-start sm:self-auto"
+          >
+            {isAdding ? <X size={13} /> : <Plus size={13} />}
+            <span>{isAdding ? "Vazgeç" : "Fotoğraf Çek / Yükle"}</span>
+          </Button>
+        )}
       </div>
 
-      {/* Upload Box */}
+      {/* Category Filter Tabs */}
+      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+        <button
+          type="button"
+          onClick={() => setActiveTab("ALL")}
+          className={cn(
+            "px-3 py-1 rounded-xl font-semibold transition-all cursor-pointer text-[11px] whitespace-nowrap",
+            activeTab === "ALL"
+              ? "bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 shadow-xs"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          )}
+        >
+          Tümü ({counts.ALL})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("CHECKIN")}
+          className={cn(
+            "px-3 py-1 rounded-xl font-semibold transition-all cursor-pointer text-[11px] whitespace-nowrap",
+            activeTab === "CHECKIN"
+              ? "bg-sky-600 text-white shadow-xs"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          )}
+        >
+          Araç Kabul ({counts.CHECKIN})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("DAMAGE")}
+          className={cn(
+            "px-3 py-1 rounded-xl font-semibold transition-all cursor-pointer text-[11px] whitespace-nowrap",
+            activeTab === "DAMAGE"
+              ? "bg-amber-600 text-white shadow-xs"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          )}
+        >
+          Hasar & Çizik ({counts.DAMAGE})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("COMPLETED")}
+          className={cn(
+            "px-3 py-1 rounded-xl font-semibold transition-all cursor-pointer text-[11px] whitespace-nowrap",
+            activeTab === "COMPLETED"
+              ? "bg-emerald-600 text-white shadow-xs"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          )}
+        >
+          Tamamlanan ({counts.COMPLETED})
+        </button>
+      </div>
+
+      {/* Real Upload Box */}
       {isAdding && (
         <form
-          onSubmit={handleSimulateUpload}
-          className="p-4 rounded-2xl bg-sky-500/5 border border-sky-500/20 space-y-3 animate-in fade-in duration-200"
+          onSubmit={handleUploadSubmit}
+          className="p-4 rounded-2xl bg-sky-500/5 border border-sky-500/20 space-y-3.5 animate-in fade-in duration-200"
         >
+          {/* File selection / camera input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handleFileChange}
+            className="hidden"
+          />
+
+          {!previewUrl ? (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-sky-400/40 hover:border-sky-500 rounded-2xl p-6 text-center cursor-pointer bg-white/60 dark:bg-slate-900/60 hover:bg-sky-50/50 dark:hover:bg-sky-950/20 transition-all flex flex-col items-center justify-center gap-2"
+            >
+              <div className="w-11 h-11 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+                <UploadCloud size={22} />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                  Fotoğraf çekmek veya yüklemek için tıklayın
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  Kamera ile çekebilir veya galeriden seçebilirsiniz (JPG, PNG, WEBP)
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <img
+                src={previewUrl}
+                alt="Önizleme"
+                className="w-16 h-16 rounded-lg object-cover border border-slate-200 dark:border-slate-800"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                  {selectedFile?.name}
+                </p>
+                <p className="text-[10px] text-slate-400">
+                  {selectedFile ? `${(selectedFile.size / 1024).toFixed(1)} KB` : ""}
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleClearSelectedFile}
+                className="text-xs text-rose-500 hover:text-rose-600 hover:bg-rose-50"
+              >
+                Değiştir
+              </Button>
+            </div>
+          )}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
@@ -158,35 +366,7 @@ export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
                 value={captionInput}
                 onChange={(e) => setCaptionInput(e.target.value)}
                 className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
-                autoFocus
               />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
-              Örnek Görsel Şablonu
-            </label>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {SAMPLE_PRESETS.map((preset) => (
-                <button
-                  key={preset.label}
-                  type="button"
-                  onClick={() => {
-                    setSelectedPresetUrl(preset.url)
-                    setPhotoType(preset.type)
-                    if (!captionInput) setCaptionInput(preset.label)
-                  }}
-                  className={cn(
-                    "p-2 rounded-xl border text-[10px] font-semibold text-left transition-all cursor-pointer truncate",
-                    selectedPresetUrl === preset.url
-                      ? "border-sky-500 bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold shadow-xs"
-                      : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  )}
-                >
-                  {preset.label}
-                </button>
-              ))}
             </div>
           </div>
 
@@ -195,85 +375,233 @@ export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => setIsAdding(false)}
+              onClick={() => {
+                setIsAdding(false)
+                handleClearSelectedFile()
+              }}
+              disabled={isUploading}
               className="h-8 text-xs cursor-pointer"
             >
               Vazgeç
             </Button>
-            <Button type="submit" size="sm" className="h-8 px-4 text-xs font-bold gap-1 cursor-pointer">
-              <Camera size={13} />
-              <span>Fotoğrafı Kaydet</span>
+            <Button
+              type="submit"
+              size="sm"
+              disabled={!selectedFile || isUploading}
+              className="h-8 px-4 text-xs font-bold gap-1.5 cursor-pointer bg-sky-600 hover:bg-sky-700 text-white"
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 size={13} className="animate-spin" />
+                  <span>Yükleniyor...</span>
+                </>
+              ) : (
+                <>
+                  <Camera size={13} />
+                  <span>Fotoğrafı Kaydet</span>
+                </>
+              )}
             </Button>
           </div>
         </form>
       )}
 
-      {/* Modern Visual Grid */}
+      {/* Visual Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {photos.length === 0 ? (
-          <div className="col-span-full py-10 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl text-slate-400 text-xs flex flex-col items-center justify-center gap-1">
-            <Camera size={24} className="opacity-40 mb-1" />
-            <span>Henüz araç fotoğrafı yüklenmemiş.</span>
+        {filteredPhotos.length === 0 ? (
+          <div className="col-span-full py-12 text-center border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-3xl text-slate-400 text-xs flex flex-col items-center justify-center gap-1.5">
+            <Camera size={26} className="opacity-40 mb-1 text-slate-400" />
+            <span className="font-medium">
+              {photos.length === 0
+                ? "Henüz araç fotoğrafı yüklenmemiş."
+                : "Bu kategoride kayıtlı fotoğraf bulunmuyor."}
+            </span>
+            <span className="text-[10px] text-slate-400">
+              Araç kabul, hasar tespiti veya işlem bitiminde görsel ekleyin.
+            </span>
           </div>
         ) : (
-          photos.map((photo, idx) => (
-            <div
-              key={photo.id}
-              onClick={() => setLightboxIndex(idx)}
-              className="group relative rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 bg-slate-950 aspect-[4/3] cursor-pointer hover:border-sky-500/70 shadow-xs hover:shadow-md transition-all duration-300"
-            >
-              {/* Actual Image */}
-              <img
-                src={photo.url}
-                alt={photo.caption}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                loading="lazy"
-              />
+          filteredPhotos.map((photo, idx) => {
+            const displayUrl = getDisplayUrl(photo.url)
+            const type = photo.type || photo.photoType || "CHECKIN"
 
-              {/* Gradient Scrim */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/20 to-transparent pointer-events-none" />
+            return (
+              <div
+                key={photo.id}
+                onClick={() => setLightboxIndex(idx)}
+                className="group relative rounded-2xl overflow-hidden border border-slate-200/80 dark:border-slate-800/80 bg-slate-950 aspect-[4/3] cursor-pointer hover:border-sky-500/70 shadow-xs hover:shadow-md transition-all duration-300"
+              >
+                {/* Actual Image */}
+                <img
+                  src={displayUrl}
+                  alt={photo.caption || "Araç Fotoğrafı"}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
+                  onError={(e) => {
+                    // Fallback on error
+                    ;(e.target as HTMLImageElement).src = "/brand/worksauto-icon-white-tight.png"
+                  }}
+                />
 
-              {/* Type Badge on Top Left */}
-              <div className="absolute top-2 left-2 pointer-events-none">
-                {photo.type === "CHECKIN" && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-sky-500/90 text-white shadow-xs backdrop-blur-xs">
-                    Kabul
-                  </span>
+                {/* Gradient Scrim */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-950/25 to-transparent pointer-events-none" />
+
+                {/* Type Badge on Top Left */}
+                <div className="absolute top-2 left-2 pointer-events-none">
+                  {type === "CHECKIN" && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-sky-500/90 text-white shadow-xs backdrop-blur-xs">
+                      Kabul
+                    </span>
+                  )}
+                  {type === "DAMAGE" && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/90 text-white shadow-xs backdrop-blur-xs flex items-center gap-1">
+                      <ShieldAlert size={10} />
+                      <span>Hasar</span>
+                    </span>
+                  )}
+                  {type === "COMPLETED" && (
+                    <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/90 text-white shadow-xs backdrop-blur-xs flex items-center gap-1">
+                      <CheckCircle2 size={10} />
+                      <span>Bitti</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Top Right Actions (Edit / Delete) */}
+                {!isLocked && (
+                  <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                    {onUpdatePhoto && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleOpenEdit(photo, e)}
+                        className="w-7 h-7 rounded-lg bg-slate-900/80 hover:bg-sky-600 text-white flex items-center justify-center transition-colors shadow-xs"
+                        title="Fotoğrafı Düzenle"
+                      >
+                        <Edit2 size={12} />
+                      </button>
+                    )}
+                    {onDeletePhoto && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeletePhoto(photo.id, e)}
+                        className="w-7 h-7 rounded-lg bg-slate-900/80 hover:bg-rose-600 text-white flex items-center justify-center transition-colors shadow-xs"
+                        title="Fotoğrafı Sil"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
                 )}
-                {photo.type === "DAMAGE" && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/90 text-white shadow-xs backdrop-blur-xs flex items-center gap-1">
-                    <ShieldAlert size={10} />
-                    <span>Hasar / Çizik</span>
-                  </span>
-                )}
-                {photo.type === "COMPLETED" && (
-                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/90 text-white shadow-xs backdrop-blur-xs flex items-center gap-1">
-                    <CheckCircle2 size={10} />
-                    <span>Bitti</span>
-                  </span>
-                )}
-              </div>
 
-              {/* Bottom Caption */}
-              <div className="absolute bottom-2 left-2 right-2 text-white pointer-events-none">
-                <p className="text-[11px] font-semibold truncate drop-shadow-xs">
-                  {photo.caption}
-                </p>
-                <p className="text-[9px] text-slate-300 drop-shadow-xs flex items-center gap-1 mt-0.5">
-                  <span>{photo.uploaderName}</span>
-                </p>
-              </div>
+                {/* Bottom Caption */}
+                <div className="absolute bottom-2 left-2 right-2 text-white pointer-events-none">
+                  <p className="text-[11px] font-semibold truncate drop-shadow-xs">
+                    {photo.caption}
+                  </p>
+                  <p className="text-[9px] text-slate-300 drop-shadow-xs flex items-center gap-1 mt-0.5">
+                    <span>{photo.uploaderName || photo.uploadedBy || "Personel"}</span>
+                  </p>
+                </div>
 
-              {/* Hover Overlay Icon */}
-              <div className="absolute inset-0 bg-slate-950/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                <div className="w-9 h-9 rounded-full bg-white/25 backdrop-blur-md text-white flex items-center justify-center shadow-lg">
-                  <Maximize2 size={16} />
+                {/* Center Hover Icon */}
+                <div className="absolute inset-0 bg-slate-950/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
+                  <div className="w-8 h-8 rounded-full bg-white/25 backdrop-blur-md text-white flex items-center justify-center shadow-lg">
+                    <Maximize2 size={15} />
+                  </div>
                 </div>
               </div>
-            </div>
-          ))
+            )
+          })
         )}
       </div>
+
+      {/* Edit Photo Dialog */}
+      {editingPhoto && (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setEditingPhoto(null)}
+        >
+          <div
+            className="w-full max-w-md p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200/70 dark:border-slate-800/70">
+              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Edit2 size={15} className="text-sky-500" />
+                <span>Fotoğraf Bilgilerini Düzenle</span>
+              </h4>
+              <button
+                type="button"
+                onClick={() => setEditingPhoto(null)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex justify-center">
+                <img
+                  src={getDisplayUrl(editingPhoto.url)}
+                  alt="Fotoğraf"
+                  className="h-32 w-auto object-cover rounded-xl border border-slate-200 dark:border-slate-800"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                  Fotoğraf Türü
+                </label>
+                <select
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value as "CHECKIN" | "DAMAGE" | "COMPLETED")}
+                  className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+                >
+                  <option value="CHECKIN">Araç Kabul (KM / Ön-Arka)</option>
+                  <option value="DAMAGE">Mevcut Hasar / Kaporta Çiziği</option>
+                  <option value="COMPLETED">İşlem Tamamlandı / Hazır</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                  Açıklama / Not
+                </label>
+                <input
+                  type="text"
+                  value={editCaption}
+                  onChange={(e) => setEditCaption(e.target.value)}
+                  placeholder="Fotoğraf açıklaması..."
+                  className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200/70 dark:border-slate-800/70">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setEditingPhoto(null)}
+                disabled={isUpdating}
+                className="h-8 text-xs cursor-pointer"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={handleSaveEdit}
+                disabled={isUpdating || !editCaption.trim()}
+                className="h-8 px-4 text-xs font-bold gap-1 cursor-pointer bg-sky-600 hover:bg-sky-700 text-white"
+              >
+                {isUpdating ? <Loader2 size={13} className="animate-spin mr-1" /> : <Check size={13} className="mr-1" />}
+                <span>Kaydet</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Cinematic Fullscreen Lightbox Modal */}
       {mounted &&
@@ -294,18 +622,18 @@ export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
                     <h4 className="text-sm font-bold text-white">
                       {activeLightboxPhoto.caption}
                     </h4>
-                    {activeLightboxPhoto.type === "CHECKIN" && (
+                    {(activeLightboxPhoto.type || activeLightboxPhoto.photoType) === "CHECKIN" && (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-400 border border-sky-500/30">
                         Araç Kabul Fotoğrafı
                       </span>
                     )}
-                    {activeLightboxPhoto.type === "DAMAGE" && (
+                    {(activeLightboxPhoto.type || activeLightboxPhoto.photoType) === "DAMAGE" && (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center gap-1">
                         <ShieldAlert size={11} />
-                        <span>Mevcut Hasar / Ekspertiz Tespiti</span>
+                        <span>Mevcut Hasar Tespiti</span>
                       </span>
                     )}
-                    {activeLightboxPhoto.type === "COMPLETED" && (
+                    {(activeLightboxPhoto.type || activeLightboxPhoto.photoType) === "COMPLETED" && (
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                         <CheckCircle2 size={11} />
                         <span>Tamamlanan İşlem</span>
@@ -315,19 +643,43 @@ export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
                   <div className="flex items-center gap-3 text-[11px] text-slate-400">
                     <span className="flex items-center gap-1">
                       <User size={12} />
-                      <span>{activeLightboxPhoto.uploaderName}</span>
+                      <span>{activeLightboxPhoto.uploaderName || activeLightboxPhoto.uploadedBy || "Personel"}</span>
                     </span>
                     <span>•</span>
                     <span className="flex items-center gap-1">
                       <Calendar size={12} />
-                      <span>{new Date(activeLightboxPhoto.uploadedAt || activeLightboxPhoto.createdAt || Date.now()).toLocaleString("tr-TR")}</span>
+                      <span>
+                        {new Date(
+                          activeLightboxPhoto.uploadedAt || activeLightboxPhoto.createdAt || Date.now()
+                        ).toLocaleString("tr-TR")}
+                      </span>
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {!isLocked && onUpdatePhoto && (
+                    <button
+                      type="button"
+                      onClick={() => handleOpenEdit(activeLightboxPhoto)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-sky-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                      title="Fotoğrafı Düzenle"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                  )}
+                  {!isLocked && onDeletePhoto && (
+                    <button
+                      type="button"
+                      onClick={() => handleDeletePhoto(activeLightboxPhoto.id)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors cursor-pointer"
+                      title="Fotoğrafı Sil"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  )}
                   <a
-                    href={activeLightboxPhoto.url}
+                    href={getDisplayUrl(activeLightboxPhoto.url)}
                     target="_blank"
                     rel="noreferrer"
                     className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
@@ -349,7 +701,7 @@ export function PhotoGallery({ photos, onAddPhoto }: PhotoGalleryProps) {
               {/* Main Photo Showcase */}
               <div className="relative w-full bg-black/60 flex items-center justify-center p-2 min-h-[350px] max-h-[65vh] overflow-hidden select-none">
                 <img
-                  src={activeLightboxPhoto.url}
+                  src={getDisplayUrl(activeLightboxPhoto.url)}
                   alt={activeLightboxPhoto.caption}
                   className="max-h-[60vh] w-auto max-w-full object-contain rounded-xl shadow-2xl"
                 />

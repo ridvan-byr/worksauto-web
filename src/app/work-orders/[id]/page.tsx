@@ -6,6 +6,13 @@ import {
   useUpdateWorkOrderStatus,
   useRemoveWorkOrderItem,
   useUpdateWorkOrderItemQuantity,
+  useUpdateWorkOrderItem,
+  useAddWorkOrderNote,
+  useUpdateWorkOrderNote,
+  useDeleteWorkOrderNote,
+  useUploadWorkOrderPhoto,
+  useUpdateWorkOrderPhoto,
+  useDeleteWorkOrderPhoto,
 } from "@/features/work-orders/api/use-work-orders"
 import { useProducts, type ProductRecord } from "@/features/inventory/api/use-inventory"
 
@@ -22,6 +29,7 @@ import {
   Plus,
   Minus,
   Trash2,
+  Edit2,
   Loader2,
   Receipt,
   FileText,
@@ -92,9 +100,18 @@ export default function WorkOrderDetailPage() {
   const updateStatusMutation = useUpdateWorkOrderStatus()
   const removeItemMutation = useRemoveWorkOrderItem()
   const updateQuantityMutation = useUpdateWorkOrderItemQuantity()
+  const updateItemMutation = useUpdateWorkOrderItem()
+  const addNoteMutation = useAddWorkOrderNote()
+  const updateNoteMutation = useUpdateWorkOrderNote()
+  const deleteNoteMutation = useDeleteWorkOrderNote()
+  const uploadPhotoMutation = useUploadWorkOrderPhoto()
+  const updatePhotoMutation = useUpdateWorkOrderPhoto()
+  const deletePhotoMutation = useDeleteWorkOrderPhoto()
 
   const [updatingItemId, setUpdatingItemId] = React.useState<string | null>(null)
   const [deletingItemId, setDeletingItemId] = React.useState<string | null>(null)
+  const [editingService, setEditingService] = React.useState<{ id: string; name: string; laborPrice: number } | null>(null)
+  const [isUpdatingService, setIsUpdatingService] = React.useState(false)
 
   React.useEffect(() => {
     if (apiOrder) {
@@ -142,20 +159,24 @@ export default function WorkOrderDetailPage() {
         assignedMechanicName: apiOrder.assignedMechanic?.user ? `${apiOrder.assignedMechanic.user.name} ${apiOrder.assignedMechanic.user.surname}` : 'Usta',
         services: servicesList,
         parts: partsList,
-        notes: (apiOrder.notes || []).map((n) => ({
+        notes: (apiOrder.notes || []).map((n: any) => ({
           id: n.id,
+          authorId: n.authorId || null,
           authorName: n.authorName || 'Usta',
-          text: n.note || n.text || '',
+          text: n.text || n.note || '',
           createdAt: n.createdAt,
-          isInternal: true,
+          updatedAt: n.updatedAt || null,
+          isInternal: n.isInternal ?? true,
         })),
-        photos: (apiOrder.photos || []).map((p) => ({
+        photos: (apiOrder.photos || []).map((p: any) => ({
           id: p.id,
           url: p.url,
           caption: p.caption || '',
           uploadedAt: p.createdAt || new Date().toISOString(),
           uploaderName: p.uploadedBy || 'Usta',
-          type: (p.type || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
+          type: (p.photoType || p.type || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
+          photoType: (p.photoType || p.type || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
+          updatedAt: p.updatedAt || null,
         })),
         laborTotal: computedLaborTotal,
         partsTotal: computedPartsTotal,
@@ -319,42 +340,108 @@ export default function WorkOrderDetailPage() {
     setIsCustomPartMode(false)
   }
 
-  const handleAddNote = (text: string) => {
-    setOrder((prev) => {
-      if (!prev) return null
-      return {
-        ...prev,
-        notes: [
-          ...prev.notes,
-          {
-            id: 'note_' + Date.now(),
-            authorName: prev.assignedMechanicName || 'Usta',
-            text: text,
-            createdAt: new Date().toISOString(),
-            isInternal: true,
-          },
-        ],
-      }
+  const handleStartEditService = (srv: { id: string; name: string; laborPrice: number }) => {
+    setEditingService({ id: srv.id, name: srv.name, laborPrice: srv.laborPrice })
+  }
+
+  const handleSaveEditService = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!order || !editingService || !editingService.name.trim() || isUpdatingService) return
+
+    setIsUpdatingService(true)
+    const price = Number(editingService.laborPrice) || 0
+    try {
+      await updateItemMutation.mutateAsync({
+        workOrderId: order.id,
+        itemId: editingService.id,
+        data: {
+          name: editingService.name.trim(),
+          unitPrice: price,
+        },
+      })
+      setOrder((prev) => {
+        if (!prev) return null
+        const updatedServices = prev.services.map((s) =>
+          s.id === editingService.id
+            ? { ...s, name: editingService.name.trim(), laborPrice: price }
+            : s
+        )
+        const newLaborTotal = updatedServices.reduce((sum, s) => sum + s.laborPrice, 0)
+        const newGrandTotal = (newLaborTotal + prev.partsTotal) * 1.2
+        return {
+          ...prev,
+          services: updatedServices,
+          laborTotal: newLaborTotal,
+          grandTotal: newGrandTotal,
+        }
+      })
+      setEditingService(null)
+    } catch (err) {
+      console.error("Failed to update service:", err)
+    } finally {
+      setIsUpdatingService(false)
+    }
+  }
+
+  const handleAddNote = async (text: string) => {
+    if (!order) return
+    await addNoteMutation.mutateAsync({
+      workOrderId: order.id,
+      text,
+      isInternal: true,
     })
   }
 
-  const handleAddPhoto = (caption: string, type: "CHECKIN" | "DAMAGE" | "COMPLETED", url?: string) => {
-    setOrder((prev) => {
-      if (!prev) return null
-      return {
-        ...prev,
-        photos: [
-          ...prev.photos,
-          {
-            id: 'photo_' + Date.now(),
-            url: url || "/brand/worksauto-icon-white-tight.png",
-            caption,
-            uploadedAt: new Date().toISOString(),
-            uploaderName: prev.assignedMechanicName || "Usta",
-            type,
-          },
-        ],
-      }
+  const handleUpdateNote = async (noteId: string, text: string) => {
+    if (!order) return
+    await updateNoteMutation.mutateAsync({
+      workOrderId: order.id,
+      noteId,
+      text,
+    })
+  }
+
+  const handleDeleteNote = async (noteId: string) => {
+    if (!order) return
+    await deleteNoteMutation.mutateAsync({
+      workOrderId: order.id,
+      noteId,
+    })
+  }
+
+  const handleUploadPhoto = async (
+    file: File,
+    caption: string,
+    photoType: "CHECKIN" | "DAMAGE" | "COMPLETED"
+  ) => {
+    if (!order) return
+    await uploadPhotoMutation.mutateAsync({
+      workOrderId: order.id,
+      file,
+      caption,
+      photoType,
+    })
+  }
+
+  const handleUpdatePhoto = async (
+    photoId: string,
+    caption: string,
+    photoType: "CHECKIN" | "DAMAGE" | "COMPLETED"
+  ) => {
+    if (!order) return
+    await updatePhotoMutation.mutateAsync({
+      workOrderId: order.id,
+      photoId,
+      caption,
+      photoType,
+    })
+  }
+
+  const handleDeletePhoto = async (photoId: string) => {
+    if (!order) return
+    await deletePhotoMutation.mutateAsync({
+      workOrderId: order.id,
+      photoId,
     })
   }
 
@@ -542,43 +629,109 @@ export default function WorkOrderDetailPage() {
                   Henüz işçilik veya işlem girilmedi.
                 </p>
               ) : (
-                order.services.map((srv) => (
-                  <div
-                    key={srv.id}
-                    className="p-3 rounded-2xl bg-slate-50/60 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between text-xs gap-3"
-                  >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-4 h-4 rounded-md bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                        <CheckCircle2 size={13} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-900 dark:text-slate-100 truncate">{srv.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">~{srv.durationMinutes} dakika</p>
-                      </div>
-                    </div>
+                order.services.map((srv) => {
+                  const isEditingThis = editingService?.id === srv.id
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
-                        {srv.laborPrice.toLocaleString("tr-TR")} ₺
-                      </span>
-                      {!isOrderLocked && (
-                        <button
-                          type="button"
-                          disabled={deletingItemId === srv.id}
-                          onClick={() => handleRemoveItem(srv.id, srv.name)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer disabled:opacity-50"
-                          title="İşçiliği Sil"
-                        >
-                          {deletingItemId === srv.id ? (
-                            <Loader2 size={14} className="animate-spin text-rose-500" />
-                          ) : (
-                            <Trash2 size={14} />
-                          )}
-                        </button>
-                      )}
+                  if (isEditingThis) {
+                    return (
+                      <form
+                        key={srv.id}
+                        onSubmit={handleSaveEditService}
+                        className="p-3 rounded-2xl bg-sky-500/5 border border-sky-500/30 flex flex-col sm:flex-row gap-2 items-center text-xs animate-in fade-in duration-200"
+                      >
+                        <input
+                          type="text"
+                          value={editingService.name}
+                          onChange={(e) => setEditingService({ ...editingService, name: e.target.value })}
+                          className="flex-1 h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs w-full"
+                          required
+                          autoFocus
+                        />
+                        <input
+                          type="number"
+                          value={editingService.laborPrice}
+                          onChange={(e) => setEditingService({ ...editingService, laborPrice: Number(e.target.value) })}
+                          className="w-full sm:w-28 h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono font-bold"
+                          required
+                          min={0}
+                        />
+                        <div className="flex gap-1.5 self-end sm:self-auto">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditingService(null)}
+                            disabled={isUpdatingService}
+                            className="h-9 text-xs"
+                          >
+                            Vazgeç
+                          </Button>
+                          <Button
+                            type="submit"
+                            size="sm"
+                            disabled={isUpdatingService || !editingService.name.trim()}
+                            className="h-9 px-3.5 text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white"
+                          >
+                            {isUpdatingService ? (
+                              <Loader2 size={13} className="animate-spin mr-1" />
+                            ) : (
+                              <Check size={13} className="mr-1" />
+                            )}
+                            <span>Kaydet</span>
+                          </Button>
+                        </div>
+                      </form>
+                    )
+                  }
+
+                  return (
+                    <div
+                      key={srv.id}
+                      className="p-3 rounded-2xl bg-slate-50/60 dark:bg-slate-950/40 border border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between text-xs gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-4 h-4 rounded-md bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                          <CheckCircle2 size={13} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 dark:text-slate-100 truncate">{srv.name}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">~{srv.durationMinutes} dakika</p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100">
+                          {srv.laborPrice.toLocaleString("tr-TR")} ₺
+                        </span>
+                        {!isOrderLocked && (
+                          <div className="flex items-center gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditService({ id: srv.id, name: srv.name, laborPrice: srv.laborPrice })}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/30 transition-colors cursor-pointer"
+                              title="İşçiliği Düzenle"
+                            >
+                              <Edit2 size={13} />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={deletingItemId === srv.id}
+                              onClick={() => handleRemoveItem(srv.id, srv.name)}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer disabled:opacity-50"
+                              title="İşçiliği Sil"
+                            >
+                              {deletingItemId === srv.id ? (
+                                <Loader2 size={13} className="animate-spin text-rose-500" />
+                              ) : (
+                                <Trash2 size={13} />
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </div>
           </div>
@@ -963,7 +1116,13 @@ export default function WorkOrderDetailPage() {
           </div>
 
           {/* SECTION 3: PHOTOS */}
-          <PhotoGallery photos={order.photos} onAddPhoto={handleAddPhoto} />
+          <PhotoGallery
+            photos={order.photos}
+            onUploadPhoto={handleUploadPhoto}
+            onUpdatePhoto={handleUpdatePhoto}
+            onDeletePhoto={handleDeletePhoto}
+            isLocked={isOrderLocked}
+          />
         </div>
 
         {/* Right 1 Column: Cost Summary Card & Technician Notes */}
@@ -1011,7 +1170,13 @@ export default function WorkOrderDetailPage() {
           </div>
 
           {/* Internal Technician Notes Stream */}
-          <TechnicianNotes notes={order.notes} onAddNote={handleAddNote} />
+          <TechnicianNotes
+            notes={order.notes}
+            onAddNote={handleAddNote}
+            onUpdateNote={handleUpdateNote}
+            onDeleteNote={handleDeleteNote}
+            isLocked={isOrderLocked}
+          />
         </div>
       </div>
     </div>
