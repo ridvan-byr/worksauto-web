@@ -24,7 +24,7 @@ interface AppointmentDetailModalProps {
   isOpen: boolean
   appointment: Appointment | null
   onClose: () => void
-  onConvertToWorkOrder: (id: string) => { success: boolean; workOrderNumber: string }
+  onConvertToWorkOrder: (id: string) => Promise<{ success: boolean; workOrderNumber: string }> | { success: boolean; workOrderNumber: string }
   onReschedule: (id: string, newDate: string, newTime: string) => void
   onCancel: (id: string, reason: CancellationReason, note?: string) => void
   onMarkNoShow: (id: string) => void
@@ -87,8 +87,8 @@ export function AppointmentDetailModal({
 
   if (!isOpen || !mounted || !appointment) return null
 
-  const handleStartWorkOrder = () => {
-    const res = onConvertToWorkOrder(appointment.id)
+  const handleStartWorkOrder = async () => {
+    const res = await onConvertToWorkOrder(appointment.id)
     if (res.success) {
       setCreatedWONumber(res.workOrderNumber)
     }

@@ -34,6 +34,47 @@ export function useCreateAppointment() {
   });
 }
 
+export interface RescheduleAppointmentInput {
+  id: string;
+  slotDate: string;
+  slotStartTime: string;
+  slotEndTime: string;
+  assignedMechanicId?: string;
+  assignedLift?: string;
+}
+
+export function useRescheduleAppointment() {
+  const queryClient = useQueryClient();
+  return useMutation<Appointment, Error, RescheduleAppointmentInput>({
+    mutationFn: ({ id, ...data }) =>
+      apiClient.post<Appointment>(`/appointments/${id}/reschedule`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      toast.success('Randevu başarıyla ertelendi / yeniden planlandı.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Randevu ertelenirken bir hata oluştu.');
+    },
+  });
+}
+
+export function useApproveAppointment() {
+  const queryClient = useQueryClient();
+  return useMutation<Appointment, Error, string>({
+    mutationFn: (id: string) =>
+      apiClient.post<Appointment>(`/appointments/${id}/approve`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['appointments'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      toast.success('Randevu onaylandı.');
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Randevu onaylanırken bir hata oluştu.');
+    },
+  });
+}
+
 export function useUpdateAppointmentStatus() {
   const queryClient = useQueryClient();
   return useMutation<Appointment, Error, { id: string; status: AppointmentStatus | string; cancellationReason?: string }>({

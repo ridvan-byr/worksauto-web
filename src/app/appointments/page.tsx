@@ -1,6 +1,12 @@
 "use client"
 
-import { useAppointments, useMarkNoShow, useCancelAppointment } from "@/features/appointments/api/use-appointments"
+import {
+  useAppointments,
+  useMarkNoShow,
+  useCancelAppointment,
+  useRescheduleAppointment,
+  useApproveAppointment,
+} from "@/features/appointments/api/use-appointments"
 
 import * as React from "react"
 import {
@@ -47,6 +53,8 @@ export default function AppointmentsPage() {
   const { data: apiAppointments } = useAppointments()
   const markNoShowMutation = useMarkNoShow()
   const cancelAppointmentMutation = useCancelAppointment()
+  const rescheduleAppointmentMutation = useRescheduleAppointment()
+  const approveAppointmentMutation = useApproveAppointment()
 
   // Pure Live API sync (100% PostgreSQL) with deduplication
   React.useEffect(() => {
@@ -56,6 +64,16 @@ export default function AppointmentsPage() {
       for (const a of apiAppointments as AppointmentRecord[]) {
         if (!a.id || seen.has(a.id)) continue
         seen.add(a.id)
+
+        const slotDateObj = new Date(a.slotStartTime || a.slotDate)
+        const yr = slotDateObj.getFullYear()
+        const mo = String(slotDateObj.getMonth() + 1).padStart(2, "0")
+        const dy = String(slotDateObj.getDate()).padStart(2, "0")
+        const dateStr = `${yr}-${mo}-${dy}`
+        const hr = String(slotDateObj.getHours()).padStart(2, "0")
+        const mn = String(slotDateObj.getMinutes()).padStart(2, "0")
+        const timeStr = `${hr}:${mn}`
+
         mapped.push({
           id: a.id,
           tenantId: a.tenantId || 'ten_1',
@@ -71,8 +89,8 @@ export default function AppointmentsPage() {
           totalEstimatedPrice: Number(a.service?.basePrice || 750),
           assignedStaffId: a.assignedMechanicId,
           assignedStaffName: a.assignedMechanic?.user ? `${a.assignedMechanic.user.name} ${a.assignedMechanic.user.surname || ""}`.trim() : 'Usta',
-          date: new Date(a.slotDate).toISOString().split('T')[0],
-          time: new Date(a.slotStartTime).toTimeString().substring(0, 5),
+          date: dateStr,
+          time: timeStr,
           status: (a.status as AppointmentStatus) || "CONFIRMED",
           customerNote: a.customerNotes,
           cancellationReason: a.cancellationReason,
@@ -149,17 +167,57 @@ export default function AppointmentsPage() {
     setAppointments((prev) => [newApp, ...prev.filter((a) => a.id !== newApp.id)])
   }
 
-  const handleConvertToWorkOrder = (id: string) => {
+  const handleConvertToWorkOrder = async (id: string) => {
+    try {
+      await approveAppointmentMutation.mutateAsync(id)
+    } catch (e) {
+      console.warn('API approve appointment error:', e)
+    }
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, status: "APPROVED" as const } : a))
     )
+    if (activeAppointment && activeAppointment.id === id) {
+      setActiveAppointment((prev) => (prev ? { ...prev, status: "APPROVED" as const } : null))
+    }
     return { success: true, workOrderNumber: `WO-${Math.floor(1000 + Math.random() * 9000)}` }
   }
 
-  const handleReschedule = (id: string, newDate: string, newTime: string) => {
+  const handleReschedule = async (id: string, newDate: string, newTime: string) => {
+    const targetApp = appointments.find((a) => a.id === id)
+    const durationMin = targetApp?.totalDurationMinutes || 60
+    const [hours, minutes] = newTime.split(":").map(Number)
+    const [year, month, day] = newDate.split("-").map(Number)
+    const startDateTime = new Date(year, month - 1, day, hours || 0, minutes || 0, 0, 0)
+    const endDateTime = new Date(startDateTime.getTime() + durationMin * 60000)
+
+    // Optimistic UI update
     setAppointments((prev) =>
       prev.map((a) => (a.id === id ? { ...a, date: newDate, time: newTime } : a))
     )
+    if (activeAppointment && activeAppointment.id === id) {
+      setActiveAppointment((prev) => (prev ? { ...prev, date: newDate, time: newTime } : null))
+    }
+
+    try {
+      await rescheduleAppointmentMutation.mutateAsync({
+        id,
+        slotDate: newDate,
+        slotStartTime: startDateTime.toISOString(),
+        slotEndTime: endDateTime.toISOString(),
+        assignedMechanicId: targetApp?.assignedStaffId,
+      })
+    } catch (e) {
+      console.error('API reschedule appointment error:', e)
+      // Revert if mutation failed
+      if (targetApp) {
+        setAppointments((prev) =>
+          prev.map((a) => (a.id === id ? { ...a, date: targetApp.date, time: targetApp.time } : a))
+        )
+        if (activeAppointment && activeAppointment.id === id) {
+          setActiveAppointment((prev) => (prev ? { ...prev, date: targetApp.date, time: targetApp.time } : null))
+        }
+      }
+    }
   }
 
   const handleCancel = async (id: string, reason: CancellationReason, note?: string) => {
