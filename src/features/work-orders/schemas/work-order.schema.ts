@@ -42,8 +42,8 @@ export const createWorkOrderModalStep2Schema = z.object({
   laborPrice: z
     .number({ message: 'İşçilik ücreti sayı olmalıdır' })
     .min(0, 'İşçilik ücreti negatif olamaz.'),
-  assignedLift: z.string().min(1, 'Lift seçimi zorunludur.'),
-  assignedMechanic: z.string().min(1, 'Usta seçimi zorunludur.'),
+  assignedLift: z.string().optional().or(z.literal('')),
+  assignedMechanic: z.string().optional().or(z.literal('')),
 });
 
 export const createWorkOrderModalSchema = z.object({
@@ -53,8 +53,8 @@ export const createWorkOrderModalSchema = z.object({
   laborPrice: z
     .number({ message: 'İşçilik ücreti sayı olmalıdır' })
     .min(0, 'İşçilik ücreti negatif olamaz.'),
-  assignedLift: z.string().min(1, 'Lift seçimi zorunludur.'),
-  assignedMechanic: z.string().min(1, 'Usta seçimi zorunludur.'),
+  assignedLift: z.string().optional().or(z.literal('')),
+  assignedMechanic: z.string().optional().or(z.literal('')),
   priority: z.enum(['NORMAL', 'HIGH', 'URGENT']),
   initialNote: z.string().max(500).optional().or(z.literal('')),
 });

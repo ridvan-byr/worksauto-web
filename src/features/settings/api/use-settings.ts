@@ -161,11 +161,13 @@ export interface StaffRecord {
     role: string;
     isActive?: boolean;
     mechanic?: {
+      id?: string;
       assignedLift?: string;
       specialty?: string;
     };
   };
   mechanic?: {
+    id?: string;
     assignedLift?: string;
     specialty?: string;
   };

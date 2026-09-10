@@ -8,6 +8,8 @@ import { X, Wrench, Play, ArrowRight, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkOrder } from "../types"
 import { useCustomers } from "@/features/customers/api/use-customers"
+import { useCreateWorkOrder } from "@/features/work-orders/api/use-work-orders"
+import { useStaff, useWorkshopBays } from "@/features/settings/api/use-settings"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import {
   createWorkOrderModalSchema,
@@ -43,7 +45,12 @@ interface CreateWorkOrderModalProps {
 export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkOrderModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const [step, setStep] = React.useState<1 | 2>(1)
+  const [isSubmitting, setIsSubmitting] = React.useState(false)
+
   const { data: apiCustomers } = useCustomers()
+  const { data: staffList = [] } = useStaff()
+  const { data: bays = [] } = useWorkshopBays()
+  const createOrderMutation = useCreateWorkOrder()
 
   const customers: ModalCustomer[] = React.useMemo(() => {
     if (!apiCustomers) return []
@@ -79,8 +86,8 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
     defaultValues: {
       customerId: "",
       vehicleId: "",
-      assignedLift: "Lift 1 (Mekanik)",
-      assignedMechanic: "Ahmet Usta",
+      assignedLift: "",
+      assignedMechanic: "",
       priority: "NORMAL",
       serviceName: "Hızlı Arıza Tespiti & Genel Kontrol",
       laborPrice: 750,
@@ -139,66 +146,46 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
     }
   }
 
-  const onSubmit = (values: CreateWorkOrderModalValues) => {
+  const onSubmit = async (values: CreateWorkOrderModalValues) => {
     if (!selectedCustomer || !selectedVehicle) return
+    setIsSubmitting(true)
 
-    const newWONumber = "WO-2026-" + Math.floor(100 + Math.random() * 900)
-    const newOrder: WorkOrder = {
-      id: "wo_" + Date.now(),
-      workOrderNumber: newWONumber,
-      tenantId: "tenant_1",
-      customerId: selectedCustomer.id,
-      customerName:
-        selectedCustomer.type === "corporate" && selectedCustomer.companyTitle
-          ? selectedCustomer.companyTitle
-          : `${selectedCustomer.name} ${selectedCustomer.surname || ""}`.trim(),
-      customerPhone: selectedCustomer.phone,
-      vehicleId: selectedVehicle.id,
-      plate: selectedVehicle.plate,
-      brand: selectedVehicle.brand,
-      model: selectedVehicle.model,
-      year: selectedVehicle.year || new Date().getFullYear(),
-      kilometer: selectedVehicle.kilometer || 0,
-      vin: selectedVehicle.vin,
-      status: "IN_PROGRESS",
-      priority: values.priority,
-      assignedLift: values.assignedLift,
-      assignedMechanicName: values.assignedMechanic,
-      services: [
-        {
-          id: "srv_" + Date.now(),
-          name: values.serviceName,
-          durationMinutes: 45,
-          laborPrice: values.laborPrice,
-          completed: false,
-        },
-      ],
-      parts: [],
-      notes: values.initialNote?.trim()
-        ? [
-            {
-              id: "nt_" + Date.now(),
-              authorName: values.assignedMechanic,
-              text: values.initialNote.trim(),
-              createdAt: new Date().toISOString(),
-              isInternal: true,
-            },
-          ]
-        : [],
-      photos: [],
-      laborTotal: values.laborPrice,
-      partsTotal: 0,
-      taxRate: 0.2,
-      grandTotal: Math.round(values.laborPrice * 1.2),
-      estimatedCompletionTime: "Bugün, 17:00",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+    try {
+      // Find mechanic ID from staff list if assigned
+      let assignedMechanicId: string | undefined = undefined
+      if (values.assignedMechanic) {
+        const staffObj = staffList.find(
+          (s) => s.id === values.assignedMechanic || s.mechanic?.id === values.assignedMechanic
+        )
+        assignedMechanicId = staffObj?.mechanic?.id || staffObj?.id || values.assignedMechanic
+      }
+
+      const createdOrder = await createOrderMutation.mutateAsync({
+        customerId: selectedCustomer.id,
+        vehicleId: selectedVehicle.id,
+        assignedLift: values.assignedLift ? values.assignedLift : undefined,
+        assignedMechanicId: assignedMechanicId || undefined,
+        initialKm: Number(selectedVehicle.kilometer || 0),
+        items: [
+          {
+            itemType: "SERVICE",
+            name: values.serviceName,
+            quantity: 1,
+            unitPrice: Number(values.laborPrice || 0),
+            kdvRate: 20,
+          },
+        ],
+      })
+
+      onCreated(createdOrder)
+      reset()
+      setStep(1)
+      onClose()
+    } catch (err) {
+      console.error("İş emri oluşturulamadı:", err)
+    } finally {
+      setIsSubmitting(false)
     }
-
-    onCreated(newOrder)
-    reset()
-    setStep(1)
-    onClose()
   }
 
   const modalContent = (
@@ -323,16 +310,26 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                  Atanan Lift <span className="text-rose-500">*</span>
+                  Atanan Lift
                 </label>
                 <select
                   {...register("assignedLift")}
                   className="w-full h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
                 >
-                  <option value="Lift 1 (Mekanik)">Lift 1 (Mekanik)</option>
-                  <option value="Lift 2 (Binek)">Lift 2 (Binek)</option>
-                  <option value="Lift 3 (Elektronik & Teşhis)">Lift 3 (Elektronik)</option>
-                  <option value="Hızlı Kabul Alanı">Hızlı Kabul Alanı</option>
+                  <option value="">Lift Seçilmedi (Kuyrukta)</option>
+                  {bays && bays.length > 0 ? (
+                    bays.filter((b) => b.isActive !== false).map((b) => (
+                      <option key={b.id} value={b.name}>
+                        {b.name} ({b.category || "Lift"})
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="Lift 1">Lift 1</option>
+                      <option value="Lift 2">Lift 2</option>
+                      <option value="Lift 3">Lift 3</option>
+                    </>
+                  )}
                 </select>
                 {errors.assignedLift && (
                   <p className="text-[10px] text-rose-500">{errors.assignedLift.message}</p>
@@ -341,15 +338,27 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
 
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                  Atanan Usta <span className="text-rose-500">*</span>
+                  Atanan Usta / Teknisyen
                 </label>
                 <select
                   {...register("assignedMechanic")}
                   className="w-full h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
                 >
-                  <option value="Ahmet Usta">Ahmet Usta (Mekanik)</option>
-                  <option value="Mustafa Usta">Mustafa Usta (Elektrik)</option>
-                  <option value="Ali Usta">Ali Usta (Ön Takım)</option>
+                  <option value="">Atanmamış (Havuzda Beklesin)</option>
+                  {staffList && staffList.length > 0 && (
+                    staffList
+                      .filter((s) => s.isActive !== false)
+                      .map((s) => {
+                        const fullName = `${s.name} ${s.surname || ""}`.trim()
+                        const specialty = s.specialty || s.mechanic?.specialty || s.role || ""
+                        const idVal = s.mechanic?.id || s.id
+                        return (
+                          <option key={s.id} value={idVal}>
+                            {fullName} {specialty ? `(${specialty})` : ""}
+                          </option>
+                        )
+                      })
+                  )}
                 </select>
                 {errors.assignedMechanic && (
                   <p className="text-[10px] text-rose-500">{errors.assignedMechanic.message}</p>
@@ -418,6 +427,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                 type="button"
                 variant="outline"
                 onClick={() => setStep(1)}
+                disabled={isSubmitting}
                 className="h-10 px-4 text-xs font-semibold gap-1 cursor-pointer"
               >
                 <ArrowLeft size={14} />
@@ -425,10 +435,17 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
               </Button>
               <Button
                 type="submit"
+                disabled={isSubmitting}
                 className="h-10 px-5 text-xs font-semibold gap-1.5 cursor-pointer shadow-md shadow-sky-500/20"
               >
-                <Play size={14} fill="currentColor" />
-                <span>İş Emrini Başlat (Lifte Al)</span>
+                {isSubmitting ? (
+                  <span>Kaydediliyor...</span>
+                ) : (
+                  <>
+                    <Play size={14} fill="currentColor" />
+                    <span>İş Emrini Başlat</span>
+                  </>
+                )}
               </Button>
             </div>
           </form>

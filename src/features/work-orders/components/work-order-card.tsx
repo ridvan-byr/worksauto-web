@@ -6,7 +6,8 @@ import {
   Wrench,
   Play,
   CheckCircle2,
-  } from "lucide-react"
+  XCircle,
+} from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"
 
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -131,6 +132,13 @@ export function WorkOrderCard({ order, onStatusChange }: WorkOrderCardProps) {
                 <span>Bitti</span>
               </span>
             </div>
+          )}
+
+          {order.status === "CANCELLED" && (
+            <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+              <XCircle size={12} />
+              <span>İptal Edildi</span>
+            </span>
           )}
         </div>
       </div>

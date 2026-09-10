@@ -1,6 +1,7 @@
 "use client"
 
-import { useWorkOrders, useUpdateWorkOrderStatus } from "@/features/work-orders/api/use-work-orders"
+import { useWorkOrders, useUpdateWorkOrderStatus, useRollbackWorkOrder } from "@/features/work-orders/api/use-work-orders"
+import { useStaff } from "@/features/settings/api/use-settings"
 
 import * as React from "react"
 import {
@@ -29,57 +30,69 @@ export default function WorkOrdersPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
 
   const { data: apiOrders } = useWorkOrders()
+  const { data: staffMembers = [] } = useStaff()
   const updateStatusMutation = useUpdateWorkOrderStatus()
+  const rollbackMutation = useRollbackWorkOrder()
 
-  // Live API sync with mock fallback
+  // Live API sync
   React.useEffect(() => {
-    if (apiOrders && apiOrders.length > 0) {
-      const mapped: WorkOrder[] = apiOrders.map((w: WorkOrder) => {
+    if (apiOrders) {
+      const mapped: WorkOrder[] = apiOrders.map((w: any) => {
         const items = (w.items || []) as Array<Record<string, unknown>>
+        const mechanicFullName = w.assignedMechanic?.user
+          ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname || ""}`.trim()
+          : (w.assignedMechanicName || 'Atanmamış')
+
         return {
           id: w.id,
-          tenantId: w.tenantId || 'ten_1',
+          tenantId: w.tenantId || '',
           workOrderNumber: w.workOrderNumber,
           customerId: w.customerId,
-          customerName: w.customer ? `${w.customer.firstName || w.customer.name || ""} ${w.customer.lastName || w.customer.surname || ""}`.trim() : 'Müşteri',
+          customerName: w.customer
+            ? `${w.customer.firstName || w.customer.name || ""} ${w.customer.lastName || w.customer.surname || ""}`.trim()
+            : 'Müşteri',
           customerPhone: w.customer?.phone || '',
           vehicleId: w.vehicleId,
-          plate: w.vehicle?.plate || w.plate || '34XX000',
-          brand: w.vehicle?.brand || w.brand || 'Araç',
+          plate: w.vehicle?.plate || w.plate || '',
+          brand: w.vehicle?.brand || w.brand || '',
           model: w.vehicle?.model || w.model || '',
-          year: w.vehicle?.year || w.year || 2024,
-          kilometer: w.vehicle?.currentKm ?? w.vehicle?.mileage ?? w.kilometer ?? 0,
-          status: w.status === 'QUEUE' as unknown ? 'PENDING' : w.status,
-          priority: 'NORMAL',
-          assignedLift: w.assignedLift || 'Lift 1',
-          assignedMechanicName: w.assignedMechanic?.user ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname || ""}`.trim() : 'Usta',
-          services: items.filter((i) => i.itemType === 'SERVICE').map((i) => ({
-            id: String(i.id || 'srv_1'),
-            name: String(i.name || 'İşçilik'),
-            durationMinutes: 60,
-            laborPrice: Number(i.unitPrice || 0),
-            completed: true,
-          })),
-          parts: items.filter((i) => i.itemType === 'PART').map((i) => ({
-            id: String(i.id || 'prt_1'),
-            name: String(i.name || 'Yedek Parça'),
-            partNumber: String(i.itemId || i.partNumber || 'YEDEK-PARCA'),
-            quantity: Number(i.quantity || 1),
-            unitPrice: Number(i.unitPrice || 0),
-            totalPrice: Number(i.totalPrice || 0),
-          })),
-          notes: (w.notes || []).map((n) => ({
+          year: w.vehicle?.year || w.year || new Date().getFullYear(),
+          kilometer: w.vehicle?.currentKm ?? w.vehicle?.mileage ?? w.kilometer ?? w.initialKm ?? 0,
+          status: ((w.status as string) === 'QUEUE' ? 'PENDING' : w.status) as WorkOrderStatus,
+          priority: w.priority || 'NORMAL',
+          assignedLift: w.assignedLift || 'Lift Belirtilmemiş',
+          assignedMechanicName: mechanicFullName,
+          services: items
+            .filter((i) => i.itemType === 'SERVICE')
+            .map((i) => ({
+              id: String(i.id || ''),
+              name: String(i.name || 'İşçilik'),
+              durationMinutes: 60,
+              laborPrice: Number(i.unitPrice || 0),
+              completed: true,
+            })),
+          parts: items
+            .filter((i) => i.itemType === 'PART')
+            .map((i) => ({
+              id: String(i.id || ''),
+              name: String(i.name || 'Yedek Parça'),
+              partNumber: String(i.itemId || i.partNumber || ''),
+              quantity: Number(i.quantity || 1),
+              unitPrice: Number(i.unitPrice || 0),
+              totalPrice: Number(i.totalPrice || 0),
+            })),
+          notes: (w.notes || []).map((n: any) => ({
             id: n.id,
-            authorName: n.authorName || 'Usta',
+            authorName: n.authorName || 'Yetkili',
             text: n.text || n.note || '',
             createdAt: n.createdAt,
             isInternal: n.isInternal ?? false,
           })),
-          photos: (w.photos || []).map((p) => ({
+          photos: (w.photos || []).map((p: any) => ({
             id: p.id,
             url: p.url,
             caption: p.caption || '',
-            uploaderName: p.uploaderName || p.uploadedBy || 'Usta',
+            uploaderName: p.uploaderName || p.uploadedBy || 'Personel',
             uploadedAt: p.uploadedAt || p.createdAt || new Date().toISOString(),
             type: (p.type || p.photoType || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
           })),
@@ -97,12 +110,25 @@ export default function WorkOrdersPage() {
   }, [apiOrders])
 
   const handleStatusChange = async (id: string, newStatus: WorkOrderStatus) => {
-    const backendStatus = (newStatus as string) === 'PENDING' ? 'QUEUE' : newStatus;
+    const targetOrder = orders.find((o) => o.id === id)
+
+    // COMPLETED -> IN_PROGRESS transition requires rollback endpoint in domain
+    if (targetOrder?.status === "COMPLETED" && newStatus === "IN_PROGRESS") {
+      try {
+        await rollbackMutation.mutateAsync(id)
+        setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: "IN_PROGRESS" } : o)))
+      } catch (e) {
+        console.error("Rollback hatası:", e)
+      }
+      return
+    }
+
+    const backendStatus = (newStatus as string) === "PENDING" ? "QUEUE" : newStatus
     try {
       await updateStatusMutation.mutateAsync({ id, status: backendStatus })
       setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)))
     } catch (e) {
-      console.error('API status update error:', e)
+      console.error("API status update error:", e)
     }
   }
 
@@ -110,10 +136,34 @@ export default function WorkOrdersPage() {
     setOrders((prev) => [newOrder, ...prev])
   }
 
+  // Dynamic distinct staff list from both database and existing orders
+  const staffFilterOptions = React.useMemo(() => {
+    const nameSet = new Set<string>()
+    staffMembers.forEach((s) => {
+      if (s.name) {
+        const full = `${s.name} ${s.surname || ""}`.trim()
+        nameSet.add(full)
+      }
+    })
+    orders.forEach((o) => {
+      if (o.assignedMechanicName && o.assignedMechanicName !== "Usta" && o.assignedMechanicName !== "Atanmamış") {
+        nameSet.add(o.assignedMechanicName)
+      }
+    })
+    return Array.from(nameSet)
+  }, [staffMembers, orders])
+
   // Filter by staff & live search
   const displayedOrders = React.useMemo(() => {
     return orders.filter((o) => {
-      if (selectedStaffFilter !== "all" && o.assignedMechanicName !== selectedStaffFilter) return false
+      if (selectedStaffFilter === "unassigned") {
+        if (o.assignedMechanicName && o.assignedMechanicName !== "Usta" && o.assignedMechanicName !== "Atanmamış") {
+          return false
+        }
+      } else if (selectedStaffFilter !== "all" && o.assignedMechanicName !== selectedStaffFilter) {
+        return false
+      }
+
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase().trim()
       const cleanPlateQ = q.replace(/\s/g, "")
@@ -227,10 +277,13 @@ export default function WorkOrdersPage() {
               onChange={(e) => setSelectedStaffFilter(e.target.value)}
               className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
             >
-              <option value="all">Tüm Ustalar</option>
-              <option value="Ahmet Usta">Ahmet Usta (Mekanik)</option>
-              <option value="Mustafa Usta">Mustafa Usta (Elektrik & Diagnostik)</option>
-              <option value="Ali Usta">Ali Usta (Ön Takım)</option>
+              <option value="all">Tüm Personel / Ustalar</option>
+              <option value="unassigned">Atanmamış Araçlar</option>
+              {staffFilterOptions.map((name) => (
+                <option key={name} value={name}>
+                  {name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
