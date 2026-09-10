@@ -203,11 +203,18 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
 
     try {
       if (target.unassign) {
-        await bulkAssignMutation.mutateAsync({
-          productIds,
-          shelfCellId: null,
-          targetShelfId: null,
-        })
+        if (productIds.length === 1) {
+          await assignProductCellMutation.mutateAsync({
+            productId: productIds[0],
+            shelfCellId: null,
+          })
+        } else {
+          await bulkAssignMutation.mutateAsync({
+            productIds,
+            shelfCellId: null,
+            targetShelfId: null,
+          })
+        }
       } else if (target.cellId) {
         if (productIds.length === 1) {
           await assignProductCellMutation.mutateAsync({
