@@ -27,7 +27,7 @@ export default function AdminDashboardPage() {
   const { data: stats } = useAdminStats()
   const { data: health } = useAdminHealth()
 
-  const [activeTab, setActiveTab] = React.useState<"tenants" | "admins" | "audit">("tenants")
+  const [activeTab, setActiveTab] = React.useState<"tenants" | "admins">("tenants")
 
   // Tenants State & Queries
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -195,19 +195,6 @@ export default function AdminDashboardPage() {
           <ShieldCheck size={16} />
           <span>Platform Yöneticileri</span>
         </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("audit")}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-            activeTab === "audit"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
-          }`}
-        >
-          <ShieldAlert size={16} />
-          <span>Güvenlik & Denetim İzi</span>
-        </button>
       </div>
 
       {/* 3. Aktif Sekme İçeriği */}
@@ -242,7 +229,17 @@ export default function AdminDashboardPage() {
 
       {activeTab === "admins" && <AdminUsersTab />}
 
-      {activeTab === "audit" && (
+      {/* 4. Platform Güvenlik & Denetim İzi (Her zaman altta) */}
+      <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+        <div className="mb-4">
+          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+            <ShieldAlert size={16} className="text-indigo-500" />
+            Platform Güvenlik & Denetim İzi
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            Sistem genelinde gerçekleşen tüm lisanslama, yönetici ve güvenlik hareketlerinin değişmez kayıtları.
+          </p>
+        </div>
         <AdminAuditLogs
           logs={auditLogs}
           meta={auditMeta}
@@ -261,7 +258,7 @@ export default function AdminDashboardPage() {
             setAuditPage(1)
           }}
         />
-      )}
+      </div>
 
       {/* Modals */}
       <TenantDetailModal
