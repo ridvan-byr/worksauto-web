@@ -16,7 +16,7 @@ import {
   Search,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { WorkOrder, WorkOrderStatus } from "@/features/work-orders/types"
+import { WorkOrder, WorkOrderStatus, WorkOrderNote, WorkOrderPhoto } from "@/features/work-orders/types"
 import { KanbanBoard } from "@/features/work-orders/components/kanban-board"
 import { WorkOrderListView } from "@/features/work-orders/components/work-order-list-view"
 import { CreateWorkOrderModal } from "@/features/work-orders/components/create-work-order-modal"
@@ -37,10 +37,10 @@ export default function WorkOrdersPage() {
   // Live API sync
   React.useEffect(() => {
     if (apiOrders) {
-      const mapped: WorkOrder[] = apiOrders.map((w: any) => {
+      const mapped: WorkOrder[] = (apiOrders as Array<WorkOrder & Record<string, unknown>>).map((w) => {
         const items = (w.items || []) as Array<Record<string, unknown>>
-        const mechanicFullName = w.assignedMechanic?.user
-          ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname || ""}`.trim()
+        const mechanicFullName = (w.assignedMechanic as { user?: { name: string; surname?: string } } | undefined)?.user
+          ? `${(w.assignedMechanic as { user: { name: string; surname?: string } }).user.name} ${(w.assignedMechanic as { user: { name: string; surname?: string } }).user.surname || ""}`.trim()
           : (w.assignedMechanicName || 'Atanmamış')
 
         return {
@@ -81,14 +81,14 @@ export default function WorkOrdersPage() {
               unitPrice: Number(i.unitPrice || 0),
               totalPrice: Number(i.totalPrice || 0),
             })),
-          notes: (w.notes || []).map((n: any) => ({
+          notes: (w.notes || []).map((n: WorkOrderNote) => ({
             id: n.id,
             authorName: n.authorName || 'Yetkili',
             text: n.text || n.note || '',
             createdAt: n.createdAt,
             isInternal: n.isInternal ?? false,
           })),
-          photos: (w.photos || []).map((p: any) => ({
+          photos: (w.photos || []).map((p: WorkOrderPhoto) => ({
             id: p.id,
             url: p.url,
             caption: p.caption || '',
