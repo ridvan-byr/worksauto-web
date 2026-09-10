@@ -15,12 +15,35 @@ import {
   AlertTriangle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import { Appointment, AppointmentServiceItem } from "../types"
 import { useCustomers, type QuickLeadResponse } from "@/features/customers/api/use-customers"
 import { useCreateAppointment } from "@/features/appointments/api/use-appointments"
 import { useStaff, type StaffRecord } from "@/features/settings/api/use-settings"
 import { useAuth } from "@/features/auth/auth-context"
 import { cn } from "@/lib/utils"
+
+function getLocalTodayStr(): string {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
+function getLocalCurrentTimeStr(): string {
+  const d = new Date()
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+}
+
+function getDefaultTimeForDate(dateStr: string): string {
+  const todayStr = getLocalTodayStr()
+  if (dateStr !== todayStr) return "10:00"
+  const now = new Date()
+  const currentMinutes = now.getMinutes()
+  const nextHalfHour = currentMinutes < 30 ? 30 : 60
+  now.setMinutes(nextHalfHour, 0, 0)
+  const hh = String(now.getHours()).padStart(2, "0")
+  const mm = String(now.getMinutes()).padStart(2, "0")
+  return `${hh}:${mm}`
+}
 import {
   appointmentCreateSchema,
   AppointmentCreateValues,
@@ -92,6 +115,9 @@ export function CreateAppointmentModal({
     }))
   }, [apiCustomers])
 
+  const todayStr = getLocalTodayStr()
+  const currentTimeStr = getLocalCurrentTimeStr()
+
   const {
     register,
     handleSubmit,
@@ -104,24 +130,29 @@ export function CreateAppointmentModal({
     defaultValues: {
       customerId: "",
       vehicleId: "",
-      date: initialDate || new Date().toISOString().split("T")[0],
-      time: initialTime || "10:00",
-      assignedStaffId: "Ahmet Usta",
+      date: initialDate || todayStr,
+      time: initialTime || getDefaultTimeForDate(initialDate || todayStr),
+      assignedStaffId: "",
       customerNote: "",
     },
   })
 
   const selectedCustomerId = watch("customerId") || ""
   const selectedVehicleId = watch("vehicleId") || ""
+  const watchDate = watch("date")
 
   React.useEffect(() => {
     setMounted(true)
   }, [])
 
   React.useEffect(() => {
-    if (initialDate) setValue("date", initialDate)
-    if (initialTime) setValue("time", initialTime)
-  }, [initialDate, initialTime, setValue])
+    if (isOpen) {
+      const d = initialDate || getLocalTodayStr()
+      const t = initialTime || getDefaultTimeForDate(d)
+      setValue("date", d)
+      setValue("time", t)
+    }
+  }, [isOpen, initialDate, initialTime, setValue])
 
   // Update selected vehicle when customer changes
   React.useEffect(() => {
@@ -178,8 +209,14 @@ export function CreateAppointmentModal({
     const totalPrice = selectedServices.reduce((sum, s) => sum + s.price, 0)
 
     const [hours, minutes] = (values.time || "10:00").split(":").map(Number)
-    const startDateTime = new Date(values.date || new Date())
-    startDateTime.setHours(hours || 10, minutes || 0, 0, 0)
+    const [year, month, day] = (values.date || todayStr).split("-").map(Number)
+    const startDateTime = new Date(year, month - 1, day, hours || 0, minutes || 0, 0, 0)
+
+    if (startDateTime.getTime() < Date.now()) {
+      toast.error("Geçmiş bir tarih veya saate randevu oluşturulamaz.")
+      return
+    }
+
     const endDateTime = new Date(startDateTime.getTime() + totalDuration * 60000)
 
     try {
@@ -194,6 +231,11 @@ export function CreateAppointmentModal({
         slotEndTime: endDateTime.toISOString(),
         customerNotes: values.customerNote?.trim() || undefined,
       })
+
+      const assignedMechanic = mechanicStaffList.find((s) => s.id === values.assignedStaffId)
+      const assignedStaffName = assignedMechanic
+        ? `${assignedMechanic.name} ${assignedMechanic.surname || ""}`.trim()
+        : undefined
 
       const newApp: Appointment = {
         id: createdApp?.id || "app_" + Date.now(),
@@ -221,7 +263,7 @@ export function CreateAppointmentModal({
               ],
         totalDurationMinutes: totalDuration,
         totalEstimatedPrice: totalPrice,
-        assignedStaffName: values.assignedStaffId || "Ahmet Usta",
+        assignedStaffName,
         date: values.date || "",
         time: values.time || "10:00",
         status: "CONFIRMED",
@@ -335,7 +377,7 @@ export function CreateAppointmentModal({
               </label>
               <input
                 type="date"
-                min={new Date().toISOString().split("T")[0]}
+                min={todayStr}
                 {...register("date")}
                 className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
@@ -351,9 +393,13 @@ export function CreateAppointmentModal({
               <input
                 type="time"
                 step={1800} // 30 min
+                min={watchDate === todayStr ? currentTimeStr : undefined}
                 {...register("time")}
                 className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
+              {errors.time && (
+                <p className="text-[10px] text-rose-500 font-medium">{errors.time.message}</p>
+              )}
             </div>
 
             <div className="space-y-1">

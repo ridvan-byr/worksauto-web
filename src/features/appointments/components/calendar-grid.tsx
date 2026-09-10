@@ -112,6 +112,12 @@ export function CalendarGrid({
 
                 {/* 7 Day Cells (Mon-Sun) */}
                 {weekDays.map((day) => {
+                  const now = new Date()
+                  const currentHour = now.getHours()
+                  const currentMinute = now.getMinutes()
+                  const currentTimeStr = `${String(currentHour).padStart(2, "0")}:${String(currentMinute).padStart(2, "0")}`
+                  const isSlotInPast = day.isPast || (day.isToday && timeSlot <= currentTimeStr)
+
                   // Find appointments in this day and near this time slot, strictly deduplicated by id
                   const cellAppointmentsMap = new Map<string, Appointment>()
                   for (const a of appointments) {
@@ -128,19 +134,19 @@ export function CalendarGrid({
                     <div
                       key={day.dateStr + timeSlot}
                       onClick={(e) => {
-                        // Only trigger if clicked on the empty space, not inside a card, and date is not in the past
-                        if (e.target === e.currentTarget && !day.isPast) {
+                        // Only trigger if clicked on the empty space, not inside a card, and slot is not in the past
+                        if (e.target === e.currentTarget && !isSlotInPast) {
                           onSlotClick(day.dateStr, timeSlot)
                         }
                       }}
                       className={cn(
                         "p-1.5 border-r border-slate-200/60 dark:border-slate-800/60 last:border-r-0 relative group transition-colors flex flex-col gap-1.5",
                         day.isToday && "bg-sky-500/[0.02] dark:bg-sky-500/[0.03]",
-                        day.isPast
+                        isSlotInPast
                           ? "bg-slate-100/40 dark:bg-slate-950/40 opacity-70 cursor-not-allowed"
                           : "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer"
                       )}
-                      title={day.isPast ? "Geçmiş bir tarihe randevu oluşturulamaz" : undefined}
+                      title={isSlotInPast ? "Geçmiş bir tarih veya saate randevu oluşturulamaz" : undefined}
                     >
                       {cellAppointments.map((app) => (
                         <div
@@ -196,7 +202,7 @@ export function CalendarGrid({
                       ))}
 
                       {/* Hover Quick Add Plus Indicator */}
-                      {cellAppointments.length === 0 && (
+                      {cellAppointments.length === 0 && !isSlotInPast && (
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400">
                           <Plus size={16} />
                         </div>

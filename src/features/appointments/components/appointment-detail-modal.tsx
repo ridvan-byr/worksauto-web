@@ -14,6 +14,7 @@ import {
   UserX,
   } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import { Appointment, CancellationReason } from "../types"
 import { AppointmentStatusBadge } from "./appointment-status-badge"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -44,6 +45,16 @@ export function AppointmentDetailModal({
   // Reschedule State
   const [rescheduleDate, setRescheduleDate] = React.useState("")
   const [rescheduleTime, setRescheduleTime] = React.useState("")
+
+  const todayStr = React.useMemo(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+  }, [])
+
+  const currentTimeStr = React.useMemo(() => {
+    const d = new Date()
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+  }, [])
 
   // Cancel State
   const [cancelReason, setCancelReason] = React.useState<CancellationReason>("CUSTOMER_REQUEST")
@@ -84,6 +95,17 @@ export function AppointmentDetailModal({
   }
 
   const handleConfirmReschedule = () => {
+    if (!rescheduleDate || !rescheduleTime) {
+      toast.error("Lütfen yeni tarih ve saat seçiniz.")
+      return
+    }
+    const [h, m] = rescheduleTime.split(":").map(Number)
+    const [yr, mo, dy] = rescheduleDate.split("-").map(Number)
+    const targetDt = new Date(yr, mo - 1, dy, h || 0, m || 0, 0, 0)
+    if (targetDt.getTime() < Date.now()) {
+      toast.error("Geçmiş bir tarih veya saate randevu ertelenemez.")
+      return
+    }
     onReschedule(appointment.id, rescheduleDate, rescheduleTime)
     setViewMode("detail")
   }
@@ -279,6 +301,7 @@ export function AppointmentDetailModal({
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Yeni Tarih</label>
                 <input
                   type="date"
+                  min={todayStr}
                   value={rescheduleDate}
                   onChange={(e) => setRescheduleDate(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -290,6 +313,7 @@ export function AppointmentDetailModal({
                 <input
                   type="time"
                   step={1800}
+                  min={rescheduleDate === todayStr ? currentTimeStr : undefined}
                   value={rescheduleTime}
                   onChange={(e) => setRescheduleTime(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"

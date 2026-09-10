@@ -65,9 +65,23 @@ export default function PublicBookingPage() {
   const [selectedServiceId, setSelectedServiceId] = React.useState("")
   
   // Today's date YYYY-MM-DD
-  const todayStr = React.useMemo(() => new Date().toISOString().split("T")[0], [])
+  const todayStr = React.useMemo(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+  }, [])
+
+  const currentTimeStr = React.useMemo(() => {
+    const d = new Date()
+    return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+  }, [])
+
   const [date, setDate] = React.useState(todayStr)
-  const [time, setTime] = React.useState("09:30")
+  const [time, setTime] = React.useState(() => {
+    const d = new Date()
+    const currentT = `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
+    const available = DEFAULT_SLOTS.find((s) => s > currentT)
+    return available || DEFAULT_SLOTS[0]
+  })
   const [note, setNote] = React.useState("")
   const [kvkkAccepted, setKvkkAccepted] = React.useState(true)
   const [isSuccess, setIsSuccess] = React.useState(false)
@@ -133,7 +147,13 @@ export default function PublicBookingPage() {
     try {
       // Calculate realistic slot end time based on selected service duration
       const durationMin = selectedService?.durationMinutes || 60
-      const startTimeDate = new Date(`${date}T${time}:00`)
+      const [h, m] = time.split(":").map(Number)
+      const [yr, mo, dy] = date.split("-").map(Number)
+      const startTimeDate = new Date(yr, mo - 1, dy, h || 0, m || 0, 0, 0)
+      if (startTimeDate.getTime() < Date.now()) {
+        toast.error("Geçmiş bir tarih veya saate randevu oluşturulamaz.")
+        return
+      }
       const endTimeDate = new Date(startTimeDate.getTime() + durationMin * 60 * 1000)
 
       await apiClient.post(`/appointments/public/${slug}`, {
@@ -358,16 +378,21 @@ export default function PublicBookingPage() {
               <div className="grid grid-cols-5 gap-1.5">
                 {DEFAULT_SLOTS.map((slot) => {
                   const isSelected = time === slot
+                  const isPast = date === todayStr && slot <= currentTimeStr
                   return (
                     <button
                       key={slot}
                       type="button"
-                      onClick={() => setTime(slot)}
-                      className={`py-2 px-1 text-center rounded-lg text-xs font-mono font-medium transition-all cursor-pointer ${
-                        isSelected
-                          ? "bg-sky-600 text-white font-bold shadow-md shadow-sky-600/30 scale-[1.02]"
-                          : "bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700"
+                      disabled={isPast}
+                      onClick={() => !isPast && setTime(slot)}
+                      className={`py-2 px-1 text-center rounded-lg text-xs font-mono font-medium transition-all ${
+                        isPast
+                          ? "opacity-35 cursor-not-allowed bg-slate-100 dark:bg-slate-800 text-slate-400 line-through"
+                          : isSelected
+                          ? "bg-sky-600 text-white font-bold shadow-md shadow-sky-600/30 scale-[1.02] cursor-pointer"
+                          : "bg-slate-100 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer"
                       }`}
+                      title={isPast ? "Geçmiş bir saat seçilemez" : undefined}
                     >
                       {slot}
                     </button>
