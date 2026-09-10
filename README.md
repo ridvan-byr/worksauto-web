@@ -40,19 +40,19 @@ This repository (`worksauto-web`) contains the **Frontend (Web UI)** application
 ## ✨ Key Enterprise Features
 
 ### 🚗 Core Automotive ERP Modules
-- **İş Emirleri & Atölye Paneli (`/work-orders`):** Araç kabulü, usta ve lift ataması, canlı parça ekleme ve durum yaşam döngüsü.
-- **Randevu Takvimi & Açık Müşteri Portalı (`/appointments`, `/book/[slug]`):** Çift çakışma önleyici haftalık takvim gridi ve müşterilere özel online randevu rezervasyonu.
-- **Canlı Stok & 2D Raf Matrisi (`/inventory`):** Kat/göz hücre gridi (`K1-G1`), görsel doluluk oranları, parça hücre atama ve atomik stok takibi.
-- **Müşteri & Filo Yönetimi (`/customers`, `/vehicles`):** TR standart plaka formatlama, servis geçmişi, cari hesap borç/alacak takibi ve tek tıkla KVKK onay SMS gönderimi.
-- **Açık KVKK & İYS Müşteri Portalı (`/c/kvkk?token=...`):** SMS onay bağlantısıyla mobil uyumlu aydınlatma metni onaylama, dijital zaman damgalı imza ve güvenlik kaydı.
-- **Finans, Fatura & Cari Ekstre (`/invoices`, `/current-accounts`):** İdempotent ödeme kaydı ve tek tıkla cari hesap hareketleri.
-- **Süper Yönetici Konsolu (`/admin`):** Servis lisanslama, platform sağlık metrikleri, yetkili yönetimi ve sayfa altında kalıcı canlı Güvenlik & Denetim İzi (Audit Log) akışı.
-- **Canlı WebSocket Bildirimleri (`socket.io`):** Atölye zili, kritik stok uyarıları ve gerçek zamanlı iş emri güncellemeleri.
+- **Work Orders & Workshop Bay Console (`/work-orders`):** Vehicle reception check-in, technician and lift bay allocation, real-time parts attachment, and operational status lifecycle management.
+- **Appointment Scheduling & Public Booking Portal (`/appointments`, `/book/[slug]`):** Dual-collision prevention weekly grid calendar and customer self-service appointment reservations.
+- **Real-Time Inventory & 2D Warehouse Shelf Matrix (`/inventory`):** Tier/bin coordinate grid (`K1-G1`), visual capacity & occupancy gauges, part-to-cell assignment, and atomic decrement tracking.
+- **Customer CRM & Fleet Management (`/customers`, `/vehicles`):** Turkish license plate normalization, full service history logs, running ledger balance tracking, and one-click regulatory consent SMS dispatch.
+- **Public Customer Consent & Compliance Portal (`/c/kvkk?token=...`):** Mobile-optimized verification flow for KVKK/GDPR disclosures, digital timestamped signing, and immutable audit capture.
+- **Finance, Invoicing & Current Account Statements (`/invoices`, `/current-accounts`):** Idempotent settlement records, regulatory VUK compliance, and automated ledger statement extracts.
+- **Super Admin Management Console (`/admin`):** Multi-tenant licensing, platform health metrics, operator administration, and a persistent live Security & Audit Log stream.
+- **Live WebSocket Notifications (`socket.io`):** Workshop bell notifications, low-stock warnings, and real-time job card status broadcasts.
 
-### 🎨 Marka & Arayüz Mimarisi
-- **Çift Katmanlı Rota Güvenliği:** Next.js Edge Middleware (`middleware.ts`) + Client-side in-memory access token mimarisi.
-- **3-Kademeli Tema & Görsel Geçişler:** View Transitions API ile dairesel dalga animasyonu ve sıfır-flicker SSR layout.
-- **UI/UX Pro Max:** Otomotiv ekosistemine özel koyu/açık renk paleti, mikro animasyonlar ve duyarlı veri tabloları.
+### 🎨 Brand & Interface Architecture
+- **Dual-Layer Route Protection:** Next.js Edge Middleware (`middleware.ts`) coupled with secure client-side in-memory access token storage.
+- **3-Tier Theme & Motion Transitions:** Native View Transitions API with circular reveal animations and zero-flicker SSR layout persistence.
+- **UI/UX Pro Max:** Tailored automotive dark/light token palette, hardware-accelerated micro-animations, and responsive high-density data grids.
 
 ---
 
@@ -157,7 +157,7 @@ npm run lint
 
 ## 👤 Lead Developer & Architect
 
-**Rıdvan Bayar**  
+**Rıdvan Emre Bayar**  
 * Lead Full-Stack Software Engineer & End-to-End System Architect  
 * GitHub: [@ridvan-byr](https://github.com/ridvan-byr)
 
