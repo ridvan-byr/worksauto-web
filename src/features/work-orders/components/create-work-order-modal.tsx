@@ -52,6 +52,17 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
   const { data: bays = [] } = useWorkshopBays()
   const createOrderMutation = useCreateWorkOrder()
 
+  // Only actual workshop technicians / mechanics (exclude administrative OWNER/CASHIER)
+  const mechanicStaffList = React.useMemo(() => {
+    return staffList.filter((s) => {
+      if (s.isActive === false) return false
+      if (s.role === "OWNER" || s.role === "CASHIER" || s.role === "SUPER_ADMIN") {
+        return !!s.mechanic
+      }
+      return s.role === "TECHNICIAN" || !!s.mechanic
+    })
+  }, [staffList])
+
   const customers: ModalCustomer[] = React.useMemo(() => {
     if (!apiCustomers) return []
     return apiCustomers.map((c) => ({
@@ -151,13 +162,13 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
     setIsSubmitting(true)
 
     try {
-      // Find mechanic ID from staff list if assigned
+      // Find mechanic ID from filtered mechanic staff list if assigned
       let assignedMechanicId: string | undefined = undefined
       if (values.assignedMechanic) {
-        const staffObj = staffList.find(
+        const staffObj = mechanicStaffList.find(
           (s) => s.id === values.assignedMechanic || s.mechanic?.id === values.assignedMechanic
         )
-        assignedMechanicId = staffObj?.mechanic?.id || staffObj?.id || values.assignedMechanic
+        assignedMechanicId = staffObj?.mechanic?.id || (staffObj?.role === "TECHNICIAN" ? staffObj.id : undefined)
       }
 
       const createdOrder = await createOrderMutation.mutateAsync({
@@ -345,19 +356,17 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                   className="w-full h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
                 >
                   <option value="">Atanmamış (Havuzda Beklesin)</option>
-                  {staffList && staffList.length > 0 && (
-                    staffList
-                      .filter((s) => s.isActive !== false)
-                      .map((s) => {
-                        const fullName = `${s.name} ${s.surname || ""}`.trim()
-                        const specialty = s.specialty || s.mechanic?.specialty || s.role || ""
-                        const idVal = s.mechanic?.id || s.id
-                        return (
-                          <option key={s.id} value={idVal}>
-                            {fullName} {specialty ? `(${specialty})` : ""}
-                          </option>
-                        )
-                      })
+                  {mechanicStaffList && mechanicStaffList.length > 0 && (
+                    mechanicStaffList.map((s) => {
+                      const fullName = `${s.name} ${s.surname || ""}`.trim()
+                      const specialty = s.specialty || s.mechanic?.specialty || "Mekanik Teknisyeni"
+                      const idVal = s.mechanic?.id || s.id
+                      return (
+                        <option key={s.id} value={idVal}>
+                          {fullName} ({specialty})
+                        </option>
+                      )
+                    })
                   )}
                 </select>
                 {errors.assignedMechanic && (

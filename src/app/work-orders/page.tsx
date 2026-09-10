@@ -136,17 +136,30 @@ export default function WorkOrdersPage() {
     setOrders((prev) => [newOrder, ...prev])
   }
 
-  // Dynamic distinct staff list from both database and existing orders
+  // Dynamic distinct technician list for filtering (excludes administrative roles without mechanic profile)
   const staffFilterOptions = React.useMemo(() => {
     const nameSet = new Set<string>()
-    staffMembers.forEach((s) => {
-      if (s.name) {
-        const full = `${s.name} ${s.surname || ""}`.trim()
-        nameSet.add(full)
-      }
-    })
+    staffMembers
+      .filter((s) => {
+        if (s.isActive === false) return false
+        if (s.role === "OWNER" || s.role === "CASHIER" || s.role === "SUPER_ADMIN") {
+          return !!s.mechanic
+        }
+        return s.role === "TECHNICIAN" || !!s.mechanic
+      })
+      .forEach((s) => {
+        if (s.name) {
+          const full = `${s.name} ${s.surname || ""}`.trim()
+          nameSet.add(full)
+        }
+      })
     orders.forEach((o) => {
-      if (o.assignedMechanicName && o.assignedMechanicName !== "Usta" && o.assignedMechanicName !== "Atanmamış") {
+      if (
+        o.assignedMechanicName &&
+        o.assignedMechanicName !== "Usta" &&
+        o.assignedMechanicName !== "Atanmamış" &&
+        !o.assignedMechanicName.toLowerCase().includes("owner")
+      ) {
         nameSet.add(o.assignedMechanicName)
       }
     })
