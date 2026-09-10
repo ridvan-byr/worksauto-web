@@ -40,10 +40,11 @@ function getDisplayUrl(url?: string): string {
     return url
   }
   const clean = url.startsWith("/") ? url.slice(1) : url
-  if (clean.startsWith("api/v1/media/files/")) {
-    return `${API_BASE_URL}/media/files/${clean.replace(/^api\/v1\/media\/files\//, "")}`
+  const key = clean.replace(/^api\/v1\/media\/files\//, "")
+  if (typeof window !== "undefined") {
+    return `/api/v1/media/files/${key}`
   }
-  return `${API_BASE_URL}/media/files/${clean}`
+  return `${API_BASE_URL}/media/files/${key}`
 }
 
 export function PhotoGallery({
@@ -707,8 +708,11 @@ export function PhotoGallery({
               <div className="relative w-full bg-black/60 flex items-center justify-center p-2 min-h-[350px] max-h-[65vh] overflow-hidden select-none">
                 <img
                   src={getDisplayUrl(activeLightboxPhoto.url)}
-                  alt={activeLightboxPhoto.caption}
+                  alt={activeLightboxPhoto.caption || "Araç Görseli"}
                   className="max-h-[60vh] w-auto max-w-full object-contain rounded-xl shadow-2xl"
+                  onError={(e) => {
+                    ;(e.target as HTMLImageElement).src = "/brand/worksauto-icon-white-tight.png"
+                  }}
                 />
 
                 {/* Left/Right Arrow Controls */}
