@@ -294,3 +294,72 @@ export function useAdminLogout() {
     },
   });
 }
+
+// -------------------------------------------------------------
+// SUPER ADMIN PLATFORM USERS HOOKS
+// -------------------------------------------------------------
+
+export interface SuperAdminUserRecord {
+  id: string;
+  email: string;
+  phone: string;
+  name: string;
+  surname?: string | null;
+  role: 'SUPER_ADMIN';
+  isActive: boolean;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface CreateSuperAdminInput {
+  email: string;
+  password: string;
+  name: string;
+  surname?: string;
+  phone: string;
+}
+
+export function useSuperAdmins() {
+  const user = getAdminUser();
+  return useQuery({
+    queryKey: ['admin-superadmins'],
+    queryFn: () => apiClient.get<SuperAdminUserRecord[]>('/admin/users'),
+    enabled: !!user,
+    refetchInterval: 20000,
+  });
+}
+
+export function useCreateSuperAdmin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: CreateSuperAdminInput) =>
+      apiClient.post<SuperAdminUserRecord>('/admin/users', data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-superadmins'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+}
+
+export function useUpdateSuperAdminStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      apiClient.patch<SuperAdminUserRecord>(`/admin/users/${id}/status`, { isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-superadmins'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+}
+
+export function useDeleteSuperAdmin() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<{ success: boolean; message: string }>(`/admin/users/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-superadmins'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+}

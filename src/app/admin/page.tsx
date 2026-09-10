@@ -13,6 +13,7 @@ import {
   useAdminHealth,
   CreateTenantInput,
 } from "@/features/admin/api/use-admin"
+import { Building2, ShieldCheck, ShieldAlert } from "lucide-react"
 import { AdminStatsGrid } from "@/features/admin/components/admin-stats-grid"
 import { TenantsTable } from "@/features/admin/components/tenants-table"
 import { TenantDetailModal } from "@/features/admin/components/tenant-detail-modal"
@@ -20,10 +21,13 @@ import { TenantLicenseModal } from "@/features/admin/components/tenant-license-m
 import { TenantDeleteModal } from "@/features/admin/components/tenant-delete-modal"
 import { CreateTenantModal } from "@/features/admin/components/create-tenant-modal"
 import { AdminAuditLogs } from "@/features/admin/components/admin-audit-logs"
+import { AdminUsersTab } from "@/features/admin/components/admin-users-tab"
 
 export default function AdminDashboardPage() {
   const { data: stats } = useAdminStats()
   const { data: health } = useAdminHealth()
+
+  const [activeTab, setActiveTab] = React.useState<"tenants" | "admins" | "audit">("tenants")
 
   // Tenants State & Queries
   const [searchQuery, setSearchQuery] = React.useState("")
@@ -161,46 +165,103 @@ export default function AdminDashboardPage() {
       {/* 1. KPI Stats & Latency */}
       <AdminStatsGrid stats={stats} health={health} />
 
-      {/* 2. Tenants Table & Search/Filter */}
-      <TenantsTable
-        tenants={tenants}
-        stats={stats}
-        searchQuery={searchQuery}
-        onSearchChange={setSearchQuery}
-        statusFilter={statusFilter}
-        onStatusFilterChange={setStatusFilter}
-        onOpenCreate={() => {
-          setCreateError(null)
-          setIsCreateModalOpen(true)
-        }}
-        onSelectTenant={(id) => setSelectedTenantId(id)}
-        onToggleStatus={(t) => setStatusModalState({ isOpen: true, tenantId: t.id, title: t.title, currentActive: t.currentActive })}
-        onDeleteTenant={(t) => {
-          setDeleteError(null)
-          setTenantToDelete(t)
-        }}
-        isUpdatingStatus={updateStatusMutation.isPending}
-      />
+      {/* 2. Platform Ana Navigasyon Sekmeleri */}
+      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+        <button
+          type="button"
+          onClick={() => setActiveTab("tenants")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === "tenants"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+          }`}
+        >
+          <Building2 size={16} />
+          <span>Kayıtlı Servisler & Lisanslar</span>
+          <span className="ml-1 px-1.5 py-0.5 rounded-full text-[10px] bg-white/20">
+            {tenants?.length || stats?.totalTenants || 0}
+          </span>
+        </button>
 
-      {/* 3. Audit Logs Section */}
-      <AdminAuditLogs
-        logs={auditLogs}
-        meta={auditMeta}
-        isLoading={isAuditLoading}
-        isFetching={isAuditFetching}
-        currentPage={auditPage}
-        onPageChange={(p) => setAuditPage(p)}
-        actionFilter={auditActionFilter}
-        onActionFilterChange={(action) => {
-          setAuditActionFilter(action)
-          setAuditPage(1)
-        }}
-        searchQuery={auditSearchQuery}
-        onSearchChange={(search) => {
-          setAuditSearchQuery(search)
-          setAuditPage(1)
-        }}
-      />
+        <button
+          type="button"
+          onClick={() => setActiveTab("admins")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === "admins"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+          }`}
+        >
+          <ShieldCheck size={16} />
+          <span>Platform Yöneticileri</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("audit")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === "audit"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
+          }`}
+        >
+          <ShieldAlert size={16} />
+          <span>Güvenlik & Denetim İzi</span>
+        </button>
+      </div>
+
+      {/* 3. Aktif Sekme İçeriği */}
+      {activeTab === "tenants" && (
+        <TenantsTable
+          tenants={tenants}
+          stats={stats}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          statusFilter={statusFilter}
+          onStatusFilterChange={setStatusFilter}
+          onOpenCreate={() => {
+            setCreateError(null)
+            setIsCreateModalOpen(true)
+          }}
+          onSelectTenant={(id) => setSelectedTenantId(id)}
+          onToggleStatus={(t) =>
+            setStatusModalState({
+              isOpen: true,
+              tenantId: t.id,
+              title: t.title,
+              currentActive: t.currentActive,
+            })
+          }
+          onDeleteTenant={(t) => {
+            setDeleteError(null)
+            setTenantToDelete(t)
+          }}
+          isUpdatingStatus={updateStatusMutation.isPending}
+        />
+      )}
+
+      {activeTab === "admins" && <AdminUsersTab />}
+
+      {activeTab === "audit" && (
+        <AdminAuditLogs
+          logs={auditLogs}
+          meta={auditMeta}
+          isLoading={isAuditLoading}
+          isFetching={isAuditFetching}
+          currentPage={auditPage}
+          onPageChange={(p) => setAuditPage(p)}
+          actionFilter={auditActionFilter}
+          onActionFilterChange={(action) => {
+            setAuditActionFilter(action)
+            setAuditPage(1)
+          }}
+          searchQuery={auditSearchQuery}
+          onSearchChange={(search) => {
+            setAuditSearchQuery(search)
+            setAuditPage(1)
+          }}
+        />
+      )}
 
       {/* Modals */}
       <TenantDetailModal

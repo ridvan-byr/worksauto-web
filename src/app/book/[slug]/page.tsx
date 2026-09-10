@@ -56,6 +56,7 @@ export default function PublicBookingPage() {
   const [date, setDate] = React.useState(new Date().toISOString().split("T")[0])
   const [time, setTime] = React.useState("10:00")
   const [note, _setNote] = React.useState("")
+  const [kvkkAccepted, setKvkkAccepted] = React.useState(true)
   const [isSuccess, setIsSuccess] = React.useState(false)
 
   // Fetch real tenant info & services catalogue
@@ -319,9 +320,23 @@ export default function PublicBookingPage() {
               </div>
             </div>
 
+            {/* KVKK Consent Checkbox */}
+            <label className="flex items-start gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 text-[11px] text-slate-600 dark:text-slate-400 cursor-pointer hover:border-sky-500/40 transition-colors">
+              <input
+                type="checkbox"
+                checked={kvkkAccepted}
+                onChange={(e) => setKvkkAccepted(e.target.checked)}
+                className="mt-0.5 rounded text-sky-600 focus:ring-sky-500 cursor-pointer"
+                required
+              />
+              <span className="leading-snug">
+                6698 sayılı KVKK kapsamında kişisel verilerimin randevu/servis süreçleri doğrultusunda işlenmesini ve servis durumu hakkında SMS ile bilgilendirilmeyi kabul ediyorum.
+              </span>
+            </label>
+
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !kvkkAccepted}
               className="w-full h-12 rounded-2xl text-xs font-bold gap-2 shadow-lg shadow-sky-500/20 cursor-pointer"
             >
               {isSubmitting ? (

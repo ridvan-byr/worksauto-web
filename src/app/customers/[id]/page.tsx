@@ -29,6 +29,7 @@ import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { AddVehicleModal } from "@/features/customers/components/add-vehicle-modal"
 import { EditCustomerModal } from "@/features/customers/components/edit-customer-modal"
 import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
+import { KvkkConsentBadge } from "@/features/customers/components/kvkk-consent-badge"
 import { cn } from "@/lib/utils"
 
 export default function CustomerDetailPage() {
@@ -186,6 +187,12 @@ export default function CustomerDetailPage() {
           >
             {customer.type === "corporate" ? "Kurumsal Filo / Şirket" : "Bireysel Müşteri"}
           </span>
+
+          <KvkkConsentBadge
+            customerId={customer.id}
+            customerName={displayName}
+            customerPhone={customer.phone}
+          />
 
           <Button
             type="button"
