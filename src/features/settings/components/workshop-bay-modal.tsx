@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, Layers, CheckCircle2 } from "lucide-react"
+import { X, Layers } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkshopBayRecord } from "@/features/settings/api/use-settings"
 
