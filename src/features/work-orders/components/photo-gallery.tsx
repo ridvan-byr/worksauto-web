@@ -19,7 +19,6 @@ import {
   Trash2,
   Loader2,
   Check,
-  Filter,
 } from "lucide-react"
 import { WorkOrderPhoto } from "../types"
 import { Button } from "@/components/ui/button"
@@ -33,12 +32,18 @@ interface PhotoGalleryProps {
   isLocked?: boolean
 }
 
+const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1").replace(/\/$/, "")
+
 function getDisplayUrl(url?: string): string {
   if (!url) return "/brand/worksauto-icon-white-tight.png"
-  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) {
+  if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("data:") || url.startsWith("blob:")) {
     return url
   }
-  return `/api/v1/media/files/${url}`
+  const clean = url.startsWith("/") ? url.slice(1) : url
+  if (clean.startsWith("api/v1/media/files/")) {
+    return `${API_BASE_URL}/media/files/${clean.replace(/^api\/v1\/media\/files\//, "")}`
+  }
+  return `${API_BASE_URL}/media/files/${clean}`
 }
 
 export function PhotoGallery({

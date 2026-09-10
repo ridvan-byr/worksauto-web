@@ -45,7 +45,7 @@ import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
 import { TechnicianNotes } from "@/features/work-orders/components/technician-notes"
 import { PhotoGallery } from "@/features/work-orders/components/photo-gallery"
-import { WorkOrder, WorkOrderStatus } from "@/features/work-orders/types"
+import { WorkOrder, WorkOrderStatus, WorkOrderNote, WorkOrderPhoto } from "@/features/work-orders/types"
 
 
 export default function WorkOrderDetailPage() {
@@ -159,7 +159,7 @@ export default function WorkOrderDetailPage() {
         assignedMechanicName: apiOrder.assignedMechanic?.user ? `${apiOrder.assignedMechanic.user.name} ${apiOrder.assignedMechanic.user.surname}` : 'Usta',
         services: servicesList,
         parts: partsList,
-        notes: (apiOrder.notes || []).map((n: any) => ({
+        notes: (apiOrder.notes || []).map((n: WorkOrderNote) => ({
           id: n.id,
           authorId: n.authorId || null,
           authorName: n.authorName || 'Usta',
@@ -168,7 +168,7 @@ export default function WorkOrderDetailPage() {
           updatedAt: n.updatedAt || null,
           isInternal: n.isInternal ?? true,
         })),
-        photos: (apiOrder.photos || []).map((p: any) => ({
+        photos: (apiOrder.photos || []).map((p: WorkOrderPhoto) => ({
           id: p.id,
           url: p.url,
           caption: p.caption || '',

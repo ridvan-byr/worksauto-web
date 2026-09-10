@@ -32,12 +32,21 @@ const securityHeaders = [
   {
     key: "Content-Security-Policy-Report-Only",
     value:
-      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' http://localhost:4000 ws://localhost:4000 http://localhost:9000 http://localhost:9001 https:; frame-ancestors 'none';",
+      "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: http: https:; connect-src 'self' http://localhost:4000 ws://localhost:4000 http://localhost:9000 http://localhost:9001 https:; frame-ancestors 'none';",
   },
 ];
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  async rewrites() {
+    const backendBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1").replace(/\/$/, "");
+    return [
+      {
+        source: "/api/v1/:path*",
+        destination: `${backendBase}/:path*`,
+      },
+    ];
+  },
   async headers() {
     return [
       {

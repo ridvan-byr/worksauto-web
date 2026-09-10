@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { MessageSquare, Send, Edit2, Trash2, Check, X, Sparkles, Shield, User as UserIcon } from "lucide-react"
+import { MessageSquare, Send, Edit2, Trash2, Check, X } from "lucide-react"
 import { WorkOrderNote } from "../types"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/features/auth/auth-context"
