@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { middleware } from './middleware'
+import { proxy } from './proxy'
 import { NextRequest } from 'next/server'
 
 function createMockRequest(url: string, cookies: Record<string, string> = {}) {
@@ -10,16 +10,16 @@ function createMockRequest(url: string, cookies: Record<string, string> = {}) {
   return req
 }
 
-describe('Next.js Edge Route Guard (middleware)', () => {
+describe('Next.js Edge Route Guard (proxy)', () => {
   it('allows public booking routes without any cookies', () => {
     const req = createMockRequest('https://app.worksauto.com/book/istanbul-garaj')
-    const res = middleware(req)
+    const res = proxy(req)
     expect(res.headers.get('location')).toBeNull()
   })
 
   it('redirects unauthenticated users from protected tenant pages to /sign-in', () => {
     const req = createMockRequest('https://app.worksauto.com/customers')
-    const res = middleware(req)
+    const res = proxy(req)
     expect(res.headers.get('location')).toBe('https://app.worksauto.com/sign-in')
   })
 
@@ -27,7 +27,7 @@ describe('Next.js Edge Route Guard (middleware)', () => {
     const req = createMockRequest('https://app.worksauto.com/customers', {
       worksauto_session: 'valid_tenant_session',
     })
-    const res = middleware(req)
+    const res = proxy(req)
     expect(res.headers.get('location')).toBeNull()
   })
 
@@ -35,13 +35,13 @@ describe('Next.js Edge Route Guard (middleware)', () => {
     const req = createMockRequest('https://app.worksauto.com/sign-in', {
       worksauto_session: 'valid_tenant_session',
     })
-    const res = middleware(req)
+    const res = proxy(req)
     expect(res.headers.get('location')).toBe('https://app.worksauto.com/')
   })
 
   it('redirects unauthenticated admin users from /admin to /admin/login', () => {
     const req = createMockRequest('https://app.worksauto.com/admin')
-    const res = middleware(req)
+    const res = proxy(req)
     expect(res.headers.get('location')).toBe('https://app.worksauto.com/admin/login')
   })
 
@@ -49,7 +49,7 @@ describe('Next.js Edge Route Guard (middleware)', () => {
     const req = createMockRequest('https://app.worksauto.com/admin', {
       worksauto_admin_session: 'valid_admin_session',
     })
-    const res = middleware(req)
+    const res = proxy(req)
     expect(res.headers.get('location')).toBeNull()
   })
 
@@ -57,7 +57,7 @@ describe('Next.js Edge Route Guard (middleware)', () => {
     const req = createMockRequest('https://app.worksauto.com/admin/login', {
       worksauto_admin_session: 'valid_admin_session',
     })
-    const res = middleware(req)
+    const res = proxy(req)
     expect(res.headers.get('location')).toBe('https://app.worksauto.com/admin')
   })
 })
