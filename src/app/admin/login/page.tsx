@@ -46,7 +46,7 @@ export default function AdminLoginPage() {
     try {
       const res = await adminLoginMutation.mutateAsync({ email, password })
       if (res.success && res.user) {
-        setAdminSession(res.user)
+        setAdminSession(res.user, res.accessToken)
         toast.success("Platform konsoluna güvenli bağlantı sağlandı.", {
           description: `Hoş geldiniz, ${res.user?.name || "Yönetici"}.`,
         })

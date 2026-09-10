@@ -35,7 +35,14 @@ export interface Product {
   barcode?: string
   category: ProductCategory
   unit: StockUnit
-  shelfLocation?: string // Depo Raf / Konum kodu (Örn: "Raf A-3", "Kutu 12")
+  shelfLocation?: string // Depo Raf / Konum kodu (Örn: "RAF-A01-K1-G2")
+
+  // WMS Fields
+  aisle?: string
+  rack?: string
+  tier?: string
+  bin?: string
+  shelfCellId?: string
 
   // Prices
   purchasePrice: number // Alış Fiyatı (TL)
@@ -50,3 +57,41 @@ export interface Product {
   createdAt?: string
   updatedAt?: string
 }
+
+export interface ShelfCell {
+  id: string
+  shelfId: string
+  cellCode: string
+  rowNumber: number
+  colNumber: number
+  barcode?: string
+  maxCapacity?: number
+  products?: Array<{
+    id: string
+    name: string
+    oemCode: string
+    brand: string
+    category: string
+    stockQuantity: number
+    minStockLevel: number
+    salePrice: number
+    shelfLocation?: string
+  }>
+}
+
+export interface WarehouseShelf {
+  id: string
+  name: string
+  code: string
+  zone?: string | null
+  rows: number
+  columns: number
+  description?: string | null
+  createdAt?: string
+  totalCells: number
+  occupiedCells: number
+  totalProducts: number
+  occupancyRate: number
+  cells?: ShelfCell[]
+}
+

@@ -7,6 +7,13 @@ let inMemoryAccessToken: string | null = null;
 export function getAccessToken(): string | null {
   if (inMemoryAccessToken) return inMemoryAccessToken;
   if (typeof window !== 'undefined') {
+    if (window.location.pathname.startsWith('/admin')) {
+      const adminToken = localStorage.getItem('worksauto_admin_token');
+      if (adminToken) {
+        inMemoryAccessToken = adminToken;
+        return adminToken;
+      }
+    }
     const legacy = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (legacy) {
       inMemoryAccessToken = legacy;
@@ -161,6 +168,8 @@ export async function apiRequest<T = unknown>(
     if (response.status === 401 && endpoint.includes('/admin/')) {
       if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
         localStorage.removeItem('worksauto_admin_user');
+        localStorage.removeItem('worksauto_admin_token');
+        inMemoryAccessToken = null;
         window.location.href = '/admin/login';
       }
       const errData = await response.json().catch(() => ({}));

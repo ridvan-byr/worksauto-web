@@ -1,20 +1,38 @@
-"use client"
-
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, PackagePlus, ArrowRight, ArrowLeft, CheckCircle2 } from "lucide-react"
+import { X, PackagePlus, ArrowRight, ArrowLeft, CheckCircle2, Boxes, Grid3X3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Product, ProductCategory, StockUnit } from "../types"
+import { useShelves, useShelfMatrix } from "../api/use-inventory"
 
 interface CreateProductModalProps {
   isOpen: boolean
   onClose: () => void
   onCreated: (product: Product) => void
+  initialShelfId?: string
+  initialCellId?: string
+  initialCellCode?: string
+  initialShelfLocation?: string
 }
 
-export function CreateProductModal({ isOpen, onClose, onCreated }: CreateProductModalProps) {
+export function CreateProductModal({
+  isOpen,
+  onClose,
+  onCreated,
+  initialShelfId,
+  initialCellId,
+  initialCellCode,
+  initialShelfLocation,
+}: CreateProductModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const [step, setStep] = React.useState<1 | 2>(1)
+
+  const { data: shelves = [] } = useShelves()
+  const [selectedShelfId, setSelectedShelfId] = React.useState<string>(initialShelfId || "")
+  const [selectedCellId, setSelectedCellId] = React.useState<string>(initialCellId || "")
+  const [isCustomShelf, setIsCustomShelf] = React.useState(false)
+
+  const { data: shelfMatrix } = useShelfMatrix(selectedShelfId || undefined)
 
   // Step 1: Identity
   const [name, setName] = React.useState("")
@@ -22,7 +40,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }: CreateProduct
   const [barcode, setBarcode] = React.useState("")
   const [category, setCategory] = React.useState<ProductCategory>("FILTERS")
   const [unit, setUnit] = React.useState<StockUnit>("ADET")
-  const [shelfLocation, setShelfLocation] = React.useState("Raf A-1")
+  const [shelfLocation, setShelfLocation] = React.useState(initialShelfLocation || initialCellCode || "A-01")
 
   // Step 2: Pricing & Stock
   const [purchasePrice, setPurchasePrice] = React.useState<number | "">(150)
@@ -39,11 +57,16 @@ export function CreateProductModal({ isOpen, onClose, onCreated }: CreateProduct
   React.useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden"
+      if (initialShelfId) setSelectedShelfId(initialShelfId)
+      if (initialCellId) setSelectedCellId(initialCellId)
+      if (initialCellCode || initialShelfLocation) setShelfLocation(initialShelfLocation || initialCellCode || "")
+      setStep(1)
+      setErrors({})
       return () => {
         document.body.style.overflow = "auto"
       }
     }
-  }, [isOpen])
+  }, [isOpen, initialShelfId, initialCellId, initialCellCode, initialShelfLocation])
 
   if (!isOpen || !mounted) return null
 
@@ -69,6 +92,7 @@ export function CreateProductModal({ isOpen, onClose, onCreated }: CreateProduct
       category,
       unit,
       shelfLocation: shelfLocation.trim() || undefined,
+      shelfCellId: selectedCellId || undefined,
       purchasePrice: Number(purchasePrice) || 0,
       salePrice: Number(salePrice) || 0,
       currentStock: Number(currentStock) || 0,
@@ -93,6 +117,19 @@ export function CreateProductModal({ isOpen, onClose, onCreated }: CreateProduct
 
     onCreated(newProduct)
     onClose()
+  }
+
+  const handleShelfChange = (shelfId: string) => {
+    setSelectedShelfId(shelfId)
+    setSelectedCellId("")
+  }
+
+  const handleCellChange = (cellId: string) => {
+    setSelectedCellId(cellId)
+    const cell = shelfMatrix?.cells?.find((c: any) => c.id === cellId)
+    if (cell) {
+      setShelfLocation(cell.cellCode)
+    }
   }
 
   const modalContent = (
@@ -171,46 +208,103 @@ export function CreateProductModal({ isOpen, onClose, onCreated }: CreateProduct
               </div>
             </div>
 
-            <div className="grid grid-cols-3 gap-2.5">
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Kategori</label>
-                <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value as ProductCategory)}
-                  className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-                >
-                  <option value="OILS">Madeni Yağ</option>
-                  <option value="FILTERS">Filtre Grubu</option>
-                  <option value="BRAKES">Fren Sistemi</option>
-                  <option value="IGNITION">Ateşleme</option>
-                  <option value="SUSPENSION">Ön Takım</option>
-                  <option value="GENERAL">Genel Sarf</option>
-                </select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2.5">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Kategori</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value as ProductCategory)}
+                    className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="OILS">Madeni Yağ</option>
+                    <option value="FILTERS">Filtre Grubu</option>
+                    <option value="BRAKES">Fren Sistemi</option>
+                    <option value="IGNITION">Ateşleme</option>
+                    <option value="SUSPENSION">Ön Takım</option>
+                    <option value="GENERAL">Genel Sarf</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Birim</label>
+                  <select
+                    value={unit}
+                    onChange={(e) => setUnit(e.target.value as StockUnit)}
+                    className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer text-slate-800 dark:text-slate-200"
+                  >
+                    <option value="ADET">Adet</option>
+                    <option value="LITRE">Litre</option>
+                    <option value="TAKIM">Takım</option>
+                    <option value="SET">Set</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Birim</label>
-                <select
-                  value={unit}
-                  onChange={(e) => setUnit(e.target.value as StockUnit)}
-                  className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-                >
-                  <option value="ADET">Adet</option>
-                  <option value="LITRE">Litre</option>
-                  <option value="TAKIM">Takım</option>
-                  <option value="SET">Set</option>
-                </select>
-              </div>
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    Depo Raf Konumu
+                  </label>
+                  {!initialCellCode && shelves.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setIsCustomShelf(!isCustomShelf)}
+                      className="text-[10px] text-sky-600 dark:text-sky-400 hover:underline font-medium cursor-pointer"
+                    >
+                      {isCustomShelf ? "Tanımlı Raflardan Seç" : "Serbest Metin Gir"}
+                    </button>
+                  )}
+                </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Depo Raf Konumu</label>
-                <input
-                  type="text"
-                  placeholder="Örn: Raf C-2"
-                  value={shelfLocation}
-                  onChange={(e) => setShelfLocation(e.target.value)}
-                  className="w-full h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
+                {initialCellCode ? (
+                  <div className="h-10 px-3 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-between text-xs font-bold text-sky-600 dark:text-sky-400">
+                    <span className="flex items-center gap-1.5 truncate font-mono">
+                      <Boxes size={15} className="shrink-0 text-sky-500" />
+                      <span className="truncate">{initialCellCode}</span>
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-md bg-sky-500/20 text-sky-700 dark:text-sky-300 shrink-0 font-medium whitespace-nowrap">
+                      🔒 Bu Hücreye Kilitli
+                    </span>
+                  </div>
+                ) : !isCustomShelf && shelves.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-2">
+                    <select
+                      value={selectedShelfId}
+                      onChange={(e) => handleShelfChange(e.target.value)}
+                      className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer font-bold"
+                    >
+                      <option value="">-- Raf Seçiniz --</option>
+                      {shelves.map((s: any) => (
+                        <option key={s.id} value={s.id}>
+                          {s.code} ({s.name})
+                        </option>
+                      ))}
+                    </select>
+
+                    <select
+                      value={selectedCellId}
+                      onChange={(e) => handleCellChange(e.target.value)}
+                      disabled={!selectedShelfId}
+                      className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer disabled:opacity-50"
+                    >
+                      <option value="">-- Hücre/Göz Seçiniz --</option>
+                      {shelfMatrix?.cells?.map((c: any) => (
+                        <option key={c.id} value={c.id}>
+                          {c.cellCode} (K{c.rowNumber}-G{c.colNumber})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  <input
+                    type="text"
+                    placeholder="Örn: RAF-A01-K1-G2 veya Kutu 4"
+                    value={shelfLocation}
+                    onChange={(e) => setShelfLocation(e.target.value)}
+                    className="w-full h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 font-mono"
+                  />
+                )}
               </div>
             </div>
 

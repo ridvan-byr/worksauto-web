@@ -62,7 +62,7 @@ export default function AdminDashboardPage() {
 
   // Audit Logs State (Pagination & Filters)
   const [auditPage, setAuditPage] = React.useState(1)
-  const [auditActionFilter, setAuditActionFilter] = React.useState("PLATFORM")
+  const [auditActionFilter, setAuditActionFilter] = React.useState("ALL")
   const [auditSearchQuery, setAuditSearchQuery] = React.useState("")
 
   const { data: auditResponse, isLoading: isAuditLoading } = useAdminAuditLogs({

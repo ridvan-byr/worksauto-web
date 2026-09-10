@@ -3,25 +3,91 @@
 import { useProducts, useCreateProduct, useStockMovement, type ProductRecord } from "@/features/inventory/api/use-inventory"
 
 import * as React from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import {
   Package,
   AlertTriangle,
   Plus,
   Coins,
   TrendingUp,
-  } from "lucide-react"
+  Boxes,
+  ListFilter,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Product, StockMovementType, ProductCategory } from "@/features/inventory/types"
 import { ProductTable } from "@/features/inventory/components/product-table"
 import { CreateProductModal } from "@/features/inventory/components/create-product-modal"
 import { StockMovementModal } from "@/features/inventory/components/stock-movement-modal"
 import { MovementHistoryModal } from "@/features/inventory/components/movement-history-modal"
+import { ShelfMatrixView } from "@/features/inventory/components/shelf-matrix-view"
 
-export default function InventoryPage() {
+function InventoryPageContent() {
+  const searchParams = useSearchParams()
+  const router = useRouter()
+  const tabParam = searchParams.get("tab")
+
+  const [activeTab, setActiveTab] = React.useState<"LIST" | "SHELVES">(() => {
+    if (tabParam === "shelves") return "SHELVES"
+    if (tabParam === "list") return "LIST"
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("worksauto_inventory_tab")
+      if (saved === "SHELVES") return "SHELVES"
+    }
+    return "LIST"
+  })
   const [products, setProducts] = React.useState<Product[]>([])
-  
+
+  // Tab Kalıcılığı ve URL Senkronizasyonu
+  React.useEffect(() => {
+    if (tabParam === "shelves") {
+      setActiveTab("SHELVES")
+      localStorage.setItem("worksauto_inventory_tab", "SHELVES")
+    } else if (tabParam === "list") {
+      setActiveTab("LIST")
+      localStorage.setItem("worksauto_inventory_tab", "LIST")
+    } else {
+      const saved = localStorage.getItem("worksauto_inventory_tab")
+      if (saved === "SHELVES") {
+        setActiveTab("SHELVES")
+        router.replace("/inventory?tab=shelves")
+      } else {
+        setActiveTab("LIST")
+      }
+    }
+  }, [tabParam, router])
+
+  const handleTabChange = (tab: "LIST" | "SHELVES") => {
+    setActiveTab(tab)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("worksauto_inventory_tab", tab)
+      window.dispatchEvent(new Event("storage"))
+    }
+    if (tab === "SHELVES") {
+      router.replace("/inventory?tab=shelves")
+    } else {
+      router.replace("/inventory?tab=list")
+    }
+  }
+
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
+  const [targetCellForNewProduct, setTargetCellForNewProduct] = React.useState<{
+    shelfId?: string
+    cellId?: string
+    cellCode?: string
+    shelfLocation?: string
+  } | null>(null)
+
+  const handleOpenCreateForCell = (cell: any, shelf: any) => {
+    setTargetCellForNewProduct({
+      shelfId: shelf?.id,
+      cellId: cell.id,
+      cellCode: cell.cellCode,
+      shelfLocation: `${shelf?.name || shelf?.code || 'Depo'} (Kat ${cell.rowNumber}, Göz ${cell.colNumber})`,
+    })
+    setIsCreateModalOpen(true)
+  }
+
   const [movementModalState, setMovementModalState] = React.useState<{
     isOpen: boolean
     product: Product | null
@@ -49,6 +115,11 @@ export default function InventoryPage() {
         category: (p.category || "GENERAL") as ProductCategory,
         unit: 'ADET',
         shelfLocation: p.shelfLocation || 'Depo',
+        shelfCellId: p.shelfCellId,
+        aisle: p.aisle,
+        rack: p.rack,
+        tier: p.tier,
+        bin: p.bin,
         purchasePrice: Number(p.purchasePrice || 0),
         salePrice: Number(p.salePrice || 0),
         currentStock: Number(p.stockQuantity || 0),
@@ -81,6 +152,11 @@ export default function InventoryPage() {
         stockQuantity: newProd.currentStock,
         minStockLevel: newProd.minimumStock,
         shelfLocation: newProd.shelfLocation,
+        shelfCellId: newProd.shelfCellId,
+        aisle: newProd.aisle,
+        rack: newProd.rack,
+        tier: newProd.tier,
+        bin: newProd.bin,
       })
     } catch (e) {
       console.warn('API sync fallback:', e)
@@ -98,34 +174,53 @@ export default function InventoryPage() {
 
   const handleApplyMovement = async (
     productId: string,
-    movementType: StockMovementType,
-    qty: number,
-    ref?: string,
+    type: StockMovementType,
+    quantity: number,
     note?: string
   ) => {
     try {
-      const updated = await stockMovementMutation.mutateAsync({
+      await stockMovementMutation.mutateAsync({
         productId,
         data: {
-          movementType,
-          quantity: qty,
-          referenceId: ref,
+          type: type === "IN_PURCHASE" ? "IN" : type === "OUT_WORK_ORDER" ? "OUT" : "ADJUSTMENT",
+          movementType: type === "IN_PURCHASE" ? "IN" : type === "OUT_WORK_ORDER" ? "OUT" : "ADJUSTMENT",
+          quantity,
           note,
         },
       })
-      if (updated?.stockQuantity !== undefined) {
-        const newStock = updated.stockQuantity
-        setProducts((prev) =>
-          prev.map((p) => (p.id === productId ? { ...p, currentStock: newStock } : p))
-        )
-      }
     } catch (e) {
-      console.error('API movement error:', e)
+      console.warn('Movement API fallback:', e)
     }
+
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id !== productId) return p
+        const diff = type === "IN_PURCHASE" ? quantity : -quantity
+        const nextStock = Math.max(0, p.currentStock + diff)
+        return {
+          ...p,
+          currentStock: nextStock,
+          movements: [
+            {
+              id: "mov_" + Date.now(),
+              productId: p.id,
+              type,
+              quantity: diff,
+              previousStock: p.currentStock,
+              nextStock,
+              note: note || (type === "IN_PURCHASE" ? "Mal Kabul Girişi" : "Depo Çıkışı"),
+              performedByName: "Servis Yöneticisi",
+              createdAt: new Date().toISOString(),
+            },
+            ...p.movements,
+          ],
+        }
+      })
+    )
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 pb-16">
+    <div className="space-y-6 animate-in fade-in duration-300">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -144,8 +239,11 @@ export default function InventoryPage() {
 
         <Button
           type="button"
-          onClick={() => setIsCreateModalOpen(true)}
-          className="h-11 px-5 rounded-2xl gap-2 font-semibold text-xs shadow-lg shadow-sky-500/20 cursor-pointer self-start sm:self-auto"
+          onClick={() => {
+            setTargetCellForNewProduct(null)
+            setIsCreateModalOpen(true)
+          }}
+          className="h-11 px-5 rounded-2xl gap-2 font-semibold text-xs shadow-lg shadow-sky-500/20 cursor-pointer self-start sm:self-auto bg-sky-500 hover:bg-sky-600 text-white"
         >
           <Plus size={16} />
           <span>Yeni Parça Kartı Oluştur</span>
@@ -189,7 +287,7 @@ export default function InventoryPage() {
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Potansiyel Satış Cirosu</p>
-            <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+            <p className="text-2xl font-bold text-emerald-600 dark:emerald-400 font-mono">
               {totalPotentialRevenue.toLocaleString("tr-TR")} ₺
             </p>
           </div>
@@ -199,18 +297,61 @@ export default function InventoryPage() {
         </div>
       </div>
 
-      {/* Main Table */}
-      <ProductTable
-        products={products}
-        onOpenMovement={handleOpenMovement}
-        onOpenHistory={handleOpenHistory}
-      />
+      {/* Görünüm Sekmeleri (Tab Bar) */}
+      <div className="flex items-center gap-2 p-1.5 rounded-2xl bg-slate-100 dark:bg-slate-800/80 w-fit">
+        <button
+          type="button"
+          onClick={() => handleTabChange("LIST")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === "LIST"
+              ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+          }`}
+        >
+          <ListFilter size={15} />
+          <span>Yedek Parça Listesi</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => handleTabChange("SHELVES")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+            activeTab === "SHELVES"
+              ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm"
+              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+          }`}
+        >
+          <Boxes size={15} />
+          <span>Depo & Raf Matrisi (WMS)</span>
+        </button>
+      </div>
+
+      {/* Main Content: Tab'a Göre Render */}
+      {activeTab === "LIST" ? (
+        <ProductTable
+          products={products}
+          onOpenMovement={handleOpenMovement}
+          onOpenHistory={handleOpenHistory}
+        />
+      ) : (
+        <ShelfMatrixView
+          products={products}
+          onCreateProductForCell={handleOpenCreateForCell}
+        />
+      )}
 
       {/* Create Product Modal */}
       <CreateProductModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false)
+          setTargetCellForNewProduct(null)
+        }}
         onCreated={handleCreatedProduct}
+        initialShelfId={targetCellForNewProduct?.shelfId}
+        initialCellId={targetCellForNewProduct?.cellId}
+        initialCellCode={targetCellForNewProduct?.cellCode}
+        initialShelfLocation={targetCellForNewProduct?.shelfLocation}
       />
 
       {/* Stock Movement Modal */}
@@ -229,5 +370,19 @@ export default function InventoryPage() {
         onClose={() => setHistoryModalState({ isOpen: false, product: null })}
       />
     </div>
+  )
+}
+
+export default function InventoryPage() {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[400px] text-sm text-slate-500">
+          Envanter yükleniyor...
+        </div>
+      }
+    >
+      <InventoryPageContent />
+    </React.Suspense>
   )
 }

@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { apiClient } from '@/lib/api-client';
+import { apiClient, setAccessToken } from '@/lib/api-client';
 
 const ADMIN_USER_KEY = 'worksauto_admin_user';
 
@@ -127,9 +127,13 @@ export function getAdminUser(): AdminUser | null {
   }
 }
 
-export function setAdminSession(user: AdminUser) {
+export function setAdminSession(user: AdminUser, accessToken?: string) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(user));
+  if (accessToken) {
+    localStorage.setItem('worksauto_admin_token', accessToken);
+    setAccessToken(accessToken);
+  }
   const isProd = process.env.NODE_ENV === 'production';
   document.cookie = `worksauto_admin_session=1; path=/; SameSite=Lax${isProd ? '; Secure' : ''}; max-age=${24 * 60 * 60}`;
 }
@@ -137,6 +141,8 @@ export function setAdminSession(user: AdminUser) {
 export function clearAdminSession() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(ADMIN_USER_KEY);
+  localStorage.removeItem('worksauto_admin_token');
+  setAccessToken(null);
   document.cookie = 'worksauto_admin_session=; path=/; SameSite=Lax; max-age=0';
 }
 
@@ -252,7 +258,11 @@ export function useAdminHealth() {
 export function useAdminLogin() {
   return useMutation({
     mutationFn: async (credentials: { email: string; password: string }) => {
-      return apiClient.post<AdminLoginResponse>('/admin/auth/login', credentials);
+      const res = await apiClient.post<AdminLoginResponse>('/admin/auth/login', credentials);
+      if (res?.user) {
+        setAdminSession(res.user, res.accessToken);
+      }
+      return res;
     },
   });
 }

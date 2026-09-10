@@ -90,6 +90,20 @@ export function AppSidebar({
     }
   }
 
+  const [preferredInventoryTab, setPreferredInventoryTab] = React.useState<string>("list")
+
+  React.useEffect(() => {
+    const updateTab = () => {
+      if (typeof window !== "undefined") {
+        const saved = localStorage.getItem("worksauto_inventory_tab")
+        setPreferredInventoryTab(saved === "SHELVES" ? "shelves" : "list")
+      }
+    }
+    updateTab()
+    window.addEventListener("storage", updateTab)
+    return () => window.removeEventListener("storage", updateTab)
+  }, [])
+
   const dynamicNavItems: NavItem[] = React.useMemo(() => {
     return [
       {
@@ -144,7 +158,7 @@ export function AppSidebar({
       },
       {
         title: "Yedek Parça & Stok",
-        href: "/inventory",
+        href: preferredInventoryTab === "shelves" ? "/inventory?tab=shelves" : "/inventory",
         icon: Package,
         badge:
           summary?.criticalStockCount && summary.criticalStockCount > 0
@@ -245,10 +259,11 @@ export function AppSidebar({
                 (c) => pathname === c.href || (c.href !== "/" && pathname.startsWith(c.href + "/"))
               )
             )
+            const itemBaseHref = item.href.split("?")[0]
             const isSelfActive =
-              item.href === "/"
+              itemBaseHref === "/"
                 ? pathname === "/"
-                : pathname === item.href || pathname.startsWith(item.href + "/")
+                : pathname === itemBaseHref || pathname.startsWith(itemBaseHref + "/")
             const isActive = isSelfActive || isChildActive
             const isExpanded = openSubMenus[item.title] ?? true
             const Icon = item.icon
