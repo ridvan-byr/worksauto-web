@@ -7,12 +7,11 @@ import {
   Play,
   CheckCircle2,
   XCircle,
+  GripVertical,
 } from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"
 
 import { PlateBadge } from "@/features/customers/components/plate-badge"
-
-
 
 interface WorkOrderCardProps {
   order: WorkOrder
@@ -21,6 +20,7 @@ interface WorkOrderCardProps {
 
 export function WorkOrderCard({ order, onStatusChange }: WorkOrderCardProps) {
   const router = useRouter()
+  const [isDragging, setIsDragging] = React.useState(false)
 
   const handleCardClick = () => {
     router.push(`/work-orders/${order.id}`)
@@ -29,14 +29,27 @@ export function WorkOrderCard({ order, onStatusChange }: WorkOrderCardProps) {
   return (
     <div
       onClick={handleCardClick}
-      className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md hover:border-sky-500/40 transition-all cursor-pointer space-y-3 group"
+      draggable={order.status !== "CANCELLED"}
+      onDragStart={(e) => {
+        setIsDragging(true)
+        e.dataTransfer.setData("text/plain", order.id)
+        e.dataTransfer.setData("application/json", JSON.stringify({ orderId: order.id, currentStatus: order.status }))
+        e.dataTransfer.effectAllowed = "move"
+      }}
+      onDragEnd={() => setIsDragging(false)}
+      className={`p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md hover:border-sky-500/40 transition-all cursor-grab active:cursor-grabbing space-y-3 group select-none ${
+        isDragging ? "opacity-40 scale-95 border-sky-400" : ""
+      }`}
     >
       {/* Top Header: Plate & WO Number */}
       <div className="flex items-center justify-between gap-2">
         <PlateBadge plate={order.plate} size="sm" />
-        <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-          {order.workOrderNumber}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+            {order.workOrderNumber}
+          </span>
+          <GripVertical size={14} className="text-slate-300 dark:text-slate-600 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors shrink-0" />
+        </div>
       </div>
 
       {/* Vehicle Model & Customer Name */}

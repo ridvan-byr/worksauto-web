@@ -41,7 +41,7 @@ export function CalendarGrid({
       return `${year}-${month}-${day}`
     }
 
-    const days: { dateStr: string; dayName: string; dayNumber: number; isToday: boolean }[] = []
+    const days: { dateStr: string; dayName: string; dayNumber: number; isToday: boolean; isPast: boolean }[] = []
     const todayStr = formatLocalDate(new Date())
 
     const allDayNames = ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar"]
@@ -54,6 +54,7 @@ export function CalendarGrid({
         dayName: allDayNames[i],
         dayNumber: d.getDate(),
         isToday: dateStr === todayStr,
+        isPast: dateStr < todayStr,
       })
     }
     return days
@@ -77,7 +78,8 @@ export function CalendarGrid({
                 key={day.dateStr}
                 className={cn(
                   "p-3 text-center border-r border-slate-200/60 dark:border-slate-800/60 last:border-r-0 transition-colors",
-                  day.isToday && "bg-sky-500/5 dark:bg-sky-500/10"
+                  day.isToday && "bg-sky-500/5 dark:bg-sky-500/10",
+                  day.isPast && "opacity-60 bg-slate-100/30 dark:bg-slate-950/20"
                 )}
               >
                 <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -88,6 +90,8 @@ export function CalendarGrid({
                     "text-base font-bold mt-0.5 inline-flex w-7 h-7 items-center justify-center rounded-full",
                     day.isToday
                       ? "bg-sky-500 text-white shadow-xs"
+                      : day.isPast
+                      ? "text-slate-400 dark:text-slate-500"
                       : "text-slate-900 dark:text-slate-100"
                   )}
                 >
@@ -124,16 +128,19 @@ export function CalendarGrid({
                     <div
                       key={day.dateStr + timeSlot}
                       onClick={(e) => {
-                        // Only trigger if clicked on the empty space, not inside a card
-                        if (e.target === e.currentTarget) {
+                        // Only trigger if clicked on the empty space, not inside a card, and date is not in the past
+                        if (e.target === e.currentTarget && !day.isPast) {
                           onSlotClick(day.dateStr, timeSlot)
                         }
                       }}
                       className={cn(
                         "p-1.5 border-r border-slate-200/60 dark:border-slate-800/60 last:border-r-0 relative group transition-colors flex flex-col gap-1.5",
                         day.isToday && "bg-sky-500/[0.02] dark:bg-sky-500/[0.03]",
-                        "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer"
+                        day.isPast
+                          ? "bg-slate-100/40 dark:bg-slate-950/40 opacity-70 cursor-not-allowed"
+                          : "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer"
                       )}
+                      title={day.isPast ? "Geçmiş bir tarihe randevu oluşturulamaz" : undefined}
                     >
                       {cellAppointments.map((app) => (
                         <div

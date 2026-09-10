@@ -29,6 +29,7 @@ import {
   useCreateShelf,
   useDeleteShelf,
   useAssignProductCell,
+  useBulkAssignProductCell,
   type ShelfSummaryRecord,
   type ShelfDetailRecord,
   type ShelfCellRecord,
@@ -63,6 +64,13 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
   // Drag & Drop State
   const [draggedProductId, setDraggedProductId] = React.useState<string | null>(null)
   const [dragOverCellId, setDragOverCellId] = React.useState<string | null>(null)
+  const [dragOverShelfId, setDragOverShelfId] = React.useState<string | null>(null)
+  const [dragOverStaging, setDragOverStaging] = React.useState(false)
+  const [draggedBulkInfo, setDraggedBulkInfo] = React.useState<{
+    type: "PRODUCT" | "CELL_BULK" | "SHELF_BULK"
+    title: string
+    count: number
+  } | null>(null)
   const [stagingSearch, setStagingSearch] = React.useState("")
   const [isStagingOpen, setIsStagingOpen] = React.useState(true)
 
@@ -78,6 +86,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
 
   const deleteShelfMutation = useDeleteShelf()
   const assignProductCellMutation = useAssignProductCell()
+  const bulkAssignMutation = useBulkAssignProductCell()
 
   // Otomatik ilk rafı seç
   React.useEffect(() => {
@@ -158,14 +167,67 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
     )
   }, [products, unassignedProducts, stagingSearch])
 
-  const handleDropProductToCell = async (productId: string, cellId: string) => {
+  const handleDropPayload = async (
+    e: React.DragEvent,
+    target: { cellId?: string; shelfId?: string; unassign?: boolean }
+  ) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setDragOverCellId(null)
+    setDragOverShelfId(null)
+    setDragOverStaging(false)
+    setDraggedProductId(null)
+    setDraggedBulkInfo(null)
+
+    let productIds: string[] = []
+    const jsonStr = e.dataTransfer.getData("application/json")
+    if (jsonStr) {
+      try {
+        const parsed = JSON.parse(jsonStr)
+        if (Array.isArray(parsed.productIds) && parsed.productIds.length > 0) {
+          productIds = parsed.productIds
+        } else if (parsed.productId) {
+          productIds = [parsed.productId]
+        }
+      } catch {}
+    }
+
+    if (productIds.length === 0) {
+      const text = e.dataTransfer.getData("text/plain") || draggedProductId
+      if (text) {
+        productIds = text.split(",").map((s) => s.trim()).filter(Boolean)
+      }
+    }
+
+    if (productIds.length === 0) return
+
     try {
-      await assignProductCellMutation.mutateAsync({
-        productId,
-        shelfCellId: cellId,
-      })
-    } catch (e) {
-      console.error("Drop assign failed:", e)
+      if (target.unassign) {
+        await bulkAssignMutation.mutateAsync({
+          productIds,
+          shelfCellId: null,
+          targetShelfId: null,
+        })
+      } else if (target.cellId) {
+        if (productIds.length === 1) {
+          await assignProductCellMutation.mutateAsync({
+            productId: productIds[0],
+            shelfCellId: target.cellId,
+          })
+        } else {
+          await bulkAssignMutation.mutateAsync({
+            productIds,
+            shelfCellId: target.cellId,
+          })
+        }
+      } else if (target.shelfId) {
+        await bulkAssignMutation.mutateAsync({
+          productIds,
+          targetShelfId: target.shelfId,
+        })
+      }
+    } catch (err) {
+      console.error("Drop handling failed:", err)
     }
   }
 
@@ -272,40 +334,110 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
     <div className="space-y-6">
       {/* Üst Bar: Raf Seçici, İstatistikler & Yeni Raf Butonu */}
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold">
-              <Boxes size={20} />
+        <div className="flex flex-col gap-2.5 w-full md:w-auto">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold">
+                <Boxes size={20} />
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Aktif Depo Rafı</p>
+                <select
+                  value={selectedShelfId || ""}
+                  onChange={(e) => setSelectedShelfId(e.target.value)}
+                  className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                  disabled={isShelvesLoading || shelves.length === 0}
+                >
+                  {shelves.length === 0 ? (
+                    <option value="">Henüz Tanımlı Raf Yok</option>
+                  ) : (
+                    shelves.map((s: ShelfSummaryRecord) => (
+                      <option key={s.id} value={s.id}>
+                        {s.code} - {s.name} ({s.occupiedCells}/{s.totalCells} Dolu)
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
             </div>
-            <div>
-              <p className="text-[10px] uppercase tracking-wider font-bold text-slate-500">Aktif Depo Rafı</p>
-              <select
-                value={selectedShelfId || ""}
-                onChange={(e) => setSelectedShelfId(e.target.value)}
-                className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-                disabled={isShelvesLoading || shelves.length === 0}
-              >
-                {shelves.length === 0 ? (
-                  <option value="">Henüz Tanımlı Raf Yok</option>
-                ) : (
-                  shelves.map((s: ShelfSummaryRecord) => (
-                    <option key={s.id} value={s.id}>
-                      {s.code} - {s.name} ({s.occupiedCells}/{s.totalCells} Dolu)
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
+
+            {selectedShelfSummary && (
+              <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
+                <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  {selectedShelfSummary.zone || "Genel Depo"}
+                </span>
+                <span className="px-2.5 py-1 rounded-lg bg-sky-500/10 text-[11px] font-bold text-sky-600 dark:text-sky-400">
+                  %{selectedShelfSummary.occupancyRate} Doluluk
+                </span>
+              </div>
+            )}
           </div>
 
-          {selectedShelfSummary && (
-            <div className="flex items-center gap-2 pl-2 border-l border-slate-200 dark:border-slate-800">
-              <span className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                {selectedShelfSummary.zone || "Genel Depo"}
-              </span>
-              <span className="px-2.5 py-1 rounded-lg bg-sky-500/10 text-[11px] font-bold text-sky-600 dark:text-sky-400">
-                %{selectedShelfSummary.occupancyRate} Doluluk
-              </span>
+          {/* Hızlı Raf Sekmeleri & Sürükle-Bırak Hedefleri */}
+          {shelves.length > 1 && (
+            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+              <span className="text-[10px] font-medium text-slate-400 mr-1">Raflar Arası Geçiş & Taşıma:</span>
+              {shelves.map((s) => {
+                const isCurrent = s.id === selectedShelfId
+                const isDropTarget = dragOverShelfId === s.id
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => setSelectedShelfId(s.id)}
+                    onDragEnter={(e) => {
+                      e.preventDefault()
+                      if (!isCurrent) setDragOverShelfId(s.id)
+                    }}
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.dataTransfer.dropEffect = "move"
+                      if (!isCurrent && dragOverShelfId !== s.id) setDragOverShelfId(s.id)
+                    }}
+                    onDragLeave={(e) => {
+                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                        if (dragOverShelfId === s.id) setDragOverShelfId(null)
+                      }
+                    }}
+                    onDrop={(e) => handleDropPayload(e, { shelfId: s.id })}
+                    draggable={isCurrent && (selectedShelfSummary?.totalProducts || 0) > 0}
+                    onDragStart={(e) => {
+                      if (currentShelf?.cells) {
+                        const allProdIds = currentShelf.cells.flatMap((c: ShelfCellRecord) => (c.products || []).map((p: ShelfProductSummary) => p.id))
+                        if (allProdIds.length > 0) {
+                          e.dataTransfer.setData("application/json", JSON.stringify({ type: "SHELF_BULK", shelfId: s.id, productIds: allProdIds }))
+                          e.dataTransfer.setData("text/plain", allProdIds.join(","))
+                          e.dataTransfer.effectAllowed = "move"
+                          setDraggedBulkInfo({ type: "SHELF_BULK", title: `${s.code} (${allProdIds.length} Parça)`, count: allProdIds.length })
+                        }
+                      }
+                    }}
+                    onDragEnd={() => {
+                      setDraggedBulkInfo(null)
+                      setDragOverShelfId(null)
+                    }}
+                    className={`group px-2.5 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border select-none ${
+                      isDropTarget
+                        ? "bg-sky-500 text-white border-sky-400 ring-2 ring-sky-300 scale-105 shadow-md animate-pulse"
+                        : isCurrent
+                        ? "bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border-sky-300 dark:border-sky-800 shadow-xs"
+                        : "bg-slate-50 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:border-sky-300 hover:text-sky-500"
+                    }`}
+                    title={
+                      isCurrent
+                        ? "Aktif Raf (Tüm parçaları başka bir rafa taşımak için bu etiketi sürükleyip diğer rafa bırakabilirsiniz)"
+                        : "Parçayı veya hücreyi bu rafa taşımak için üzerine bırakın"
+                    }
+                  >
+                    <span>{s.code}</span>
+                    <span className={`text-[10px] px-1.5 py-0.2 rounded-md ${
+                      isCurrent ? "bg-sky-200/80 dark:bg-sky-800/60 text-sky-800 dark:text-sky-200" : "bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-300"
+                    }`}>
+                      {s.totalProducts}
+                    </span>
+                    {isDropTarget && <span className="text-[10px] font-extrabold animate-bounce">🎯 Buraya Taşı</span>}
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -435,7 +567,33 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
           </div>
 
           {/* Sürükle & Bırak İstasyonu (Staging Dock) */}
-          <div className="p-4 rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 shadow-sm dark:shadow-xl space-y-3 text-slate-900 dark:text-slate-100">
+          <div
+            onDragEnter={(e) => {
+              e.preventDefault()
+              setDragOverStaging(true)
+            }}
+            onDragOver={(e) => {
+              e.preventDefault()
+              e.dataTransfer.dropEffect = "move"
+              if (!dragOverStaging) setDragOverStaging(true)
+            }}
+            onDragLeave={(e) => {
+              if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                setDragOverStaging(false)
+              }
+            }}
+            onDrop={(e) => handleDropPayload(e, { unassign: true })}
+            className={`p-4 rounded-3xl border shadow-sm dark:shadow-xl space-y-3 text-slate-900 dark:text-slate-100 transition-all ${
+              dragOverStaging
+                ? "bg-amber-50/90 dark:bg-amber-950/40 border-amber-400 ring-2 ring-amber-400/60 shadow-lg scale-[1.01]"
+                : "bg-white dark:bg-slate-900/95 border-slate-200/90 dark:border-slate-800"
+            }`}
+          >
+            {dragOverStaging && (
+              <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-800 dark:text-amber-200 text-xs font-bold text-center animate-pulse">
+                🎯 Parçaları veya hücreyi buraya bırakarak raf atamasını kaldırın (Serbest Alana Çıkar)
+              </div>
+            )}
             {/* Dock Header */}
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
@@ -630,6 +788,28 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                             key={cell.id}
                             type="button"
                             onClick={() => setActiveCellModal(cell)}
+                            draggable={hasProducts}
+                            onDragStart={(e) => {
+                              if (hasProducts) {
+                                const pIds = cellProducts.map((p: ShelfProductSummary) => p.id)
+                                e.dataTransfer.setData(
+                                  "application/json",
+                                  JSON.stringify({ type: "CELL_BULK", cellId: cell.id, productIds: pIds })
+                                )
+                                e.dataTransfer.setData("text/plain", pIds.join(","))
+                                e.dataTransfer.effectAllowed = "move"
+                                setDraggedBulkInfo({
+                                  type: "CELL_BULK",
+                                  title: `${cell.cellCode} (${pIds.length} Parça)`,
+                                  count: pIds.length,
+                                })
+                              }
+                            }}
+                            onDragEnd={() => {
+                              setDraggedBulkInfo(null)
+                              setDragOverCellId(null)
+                              setDragOverShelfId(null)
+                            }}
                             onDragEnter={(e) => {
                               e.preventDefault()
                               if (dragOverCellId !== cell.id) setDragOverCellId(cell.id)
@@ -644,15 +824,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                 if (dragOverCellId === cell.id) setDragOverCellId(null)
                               }
                             }}
-                            onDrop={async (e) => {
-                              e.preventDefault()
-                              const prodId = e.dataTransfer.getData("text/plain") || draggedProductId
-                              setDragOverCellId(null)
-                              setDraggedProductId(null)
-                              if (prodId) {
-                                await handleDropProductToCell(prodId, cell.id)
-                              }
-                            }}
+                            onDrop={(e) => handleDropPayload(e, { cellId: cell.id })}
                             title={tooltipText}
                             className={`w-9 h-9 rounded-lg border text-[10px] font-mono font-bold transition-all flex items-center justify-center cursor-pointer relative group ${
                               isDragOver
@@ -696,15 +868,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                               if (dragOverCellId === cell.id) setDragOverCellId(null)
                             }
                           }}
-                          onDrop={async (e) => {
-                            e.preventDefault()
-                            const prodId = e.dataTransfer.getData("text/plain") || draggedProductId
-                            setDragOverCellId(null)
-                            setDraggedProductId(null)
-                            if (prodId) {
-                              await handleDropProductToCell(prodId, cell.id)
-                            }
-                          }}
+                          onDrop={(e) => handleDropPayload(e, { cellId: cell.id })}
                           className={`group relative p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between h-[115px] overflow-hidden min-w-0 ${
                             isDragOver
                               ? "ring-2 ring-sky-500 bg-sky-50 dark:bg-sky-500/25 scale-[1.03] shadow-lg shadow-sky-500/20 z-20"
@@ -740,6 +904,35 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                     <span>{productCount} Çeşit</span>
                                   </span>
                                 )}
+                                {/* Bulk Cell Drag Handle */}
+                                <div
+                                  draggable="true"
+                                  onClick={(e) => e.stopPropagation()}
+                                  onDragStart={(e) => {
+                                    e.stopPropagation()
+                                    const pIds = cellProducts.map((p: ShelfProductSummary) => p.id)
+                                    e.dataTransfer.setData(
+                                      "application/json",
+                                      JSON.stringify({ type: "CELL_BULK", cellId: cell.id, productIds: pIds })
+                                    )
+                                    e.dataTransfer.setData("text/plain", pIds.join(","))
+                                    e.dataTransfer.effectAllowed = "move"
+                                    setDraggedBulkInfo({
+                                      type: "CELL_BULK",
+                                      title: `${cell.cellCode} (${pIds.length} Parça)`,
+                                      count: pIds.length,
+                                    })
+                                  }}
+                                  onDragEnd={() => {
+                                    setDraggedBulkInfo(null)
+                                    setDragOverCellId(null)
+                                    setDragOverShelfId(null)
+                                  }}
+                                  className="p-1 rounded-md bg-sky-500/10 hover:bg-sky-500/25 text-sky-600 dark:text-sky-400 cursor-grab active:cursor-grabbing transition-colors"
+                                  title={`Tüm gözü (${productCount} parça) başka hücreye veya yukarıdaki raflardan birine topluca taşımak için sürükleyin`}
+                                >
+                                  <GripVertical size={12} />
+                                </div>
                                 <span
                                   className={`w-2 h-2 rounded-full shrink-0 ${
                                     hasCritical
@@ -774,6 +967,10 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                       draggable="true"
                                       onDragStart={(e) => {
                                         e.stopPropagation()
+                                        e.dataTransfer.setData(
+                                          "application/json",
+                                          JSON.stringify({ type: "PRODUCT", productId: p.id, productIds: [p.id] })
+                                        )
                                         e.dataTransfer.setData("text/plain", p.id)
                                         e.dataTransfer.effectAllowed = "move"
                                         setDraggedProductId(p.id)
@@ -783,7 +980,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                         setDragOverCellId(null)
                                       }}
                                       className="flex items-center justify-between text-[10px] leading-tight gap-1 cursor-grab active:cursor-grabbing hover:bg-indigo-100/60 dark:hover:bg-white/10 rounded px-1 -mx-1 transition-colors"
-                                      title="Başka bir göze taşımak için sürükleyin"
+                                      title="Başka bir göze veya rafa taşımak için sürükleyin"
                                     >
                                       <span className="text-slate-800 dark:text-white font-medium truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-200">
                                         {p.name}
@@ -811,6 +1008,10 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                   draggable="true"
                                   onDragStart={(e) => {
                                     e.stopPropagation()
+                                    e.dataTransfer.setData(
+                                      "application/json",
+                                      JSON.stringify({ type: "PRODUCT", productId: cellProducts[0].id, productIds: [cellProducts[0].id] })
+                                    )
                                     e.dataTransfer.setData("text/plain", cellProducts[0].id)
                                     e.dataTransfer.effectAllowed = "move"
                                     setDraggedProductId(cellProducts[0].id)
@@ -820,7 +1021,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                     setDragOverCellId(null)
                                   }}
                                   className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-sky-600 dark:group-hover:text-sky-300 transition-colors cursor-grab active:cursor-grabbing break-words"
-                                  title="Başka bir göze taşımak için sürükleyin"
+                                  title="Başka bir göze veya rafa taşımak için sürükleyin"
                                 >
                                   {cellProducts[0].name}
                                 </p>

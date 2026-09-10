@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Appointment, AppointmentServiceItem } from "../types"
 import { useCustomers, type QuickLeadResponse } from "@/features/customers/api/use-customers"
 import { useCreateAppointment } from "@/features/appointments/api/use-appointments"
+import { useStaff, type StaffRecord } from "@/features/settings/api/use-settings"
 import { useAuth } from "@/features/auth/auth-context"
 import { cn } from "@/lib/utils"
 import {
@@ -52,7 +53,19 @@ export function CreateAppointmentModal({
   const [mounted, setMounted] = React.useState(false)
   const { tenant } = useAuth()
   const { data: apiCustomers } = useCustomers()
+  const { data: staffList = [] } = useStaff()
   const createAppointmentMutation = useCreateAppointment()
+
+  // Filter actual workshop technicians / mechanics (exclude administrative OWNER/CASHIER)
+  const mechanicStaffList = React.useMemo(() => {
+    return (staffList as StaffRecord[]).filter((s) => {
+      if (s.isActive === false) return false
+      if (s.role === "OWNER" || s.role === "CASHIER" || s.role === "SUPER_ADMIN") {
+        return !!s.mechanic
+      }
+      return true
+    })
+  }, [staffList])
 
   // Mode: "search" vs "quick-lead"
   const [customerMode, setCustomerMode] = React.useState<"search" | "quick-lead">("search")
@@ -322,9 +335,13 @@ export function CreateAppointmentModal({
               </label>
               <input
                 type="date"
+                min={new Date().toISOString().split("T")[0]}
                 {...register("date")}
                 className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
+              {errors.date && (
+                <p className="text-[10px] text-rose-500 font-medium">{errors.date.message}</p>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -347,9 +364,12 @@ export function CreateAppointmentModal({
                 {...register("assignedStaffId")}
                 className="w-full h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
               >
-                <option value="Ahmet Usta">Ahmet Usta (Motor & Mekanik)</option>
-                <option value="Mustafa Usta">Mustafa Usta (Oto Elektrik)</option>
-                <option value="Ali Usta">Ali Usta (Ön Takım & Fren)</option>
+                <option value="">Usta / Teknisyen Seçiniz (Opsiyonel)</option>
+                {mechanicStaffList.map((st: StaffRecord) => (
+                  <option key={st.id} value={st.id}>
+                    {st.name} {st.surname || ""} ({st.specialty || (st.role === "TECHNICIAN" ? "Teknisyen" : st.role)})
+                  </option>
+                ))}
               </select>
             </div>
           </div>

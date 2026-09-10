@@ -223,10 +223,14 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
           </div>
           <div className="hidden xl:block text-left">
             <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 leading-none">
-              {user ? `${user.name} ${user.surname}` : "Yetkili Kullanıcı"}
+              {user
+                ? user.surname && !user.name.includes(user.surname)
+                  ? `${user.name} ${user.surname}`.trim()
+                  : user.name
+                : "Yetkili Kullanıcı"}
             </p>
             <p className="text-[10px] text-slate-400 leading-none mt-1">
-              {user?.role === "tenant_admin" ? "Servis Yöneticisi" : "Servis Danışmanı"}
+              {user?.role === "OWNER" || user?.role === "tenant_admin" ? "Servis Yöneticisi" : "Servis Danışmanı"}
             </p>
           </div>
         </div>

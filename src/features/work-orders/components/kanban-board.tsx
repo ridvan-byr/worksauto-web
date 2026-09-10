@@ -18,6 +18,16 @@ const PRIORITY_WEIGHT: Record<string, number> = {
 
 export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
   const [showCancelled, setShowCancelled] = React.useState(false)
+  const [dragOverColumn, setDragOverColumn] = React.useState<WorkOrderStatus | null>(null)
+
+  const handleDropToColumn = (e: React.DragEvent, targetStatus: WorkOrderStatus) => {
+    e.preventDefault()
+    setDragOverColumn(null)
+    const id = e.dataTransfer.getData("text/plain")
+    if (id) {
+      onStatusChange(id, targetStatus)
+    }
+  }
 
   // 1. PENDING / QUEUE: En acil olanlar en üstte, aynı aciliyette ilk gelen araç önce alınır (FIFO)
   const pendingOrders = React.useMemo(() => {
@@ -71,7 +81,24 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
         {/* COLUMN 1: PENDING */}
-        <div className="rounded-3xl bg-slate-100/70 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800/80 p-4 space-y-3.5">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = "move"
+            if (dragOverColumn !== "PENDING") setDragOverColumn("PENDING")
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              if (dragOverColumn === "PENDING") setDragOverColumn(null)
+            }
+          }}
+          onDrop={(e) => handleDropToColumn(e, "PENDING")}
+          className={`rounded-3xl border p-4 space-y-3.5 transition-all ${
+            dragOverColumn === "PENDING"
+              ? "bg-amber-500/15 border-amber-400 ring-2 ring-amber-400/60 shadow-lg scale-[1.01]"
+              : "bg-slate-100/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800/80"
+          }`}
+        >
           <div className="flex items-center justify-between pb-2 border-b border-slate-200/70 dark:border-slate-800/70">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
@@ -83,6 +110,12 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
               {pendingOrders.length}
             </span>
           </div>
+
+          {dragOverColumn === "PENDING" && (
+            <div className="p-2.5 rounded-xl border border-dashed border-amber-400 bg-amber-500/20 text-center text-xs font-bold text-amber-800 dark:text-amber-200 animate-pulse">
+              🎯 Bekleme Sırasına Almak İçin Buraya Bırakın
+            </div>
+          )}
 
           <div className="space-y-3 min-h-[320px]">
             {pendingOrders.length === 0 ? (
@@ -99,7 +132,24 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
         </div>
 
         {/* COLUMN 2: IN PROGRESS (ON LIFT) */}
-        <div className="rounded-3xl bg-sky-500/[0.04] dark:bg-sky-500/[0.03] border border-sky-500/20 p-4 space-y-3.5">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = "move"
+            if (dragOverColumn !== "IN_PROGRESS") setDragOverColumn("IN_PROGRESS")
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              if (dragOverColumn === "IN_PROGRESS") setDragOverColumn(null)
+            }
+          }}
+          onDrop={(e) => handleDropToColumn(e, "IN_PROGRESS")}
+          className={`rounded-3xl border p-4 space-y-3.5 transition-all ${
+            dragOverColumn === "IN_PROGRESS"
+              ? "bg-sky-500/20 border-sky-400 ring-2 ring-sky-400/60 shadow-lg scale-[1.01]"
+              : "bg-sky-500/[0.04] dark:bg-sky-500/[0.03] border-sky-500/20"
+          }`}
+        >
           <div className="flex items-center justify-between pb-2 border-b border-sky-500/20">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
@@ -111,6 +161,12 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
               {inProgressOrders.length}
             </span>
           </div>
+
+          {dragOverColumn === "IN_PROGRESS" && (
+            <div className="p-2.5 rounded-xl border border-dashed border-sky-400 bg-sky-500/25 text-center text-xs font-bold text-sky-800 dark:text-sky-200 animate-pulse">
+              🎯 Lifte / İşleme Almak İçin Buraya Bırakın
+            </div>
+          )}
 
           <div className="space-y-3 min-h-[320px]">
             {inProgressOrders.length === 0 ? (
@@ -127,7 +183,24 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
         </div>
 
         {/* COLUMN 3: COMPLETED */}
-        <div className="rounded-3xl bg-emerald-500/[0.04] dark:bg-emerald-500/[0.03] border border-emerald-500/20 p-4 space-y-3.5">
+        <div
+          onDragOver={(e) => {
+            e.preventDefault()
+            e.dataTransfer.dropEffect = "move"
+            if (dragOverColumn !== "COMPLETED") setDragOverColumn("COMPLETED")
+          }}
+          onDragLeave={(e) => {
+            if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+              if (dragOverColumn === "COMPLETED") setDragOverColumn(null)
+            }
+          }}
+          onDrop={(e) => handleDropToColumn(e, "COMPLETED")}
+          className={`rounded-3xl border p-4 space-y-3.5 transition-all ${
+            dragOverColumn === "COMPLETED"
+              ? "bg-emerald-500/20 border-emerald-400 ring-2 ring-emerald-400/60 shadow-lg scale-[1.01]"
+              : "bg-emerald-500/[0.04] dark:bg-emerald-500/[0.03] border-emerald-500/20"
+          }`}
+        >
           <div className="flex items-center justify-between pb-2 border-b border-emerald-500/20">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
@@ -139,6 +212,12 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
               {completedOrders.length}
             </span>
           </div>
+
+          {dragOverColumn === "COMPLETED" && (
+            <div className="p-2.5 rounded-xl border border-dashed border-emerald-400 bg-emerald-500/25 text-center text-xs font-bold text-emerald-800 dark:text-emerald-200 animate-pulse">
+              🎯 İşlemi Tamamlamak İçin Buraya Bırakın
+            </div>
+          )}
 
           <div className="space-y-3 min-h-[320px]">
             {completedOrders.length === 0 ? (

@@ -168,6 +168,8 @@ export function useCreateProduct() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-shelves'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-shelf-matrix'] });
       toast.success('Yeni parça başarıyla envantere eklendi.');
     },
     onError: (err: unknown) => {
@@ -251,6 +253,38 @@ export function useAssignProductCell() {
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'Hücre ataması yapılamadı.';
+      toast.error(message);
+    },
+  });
+}
+
+export interface BulkAssignProductCellInput {
+  productIds: string[];
+  shelfCellId?: string | null;
+  targetShelfId?: string | null;
+}
+
+export interface BulkAssignCellResult {
+  success: boolean;
+  count: number;
+  message?: string;
+  cellCode?: string;
+  shelfCode?: string;
+}
+
+export function useBulkAssignProductCell() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: BulkAssignProductCellInput) =>
+      apiClient.post<BulkAssignCellResult>('/inventory/shelves/bulk-assign-cell', data),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-shelves'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-shelf-matrix'] });
+      toast.success(data?.message || `${data?.count || 0} adet parça başarıyla taşındı.`);
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Toplu taşıma işlemi başarısız oldu.';
       toast.error(message);
     },
   });

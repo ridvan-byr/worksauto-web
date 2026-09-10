@@ -108,6 +108,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.removeItem(REFRESH_TOKEN_KEY)
             router.replace("/sign-in?suspended=true")
           }
+        } else {
+          const freshData = await res.json().catch(() => null)
+          if (freshData?.user) {
+            let role = freshData.user.role
+            if (role === "tenant_admin") role = "OWNER"
+            else if (role === "technician") role = "TECHNICIAN"
+
+            const updatedUser: User = {
+              id: freshData.user.id,
+              name: freshData.user.name,
+              surname: freshData.user.surname,
+              phone: freshData.user.phone || "",
+              email: freshData.user.email || "",
+              role: role || "OWNER",
+            }
+
+            setUser(updatedUser)
+
+            if (freshData.tenant) {
+              setTenant((prev) => (prev ? { ...prev, ...freshData.tenant } : freshData.tenant))
+            }
+
+            try {
+              const saved = typeof window !== "undefined" ? localStorage.getItem(AUTH_STORAGE_KEY) : null
+              if (saved) {
+                const parsed = JSON.parse(saved)
+                parsed.user = updatedUser
+                if (freshData.tenant) {
+                  parsed.tenant = { ...parsed.tenant, ...freshData.tenant }
+                }
+                localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed))
+              }
+            } catch {
+              // ignore storage errors
+            }
+          }
         }
       } catch {
         // Network error, keep existing state

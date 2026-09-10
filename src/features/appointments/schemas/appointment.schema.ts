@@ -4,7 +4,17 @@ export const appointmentCreateSchema = z.object({
   customerId: z.string().min(1, 'Lütfen bir müşteri seçin veya hızlı kayıt yapın.'),
   vehicleId: z.string().min(1, 'Lütfen müşteriye ait bir araç seçin.'),
   serviceId: z.string().optional(),
-  date: z.string().optional(),
+  date: z
+    .string()
+    .refine(
+      (val) => {
+        if (!val) return true;
+        const todayStr = new Date().toISOString().split('T')[0];
+        return val >= todayStr;
+      },
+      { message: 'Geçmiş bir tarihe randevu oluşturulamaz.' },
+    )
+    .optional(),
   slotDate: z.string().optional(),
   slotStartTime: z.string().optional(),
   slotEndTime: z.string().optional(),
