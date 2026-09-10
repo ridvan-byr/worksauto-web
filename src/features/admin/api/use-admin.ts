@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient, keepPreviousData } from '@tanstack/react-query';
-import { apiClient, setAccessToken } from '@/lib/api-client';
+import { apiClient, setAdminToken } from '@/lib/api-client';
 
 const ADMIN_USER_KEY = 'worksauto_admin_user';
 
@@ -58,6 +58,7 @@ export interface AdminTenantDetail {
     surname?: string;
     phone: string;
     role: string;
+    isActive: boolean;
   }>;
   _count?: {
     workOrders?: number;
@@ -131,8 +132,7 @@ export function setAdminSession(user: AdminUser, accessToken?: string) {
   if (typeof window === 'undefined') return;
   localStorage.setItem(ADMIN_USER_KEY, JSON.stringify(user));
   if (accessToken) {
-    localStorage.setItem('worksauto_admin_token', accessToken);
-    setAccessToken(accessToken);
+    setAdminToken(accessToken);
   }
   const isProd = process.env.NODE_ENV === 'production';
   document.cookie = `worksauto_admin_session=1; path=/; SameSite=Lax${isProd ? '; Secure' : ''}; max-age=${24 * 60 * 60}`;
@@ -141,8 +141,7 @@ export function setAdminSession(user: AdminUser, accessToken?: string) {
 export function clearAdminSession() {
   if (typeof window === 'undefined') return;
   localStorage.removeItem(ADMIN_USER_KEY);
-  localStorage.removeItem('worksauto_admin_token');
-  setAccessToken(null);
+  setAdminToken(null);
   document.cookie = 'worksauto_admin_session=; path=/; SameSite=Lax; max-age=0';
 }
 
@@ -236,12 +235,26 @@ export function useAdminAuditLogs(params?: {
   search?: string;
 }) {
   const user = getAdminUser();
+  const page = params?.page ? Number(params.page) : 1;
+  const limit = params?.limit ? Number(params.limit) : 10;
+  const action = params?.action || 'ALL';
+  const search = params?.search?.trim() || '';
+
   return useQuery({
-    queryKey: ['admin-audit-logs', params],
-    queryFn: () => apiClient.get<AuditLogsResponse>('/admin/audit-logs', { params }),
+    queryKey: ['admin-audit-logs', page, limit, action, search],
+    queryFn: () =>
+      apiClient.get<AuditLogsResponse>('/admin/audit-logs', {
+        params: {
+          page,
+          limit,
+          action,
+          search: search || undefined,
+        },
+      }),
     enabled: !!user,
     placeholderData: keepPreviousData,
-    refetchInterval: 10000,
+    refetchInterval: 15000,
+    retry: 1,
   });
 }
 

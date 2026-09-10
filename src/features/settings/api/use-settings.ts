@@ -37,10 +37,26 @@ export function useTenantAuditLogs(params?: {
   entityName?: string;
   search?: string;
 }) {
+  const page = params?.page ? Number(params.page) : 1;
+  const limit = params?.limit ? Number(params.limit) : 15;
+  const action = params?.action || 'ALL';
+  const entityName = params?.entityName || '';
+  const search = params?.search?.trim() || '';
+
   return useQuery({
-    queryKey: ['tenant-audit-logs', params],
-    queryFn: () => apiClient.get<TenantAuditLogsResponse>('/audit-logs', { params }),
+    queryKey: ['tenant-audit-logs', page, limit, action, entityName, search],
+    queryFn: () =>
+      apiClient.get<TenantAuditLogsResponse>('/audit-logs', {
+        params: {
+          page,
+          limit,
+          action: action !== 'ALL' ? action : undefined,
+          entityName: entityName || undefined,
+          search: search || undefined,
+        },
+      }),
     placeholderData: keepPreviousData,
+    retry: 1,
   });
 }
 

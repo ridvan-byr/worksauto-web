@@ -459,65 +459,72 @@ export default function TenantAuditLogsPage() {
         </div>
 
         {/* Pagination Controls */}
-        <div className="p-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="text-slate-500 dark:text-slate-400 text-[11px]">
-            Toplam <strong className="text-slate-900 dark:text-white font-mono">{meta.total}</strong> olay kaydı • Sayfa <strong className="text-slate-900 dark:text-white font-mono">{meta.page}</strong> / <strong className="text-slate-900 dark:text-white font-mono">{meta.totalPages}</strong>
-          </div>
+        {meta.total > 0 && (
+          <div className="p-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="text-slate-500 dark:text-slate-400 text-[11px]">
+              Toplam <strong className="text-slate-900 dark:text-white font-mono">{meta.total}</strong> olay kaydı
+              {meta.totalPages > 1 && (
+                <> • Sayfa <strong className="text-slate-900 dark:text-white font-mono">{meta.page}</strong> / <strong className="text-slate-900 dark:text-white font-mono">{meta.totalPages}</strong></>
+              )}
+            </div>
 
-          <div className="flex items-center gap-1.5 self-end sm:self-auto">
-            <Button
-              size="sm"
-              variant="outline"
-              type="button"
-              disabled={meta.page <= 1}
-              onClick={(e) => {
-                e.preventDefault()
-                setPage((prev) => Math.max(1, prev - 1))
-              }}
-              className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
-            >
-              <ChevronLeft size={13} />
-              <span>Önceki</span>
-            </Button>
-
-            {/* Page numbers (up to 5 pages) */}
-            {Array.from({ length: Math.min(5, meta.totalPages) }, (_, i) => {
-              const pageNum = i + 1
-              return (
-                <button
-                  key={pageNum}
+            {meta.totalPages > 1 && (
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                <Button
+                  size="sm"
+                  variant="outline"
                   type="button"
+                  disabled={meta.page <= 1}
                   onClick={(e) => {
                     e.preventDefault()
-                    setPage(pageNum)
+                    setPage((prev) => Math.max(1, prev - 1))
                   }}
-                  className={`w-7 h-7 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
-                    meta.page === pageNum
-                      ? "bg-sky-500 text-white font-bold shadow-xs"
-                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-                  }`}
+                  className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
                 >
-                  {pageNum}
-                </button>
-              )
-            })}
+                  <ChevronLeft size={13} />
+                  <span>Önceki</span>
+                </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              type="button"
-              disabled={meta.page >= meta.totalPages}
-              onClick={(e) => {
-                e.preventDefault()
-                setPage((prev) => Math.min(meta.totalPages, prev + 1))
-              }}
-              className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
-            >
-              <span>Sonraki</span>
-              <ChevronRight size={13} />
-            </Button>
+                {/* Sadece gerçekte var olan sayfaları göster */}
+                {Array.from({ length: meta.totalPages }, (_, i) => {
+                  const pageNum = i + 1
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        setPage(pageNum)
+                      }}
+                      className={`w-7 h-7 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
+                        meta.page === pageNum
+                          ? "bg-sky-500 text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                })}
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  disabled={meta.page >= meta.totalPages}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    setPage((prev) => Math.min(meta.totalPages, prev + 1))
+                  }}
+                  className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
+                >
+                  <span>Sonraki</span>
+                  <ChevronRight size={13} />
+                </Button>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </Card>
 
       {/* AUDIT LOG PAYLOAD DETAIL MODAL */}

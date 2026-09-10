@@ -64,13 +64,28 @@ export default function AdminDashboardPage() {
   const [auditPage, setAuditPage] = React.useState(1)
   const [auditActionFilter, setAuditActionFilter] = React.useState("ALL")
   const [auditSearchQuery, setAuditSearchQuery] = React.useState("")
+  const [debouncedAuditSearch, setDebouncedAuditSearch] = React.useState("")
 
-  const { data: auditResponse, isLoading: isAuditLoading } = useAdminAuditLogs({
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedAuditSearch(auditSearchQuery.trim())
+    }, 250)
+    return () => clearTimeout(timer)
+  }, [auditSearchQuery])
+
+  const { data: auditResponse, isLoading: isAuditLoading, isFetching: isAuditFetching } = useAdminAuditLogs({
     page: auditPage,
     limit: 10,
     action: auditActionFilter,
-    search: auditSearchQuery || undefined,
+    search: debouncedAuditSearch || undefined,
   })
+
+  // Yalnızca sunucu yanıtı geldiğinde ve seçili sayfa mevcut toplam sayfayı aşıyorsa 1'e çek
+  React.useEffect(() => {
+    if (auditResponse?.meta?.totalPages && auditPage > auditResponse.meta.totalPages) {
+      setAuditPage(1)
+    }
+  }, [auditResponse?.meta?.totalPages])
 
   const handleConfirmStatusToggle = async () => {
     if (!statusModalState) return
@@ -172,7 +187,9 @@ export default function AdminDashboardPage() {
         logs={auditLogs}
         meta={auditMeta}
         isLoading={isAuditLoading}
-        onPageChange={setAuditPage}
+        isFetching={isAuditFetching}
+        currentPage={auditPage}
+        onPageChange={(p) => setAuditPage(p)}
         actionFilter={auditActionFilter}
         onActionFilterChange={(action) => {
           setAuditActionFilter(action)

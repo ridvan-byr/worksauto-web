@@ -2,21 +2,32 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/a
 const ACCESS_TOKEN_KEY = 'worksauto_access_token';
 const REFRESH_TOKEN_KEY = 'worksauto_refresh_token';
 
-let inMemoryAccessToken: string | null = null;
+let inMemoryTenantToken: string | null = null;
+let inMemoryAdminToken: string | null = null;
 
-export function getAccessToken(): string | null {
-  if (inMemoryAccessToken) return inMemoryAccessToken;
+export function getAccessToken(endpoint?: string): string | null {
   if (typeof window !== 'undefined') {
-    if (window.location.pathname.startsWith('/admin')) {
+    const isAdmin = Boolean(
+      (endpoint && endpoint.includes('/admin')) ||
+      window.location.pathname.startsWith('/admin')
+    );
+
+    if (isAdmin) {
+      if (inMemoryAdminToken) return inMemoryAdminToken;
       const adminToken = localStorage.getItem('worksauto_admin_token');
       if (adminToken) {
-        inMemoryAccessToken = adminToken;
+        inMemoryAdminToken = adminToken;
         return adminToken;
       }
+      return null;
     }
+  }
+
+  if (inMemoryTenantToken) return inMemoryTenantToken;
+  if (typeof window !== 'undefined') {
     const legacy = localStorage.getItem(ACCESS_TOKEN_KEY);
     if (legacy) {
-      inMemoryAccessToken = legacy;
+      inMemoryTenantToken = legacy;
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       return legacy;
     }
@@ -25,10 +36,21 @@ export function getAccessToken(): string | null {
 }
 
 export function setAccessToken(token: string | null): void {
-  inMemoryAccessToken = token;
+  inMemoryTenantToken = token;
   if (typeof window !== 'undefined') {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     setSessionCookie(Boolean(token));
+  }
+}
+
+export function setAdminToken(token: string | null): void {
+  inMemoryAdminToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('worksauto_admin_token', token);
+    } else {
+      localStorage.removeItem('worksauto_admin_token');
+    }
   }
 }
 
@@ -149,7 +171,7 @@ export async function apiRequest<T = unknown>(
     }
   }
 
-  const token = getAccessToken();
+  const token = getAccessToken(endpoint);
 
   const requestHeaders: HeadersInit = {
     'Content-Type': 'application/json',
@@ -164,16 +186,16 @@ export async function apiRequest<T = unknown>(
       ...rest,
     });
 
-    // Handle 401 on Super Admin endpoints separately: redirect to /admin/login instead of /sign-in
-    if (response.status === 401 && endpoint.includes('/admin/')) {
+    // Handle 401 / 403 on Super Admin endpoints separately: redirect to /admin/login instead of /sign-in
+    if ((response.status === 401 || response.status === 403) && endpoint.includes('/admin/')) {
       if (typeof window !== 'undefined' && window.location.pathname.startsWith('/admin') && window.location.pathname !== '/admin/login') {
         localStorage.removeItem('worksauto_admin_user');
         localStorage.removeItem('worksauto_admin_token');
-        inMemoryAccessToken = null;
+        inMemoryAdminToken = null;
         window.location.href = '/admin/login';
       }
       const errData = await response.json().catch(() => ({}));
-      throw new ApiError(errData.message || 'Platform yöneticisi oturumu sonlandı.', 401, errData.errorCode, errData);
+      throw new ApiError(errData.message || 'Platform yöneticisi oturumu sonlandı.', response.status, errData.errorCode, errData);
     }
 
     // 401 Unauthorized -> Handle Token Refresh Rotation or Evict Suspended Tenant

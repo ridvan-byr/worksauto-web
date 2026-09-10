@@ -39,6 +39,8 @@ interface AdminAuditLogsProps {
     totalPages: number
   }
   isLoading: boolean
+  isFetching?: boolean
+  currentPage?: number
   onPageChange: (page: number) => void
   actionFilter: string
   onActionFilterChange: (action: string) => void
@@ -289,6 +291,8 @@ export function AdminAuditLogs({
   logs,
   meta,
   isLoading,
+  isFetching,
+  currentPage,
   onPageChange,
   actionFilter,
   onActionFilterChange,
@@ -306,7 +310,7 @@ export function AdminAuditLogs({
             <span>Platform & Güvenlik Olay Günlüğü (Audit Log)</span>
           </h3>
           <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            IP tabanlı girişler, lisans güncellemeleri ve tüm kritik sistem hareketleri.
+            Servis lisansları, yönetici müdahaleleri ve giriş logları. Servis içi operasyonlar kiracının kendi denetim izinde tutulur.
           </p>
         </div>
 
@@ -314,15 +318,26 @@ export function AdminAuditLogs({
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
-            onClick={() => onActionFilterChange("PLATFORM")}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
-              actionFilter === "PLATFORM"
+            onClick={() => onActionFilterChange("ALL")}
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
+              actionFilter === "ALL"
                 ? "bg-sky-500 text-white font-semibold shadow-xs"
                 : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
             }`}
           >
-            <ShieldCheck size={12} />
-            <span>Platform & Güvenlik</span>
+            Tüm Platform Olayları
+          </button>
+          <button
+            type="button"
+            onClick={() => onActionFilterChange("SECURITY")}
+            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+              actionFilter === "SECURITY"
+                ? "bg-sky-500 text-white font-semibold shadow-xs"
+                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
+            }`}
+          >
+            <ShieldAlert size={12} />
+            <span>Giriş & Güvenlik</span>
           </button>
           <button
             type="button"
@@ -336,41 +351,6 @@ export function AdminAuditLogs({
             <Building2 size={12} />
             <span>Servis & Lisans</span>
           </button>
-          <button
-            type="button"
-            onClick={() => onActionFilterChange("SECURITY")}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
-              actionFilter === "SECURITY"
-                ? "bg-sky-500 text-white font-semibold shadow-xs"
-                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-            }`}
-          >
-            <ShieldAlert size={12} />
-            <span>Giriş Denemeleri</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onActionFilterChange("OPERATIONS")}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
-              actionFilter === "OPERATIONS"
-                ? "bg-sky-500 text-white font-semibold shadow-xs"
-                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-            }`}
-          >
-            <Wrench size={12} />
-            <span>Servis Operasyonları</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => onActionFilterChange("ALL")}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
-              actionFilter === "ALL"
-                ? "bg-sky-500 text-white font-semibold shadow-xs"
-                : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-            }`}
-          >
-            Tüm Kayıtlar
-          </button>
         </div>
       </div>
 
@@ -382,7 +362,7 @@ export function AdminAuditLogs({
             type="text"
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Aktör, servis adı, işlem türü (fatura, randevu...), IP veya ID ara..."
+            placeholder="Aktör, servis adı, IP adresi veya ID ara..."
             className="w-full h-8 pl-8 pr-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
           />
         </div>
@@ -476,8 +456,18 @@ export function AdminAuditLogs({
 
               {logs.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-500 text-xs">
-                    {isLoading ? "Audit kayıtları yükleniyor..." : "Filtre kriterlerine uygun log kaydı bulunamadı."}
+                  <td colSpan={6} className="p-12 text-center text-slate-500 text-xs">
+                    {isLoading || isFetching ? (
+                      <div className="flex flex-col items-center justify-center gap-2 py-4 text-slate-500">
+                        <RefreshCw size={18} className="animate-spin text-sky-500" />
+                        <span>Audit kayıtları yükleniyor...</span>
+                      </div>
+                    ) : (
+                      <div className="py-4 space-y-1">
+                        <p className="font-semibold text-slate-700 dark:text-slate-300">Filtre kriterlerine uygun log kaydı bulunamadı.</p>
+                        <p className="text-[11px] text-slate-400">Arama kelimesini veya seçili filtre sekmesini değiştirmeyi deneyebilirsiniz.</p>
+                      </div>
+                    )}
                   </td>
                 </tr>
               )}
@@ -486,65 +476,81 @@ export function AdminAuditLogs({
         </div>
 
         {/* Pagination Controls */}
-        <div className="p-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="text-slate-500 dark:text-slate-400 text-[11px]">
-            Toplam <strong className="text-slate-900 dark:text-white font-mono">{meta.total}</strong> olay kaydı • Sayfa <strong className="text-slate-900 dark:text-white font-mono">{meta.page}</strong> / <strong className="text-slate-900 dark:text-white font-mono">{meta.totalPages}</strong>
-          </div>
+        {meta.total > 0 && (
+          <div className="p-3.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-2">
+              <span>
+                Toplam <strong className="text-slate-900 dark:text-white font-mono">{meta.total}</strong> olay kaydı
+                {meta.totalPages > 1 && (
+                  <> • Sayfa <strong className="text-slate-900 dark:text-white font-mono">{currentPage || meta.page}</strong> / <strong className="text-slate-900 dark:text-white font-mono">{meta.totalPages}</strong></>
+                )}
+              </span>
+              {isFetching && (
+                <span className="inline-flex items-center gap-1 text-[10px] text-sky-500 font-medium">
+                  <RefreshCw size={10} className="animate-spin" />
+                  Yenileniyor...
+                </span>
+              )}
+            </div>
 
-          <div className="flex items-center gap-1.5 self-end sm:self-auto">
-            <Button
-              size="sm"
-              variant="outline"
-              type="button"
-              disabled={meta.page <= 1}
-              onClick={(e) => {
-                e.preventDefault()
-                onPageChange(Math.max(1, meta.page - 1))
-              }}
-              className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
-            >
-              <ChevronLeft size={13} />
-              <span>Önceki</span>
-            </Button>
-
-            {/* Page numbers (up to 5 pages) */}
-            {Array.from({ length: Math.min(5, meta.totalPages) }, (_, i) => {
-              const pageNum = i + 1
-              return (
-                <button
-                  key={pageNum}
+            {meta.totalPages > 1 && (
+              <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                <Button
+                  size="sm"
+                  variant="outline"
                   type="button"
+                  disabled={(currentPage || meta.page) <= 1}
                   onClick={(e) => {
                     e.preventDefault()
-                    onPageChange(pageNum)
+                    onPageChange(Math.max(1, (currentPage || meta.page) - 1))
                   }}
-                  className={`w-7 h-7 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
-                    meta.page === pageNum
-                      ? "bg-sky-500 text-white font-bold shadow-xs"
-                      : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
-                  }`}
+                  className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
                 >
-                  {pageNum}
-                </button>
-              )
-            })}
+                  <ChevronLeft size={13} />
+                  <span>Önceki</span>
+                </Button>
 
-            <Button
-              size="sm"
-              variant="outline"
-              type="button"
-              disabled={meta.page >= meta.totalPages}
-              onClick={(e) => {
-                e.preventDefault()
-                onPageChange(Math.min(meta.totalPages, meta.page + 1))
-              }}
-              className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
-            >
-              <span>Sonraki</span>
-              <ChevronRight size={13} />
-            </Button>
+                {/* Sadece gerçekte var olan sayfaları göster (1, 2, 3...) */}
+                {Array.from({ length: meta.totalPages }, (_, i) => {
+                  const pageNum = i + 1
+                  const isCurrent = (currentPage || meta.page) === pageNum
+                  return (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault()
+                        onPageChange(pageNum)
+                      }}
+                      className={`w-7 h-7 rounded-lg text-xs font-mono transition-colors cursor-pointer ${
+                        isCurrent
+                          ? "bg-sky-500 text-white font-bold shadow-xs"
+                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white border border-slate-200 dark:border-slate-800"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  )
+                })}
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  disabled={(currentPage || meta.page) >= meta.totalPages}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    onPageChange(Math.min(meta.totalPages, (currentPage || meta.page) + 1))
+                  }}
+                  className="h-7 px-2 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs gap-1 disabled:opacity-30 cursor-pointer"
+                >
+                  <span>Sonraki</span>
+                  <ChevronRight size={13} />
+                </Button>
+              </div>
+            )}
           </div>
-        </div>
+        )}
       </Card>
 
       {/* Detail Modal */}
