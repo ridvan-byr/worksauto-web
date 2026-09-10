@@ -20,8 +20,9 @@
     <a href="#-key-features">Features</a> •
     <a href="#-tech-stack">Tech Stack</a> •
     <a href="#-project-structure">Structure</a> •
+    <a href="#-testing--quality-assurance">Testing</a> •
     <a href="#-getting-started">Getting Started</a> •
-    <a href="#-roadmap">Roadmap</a>
+    <a href="#-author">Author</a>
   </p>
 
 </div>
@@ -41,20 +42,17 @@ This repository (`worksauto-web`) contains the **Frontend (Web UI)** application
 ### 🚗 Core Automotive ERP Modules
 - **İş Emirleri & Atölye Paneli (`/work-orders`):** Araç kabulü, usta ve lift ataması, canlı parça ekleme ve durum yaşam döngüsü.
 - **Randevu Takvimi & Açık Müşteri Portalı (`/appointments`, `/book/[slug]`):** Çift çakışma önleyici haftalık takvim gridi ve müşterilere özel online randevu rezervasyonu.
-- **Canlı Stok & Yedek Parça Kataloğu (`/inventory`):** Atomik stok düşümü, kritik eşik uyarıları ve raf/koridor lokasyon takibi.
-- **Müşteri & Filo Yönetimi (`/customers`, `/vehicles`):** TR standart plaka formatlama, servis geçmişi ve cari hesap borç/alacak takibi.
+- **Canlı Stok & 2D Raf Matrisi (`/inventory`):** Kat/göz hücre gridi (`K1-G1`), görsel doluluk oranları, parça hücre atama ve atomik stok takibi.
+- **Müşteri & Filo Yönetimi (`/customers`, `/vehicles`):** TR standart plaka formatlama, servis geçmişi, cari hesap borç/alacak takibi ve tek tıkla KVKK onay SMS gönderimi.
+- **Açık KVKK & İYS Müşteri Portalı (`/c/kvkk?token=...`):** SMS onay bağlantısıyla mobil uyumlu aydınlatma metni onaylama, dijital zaman damgalı imza ve güvenlik kaydı.
 - **Finans, Fatura & Cari Ekstre (`/invoices`, `/current-accounts`):** İdempotent ödeme kaydı ve tek tıkla cari hesap hareketleri.
-- **Süper Yönetici Konsolu (`/admin`):** Çoklu servis lisanslama, platform sağlık ve işlem hacmi KPI paneli.
+- **Süper Yönetici Konsolu (`/admin`):** Servis lisanslama, platform sağlık metrikleri, yetkili yönetimi ve sayfa altında kalıcı canlı Güvenlik & Denetim İzi (Audit Log) akışı.
 - **Canlı WebSocket Bildirimleri (`socket.io`):** Atölye zili, kritik stok uyarıları ve gerçek zamanlı iş emri güncellemeleri.
-
-### 🧪 Test & CI/CD Kalitesi
-- **Birim Testleri (Vitest):** Token saklama, formatlayıcılar ve middleware guard testleri (`npm test`).
-- **E2E Test Paketi (Playwright Chromium):** 4 kapsamlı E2E test paketi (auth-guard, work-order-lifecycle, appointment-booking, admin-tenant-management) ile %100 yeşil test güvencesi.
-- **GitHub Actions Pipeline:** Lint, Typecheck, Unit Test, Build ve E2E test aşamalarıyla korunan dağıtım zinciri.
 
 ### 🎨 Marka & Arayüz Mimarisi
 - **Çift Katmanlı Rota Güvenliği:** Next.js Edge Middleware (`middleware.ts`) + Client-side in-memory access token mimarisi.
 - **3-Kademeli Tema & Görsel Geçişler:** View Transitions API ile dairesel dalga animasyonu ve sıfır-flicker SSR layout.
+- **UI/UX Pro Max:** Otomotiv ekosistemine özel koyu/açık renk paleti, mikro animasyonlar ve duyarlı veri tabloları.
 
 ---
 
@@ -82,28 +80,44 @@ worksauto-web/
 │   └── brand/                   # Optimized SVG/PNG logos, icons, and favicon pack
 ├── src/
 │   ├── app/
+│   │   ├── admin/               # Super Admin root console (tenants, admins, audit logs)
+│   │   ├── appointments/        # Workshop appointment calendar
+│   │   ├── book/                # Public booking portal
+│   │   ├── c/kvkk/              # Public customer KVKK consent confirmation page
+│   │   ├── current-accounts/    # Customer accounting ledger & statements
+│   │   ├── customers/           # CRM & customer records
+│   │   ├── inventory/           # Stock catalog & 2D warehouse shelf matrix
+│   │   ├── invoices/            # Invoice management & PDF generator
+│   │   ├── vehicles/            # Vehicle fleet registry
+│   │   ├── work-orders/         # Core workshop job card operations
 │   │   ├── globals.css          # Tailwind v4 configuration, theme variables & keyframes
-│   │   ├── layout.tsx           # Root layout, server cookie reading, font & providers
-│   │   ├── template.tsx         # Unified hardware-accelerated page transition template
-│   │   ├── not-found.tsx        # Minimalist corporate 404 error page
-│   │   └── page.tsx             # Primary operational dashboard
+│   │   └── layout.tsx           # Root layout, server cookie reading, font & providers
+│   ├── features/                # Domain-specific feature modules & API hooks
 │   ├── components/
-│   │   ├── dynamic-favicon.tsx  # Dynamic browser tab favicon switcher
-│   │   ├── query-provider.tsx   # TanStack Query client wrapper
-│   │   ├── theme-provider.tsx   # next-themes provider wrapper
-│   │   ├── layout/
-│   │   │   ├── app-header.tsx   # Search bar, notifications, theme toggle & user profile
-│   │   │   ├── app-sidebar.tsx  # Collapsible navigation with floating edge handle
-│   │   │   ├── app-shell.tsx    # Responsive application shell & state coordinator
-│   │   │   └── theme-toggle.tsx # 3-way circular reveal theme dropdown
-│   │   ├── shared/
-│   │   │   └── brand-logo.tsx   # Auto-theme & collapsed-aware WorksAuto brand mark
+│   │   ├── layout/              # AppHeader, AppSidebar, AppShell, ThemeToggle
 │   │   └── ui/                  # Atomic primitives (Button, Card, Badge, Input, etc.)
 │   └── lib/
-│       ├── animation.ts         # Safe DOM reflow animation restart utility
+│       ├── api-client.ts        # Axios/Fetch HTTP client with interceptors & refresh
 │       └── utils.ts             # Tailwind class merging utility (cn helper)
-└── design-system/
-    └── worksauto/MASTER.md      # Automotive SaaS design tokens and style guide
+└── e2e/                         # Playwright end-to-end integration test suites
+```
+
+---
+
+## 🧪 Testing & Quality Assurance
+
+```bash
+# Unit Tests (Vitest)
+npm run test
+
+# End-to-End Integration Suite (Playwright)
+npx playwright test
+
+# Strict Static Type Check
+npx tsc --noEmit
+
+# Linter Verification
+npm run lint
 ```
 
 ---
@@ -111,7 +125,7 @@ worksauto-web/
 ## 🚀 Getting Started
 
 ### Prerequisites
-- **Node.js:** `v20.0.0` or higher (`v24+` recommended)
+- **Node.js:** `v20.0.0` or higher (`v22+` recommended)
 - **npm:** `v10.0.0` or higher
 
 ### Local Development Setup
@@ -127,40 +141,28 @@ worksauto-web/
    npm install
    ```
 
-3. **Start the local development server:**
+3. **Configure environment variables:**
+   ```bash
+   cp .env.example .env.local
+   ```
+   Ensure `NEXT_PUBLIC_API_URL` points to `http://localhost:4000/api/v1`.
+
+4. **Start the local development server:**
    ```bash
    npm run dev
    ```
-   *The application will be accessible at [http://localhost:3000](http://localhost:3000).*
-
-4. **Create an optimized production build:**
-   ```bash
-   npm run build
-   npm run start
-   ```
+   Open `http://localhost:3000` to view the application.
 
 ---
 
-## 🗺️ Implementation Roadmap (Frontend-First)
+## 👤 Author
 
-| Phase | Module | Scope | Status |
-| :---: | :--- | :--- | :---: |
-| **Phase 1** | **UI Bootstrap & Design System** | Setup, theme engine, brand integration, responsive shell | 🟢 **Completed** |
-| **Phase 2** | **Auth & Tenant Onboarding Wizard** | Auth layouts, 6-step workshop setup wizard, route guards | 🟡 *Next Up* |
-| **Phase 3** | **Customer & Vehicle Management UI** | Customer directory, Turkish license-plate format masks, service log | ⚪ Queued |
-| **Phase 4** | **Appointment Calendar & Transition** | Weekly workshop scheduling grid, "Approve & Open Work Order" | ⚪ Queued |
-| **Phase 5** | **Work Order & Workshop Board UI** | Mobile mechanic dashboard, vehicle intake damage gallery, labor tracking | ⚪ Queued |
-| **Phase 6** | **Inventory & Spare Parts UI** | Parts catalog, minimum stock alerts, stock transaction history | ⚪ Queued |
-| **Phase 7** | **Invoicing, Cashflow & Current Accounts**| Work order closure, PDF-ready service invoices, client balances | ⚪ Queued |
-| **Phase 8** | **Interactive Presentation & Demo Seed** | Seed data, realistic automotive demo workflows | ⚪ Queued |
-| **Phase 9** | **Backend API Integration** | NestJS Clean Architecture, PostgreSQL, Docker (`worksauto-api`) | ⚪ Queued |
+**Rıdvan Bayar**  
+* Founder & Lead Architect, WorksAuto  
+* GitHub: [@ridvan-byr](https://github.com/ridvan-byr)
 
 ---
 
 ## 📄 License
 
-This repository contains proprietary software. All rights reserved.
-
-<div align="center">
-  <sub>Engineered with precision for the WorksAuto Platform.</sub>
-</div>
+Proprietary — All rights reserved. WorksAuto © 2026.
