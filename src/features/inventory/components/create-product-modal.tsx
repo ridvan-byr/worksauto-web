@@ -1,9 +1,9 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, PackagePlus, ArrowRight, ArrowLeft, CheckCircle2, Boxes, Grid3X3 } from "lucide-react"
+import { X, PackagePlus, ArrowRight, ArrowLeft, CheckCircle2, Boxes } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Product, ProductCategory, StockUnit } from "../types"
-import { useShelves, useShelfMatrix } from "../api/use-inventory"
+import { useShelves, useShelfMatrix, type ShelfSummaryRecord, type ShelfCellRecord } from "../api/use-inventory"
 
 interface CreateProductModalProps {
   isOpen: boolean
@@ -126,7 +126,7 @@ export function CreateProductModal({
 
   const handleCellChange = (cellId: string) => {
     setSelectedCellId(cellId)
-    const cell = shelfMatrix?.cells?.find((c: any) => c.id === cellId)
+    const cell = shelfMatrix?.cells?.find((c: ShelfCellRecord) => c.id === cellId)
     if (cell) {
       setShelfLocation(cell.cellCode)
     }
@@ -275,7 +275,7 @@ export function CreateProductModal({
                       className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer font-bold"
                     >
                       <option value="">-- Raf Seçiniz --</option>
-                      {shelves.map((s: any) => (
+                      {shelves.map((s: ShelfSummaryRecord) => (
                         <option key={s.id} value={s.id}>
                           {s.code} ({s.name})
                         </option>
@@ -289,7 +289,7 @@ export function CreateProductModal({
                       className="w-full h-10 px-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer disabled:opacity-50"
                     >
                       <option value="">-- Hücre/Göz Seçiniz --</option>
-                      {shelfMatrix?.cells?.map((c: any) => (
+                      {shelfMatrix?.cells?.map((c: ShelfCellRecord) => (
                         <option key={c.id} value={c.id}>
                           {c.cellCode} (K{c.rowNumber}-G{c.colNumber})
                         </option>

@@ -60,6 +60,68 @@ export interface AssignProductCellInput {
   shelfCellId?: string | null;
 }
 
+export interface ShelfSummaryRecord {
+  id: string;
+  name: string;
+  code: string;
+  zone?: string | null;
+  rows: number;
+  columns: number;
+  description?: string | null;
+  createdAt: string;
+  totalCells: number;
+  occupiedCells: number;
+  totalProducts: number;
+  occupancyRate: number;
+}
+
+export interface ShelfProductSummary {
+  id: string;
+  name: string;
+  oemCode?: string | null;
+  brand?: string | null;
+  category?: string | null;
+  stockQuantity: number;
+  minStockLevel?: number | null;
+  salePrice?: number | null;
+  shelfLocation?: string | null;
+}
+
+export interface ShelfCellRecord {
+  id: string;
+  shelfId: string;
+  cellCode: string;
+  rowNumber: number;
+  colNumber: number;
+  barcode?: string | null;
+  maxCapacity?: number | null;
+  products?: ShelfProductSummary[];
+}
+
+export interface ShelfDetailRecord {
+  id: string;
+  tenantId: string;
+  name: string;
+  code: string;
+  zone?: string | null;
+  rows: number;
+  columns: number;
+  description?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  cells: ShelfCellRecord[];
+}
+
+export interface AssignCellResult {
+  success: boolean;
+  product: ProductRecord;
+}
+
+export interface DeleteShelfResult {
+  success: boolean;
+  message: string;
+}
+
 export interface StockMovementInput {
   type?: 'IN' | 'OUT' | 'ADJUSTMENT' | string;
   movementType?: 'IN' | 'OUT' | 'ADJUSTMENT' | string;
@@ -103,15 +165,13 @@ export function useCreateProduct() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (data: CreateProductInput) => apiClient.post<ProductRecord>('/inventory', data),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
-      toast.success('Yeni stok kartı oluşturuldu.', {
-        description: data?.name ? `${data.name} envantere eklendi.` : undefined,
-      });
+      toast.success('Yeni parça başarıyla envantere eklendi.');
     },
     onError: (err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Stok kartı kaydedilemedi.';
+      const message = err instanceof Error ? err.message : 'Parça kaydedilemedi.';
       toast.error(message);
     },
   });
@@ -121,22 +181,21 @@ export function useStockMovement() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ productId, data }: { productId: string; data: StockMovementInput }) =>
-      apiClient.post<{ stockQuantity?: number }>(`/inventory/${productId}/stock-movement`, data),
+      apiClient.post<ProductRecord>(`/inventory/${productId}/stock-movement`, data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
-      queryClient.invalidateQueries({ queryKey: ['inventory', variables.productId] });
       queryClient.invalidateQueries({ queryKey: ['stock-movements', variables.productId] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
-      toast.success('Stok hareketi başarıyla kaydedildi.');
+      toast.success('Stok hareketi başarıyla işlendi.');
     },
     onError: (err: unknown) => {
-      const message = err instanceof Error ? err.message : 'Stok hareketi işlenirken hata oluştu.';
+      const message = err instanceof Error ? err.message : 'Stok hareketi kaydedilemedi.';
       toast.error(message);
     },
   });
 }
 
-export function useProductMovements(productId?: string) {
+export function useStockMovements(productId?: string) {
   return useQuery({
     queryKey: ['stock-movements', productId],
     queryFn: () => apiClient.get<StockMovementRecord[]>(`/inventory/${productId}/movements`),
@@ -151,14 +210,14 @@ export function useProductMovements(productId?: string) {
 export function useShelves() {
   return useQuery({
     queryKey: ['inventory-shelves'],
-    queryFn: () => apiClient.get<any[]>('/inventory/shelves'),
+    queryFn: () => apiClient.get<ShelfSummaryRecord[]>('/inventory/shelves'),
   });
 }
 
 export function useShelfMatrix(shelfId?: string) {
   return useQuery({
     queryKey: ['inventory-shelf-matrix', shelfId],
-    queryFn: () => apiClient.get<any>(`/inventory/shelves/${shelfId}`),
+    queryFn: () => apiClient.get<ShelfDetailRecord>(`/inventory/shelves/${shelfId}`),
     enabled: !!shelfId,
   });
 }
@@ -166,7 +225,7 @@ export function useShelfMatrix(shelfId?: string) {
 export function useCreateShelf() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateShelfInput) => apiClient.post<any>('/inventory/shelves', data),
+    mutationFn: (data: CreateShelfInput) => apiClient.post<ShelfDetailRecord>('/inventory/shelves', data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['inventory-shelves'] });
       toast.success('Yeni raf ünitesi tanımlandı.', {
@@ -183,7 +242,7 @@ export function useCreateShelf() {
 export function useAssignProductCell() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: AssignProductCellInput) => apiClient.post<any>('/inventory/shelves/assign-cell', data),
+    mutationFn: (data: AssignProductCellInput) => apiClient.post<AssignCellResult>('/inventory/shelves/assign-cell', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-shelves'] });
@@ -200,7 +259,7 @@ export function useAssignProductCell() {
 export function useDeleteShelf() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (shelfId: string) => apiClient.delete<any>(`/inventory/shelves/${shelfId}`),
+    mutationFn: (shelfId: string) => apiClient.delete<DeleteShelfResult>(`/inventory/shelves/${shelfId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['inventory-shelves'] });
       queryClient.invalidateQueries({ queryKey: ['inventory-shelf-matrix'] });
@@ -212,4 +271,3 @@ export function useDeleteShelf() {
     },
   });
 }
-

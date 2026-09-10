@@ -6,7 +6,6 @@ import {
   Layers,
   Plus,
   Trash2,
-  Package,
   AlertTriangle,
   Boxes,
   Grid3X3,
@@ -23,18 +22,25 @@ import {
   Inbox,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import type { Product } from "@/features/inventory/types"
 import {
   useShelves,
   useShelfMatrix,
   useCreateShelf,
   useDeleteShelf,
   useAssignProductCell,
-  type ProductRecord,
+  type ShelfSummaryRecord,
+  type ShelfDetailRecord,
+  type ShelfCellRecord,
+  type ShelfProductSummary,
 } from "@/features/inventory/api/use-inventory"
 
 interface ShelfMatrixViewProps {
-  products: any[]
-  onCreateProductForCell?: (cell: any, shelf: any) => void
+  products: Product[]
+  onCreateProductForCell?: (
+    cell: ShelfCellRecord,
+    shelf?: ShelfDetailRecord | ShelfSummaryRecord | null
+  ) => void
 }
 
 interface ConfirmModalState {
@@ -62,8 +68,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
-  const [activeCellModal, setActiveCellModal] = React.useState<any | null>(null)
-  const [assignProductId, setAssignProductId] = React.useState<string>("")
+  const [activeCellModal, setActiveCellModal] = React.useState<ShelfCellRecord | null>(null)
   const [confirmModal, setConfirmModal] = React.useState<ConfirmModalState>({
     isOpen: false,
     title: "",
@@ -71,7 +76,6 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
     onConfirm: () => {},
   })
 
-  const createShelfMutation = useCreateShelf()
   const deleteShelfMutation = useDeleteShelf()
   const assignProductCellMutation = useAssignProductCell()
 
@@ -82,23 +86,23 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
     }
   }, [shelves, selectedShelfId])
 
-  const { data: currentShelf, isLoading: isMatrixLoading } = useShelfMatrix(
+  const { data: currentShelf } = useShelfMatrix(
     selectedShelfId || undefined
   )
 
-  const selectedShelfSummary = shelves.find((s: any) => s.id === selectedShelfId)
+  const selectedShelfSummary = shelves.find((s) => s.id === selectedShelfId)
 
   // Hücre matrisini katlara (rows) göre grupla (Yukarıdan aşağı: En üst kat önce)
   const cellsByRow = React.useMemo(() => {
     if (!currentShelf?.cells) return {}
-    const grouped: { [key: number]: any[] } = {}
+    const grouped: { [key: number]: ShelfCellRecord[] } = {}
     
     // Satırları ters sırala (Örn: 4. Kat en üstte görünsün)
     for (let r = currentShelf.rows; r >= 1; r--) {
       grouped[r] = []
     }
 
-    currentShelf.cells.forEach((cell: any) => {
+    currentShelf.cells.forEach((cell: ShelfCellRecord) => {
       if (!grouped[cell.rowNumber]) grouped[cell.rowNumber] = []
       grouped[cell.rowNumber].push(cell)
     })
@@ -112,8 +116,8 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
   }, [currentShelf])
 
   const cellMap = React.useMemo(() => {
-    const map = new Map<string, any>()
-    currentShelf?.cells?.forEach((cell: any) => {
+    const map = new Map<string, ShelfCellRecord>()
+    currentShelf?.cells?.forEach((cell: ShelfCellRecord) => {
       map.set(`${cell.rowNumber}-${cell.colNumber}`, cell)
     })
     return map
@@ -166,14 +170,15 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
   }
 
   // Açık olan modal hücresini her zaman güncel sunucu verisiyle senkronize tut
+  const activeCellId = activeCellModal?.id
   React.useEffect(() => {
-    if (activeCellModal && currentShelf?.cells) {
-      const freshCell = currentShelf.cells.find((c: any) => c.id === activeCellModal.id)
+    if (activeCellId && currentShelf?.cells) {
+      const freshCell = currentShelf.cells.find((c: ShelfCellRecord) => c.id === activeCellId)
       if (freshCell) {
         setActiveCellModal(freshCell)
       }
     }
-  }, [currentShelf])
+  }, [currentShelf, activeCellId])
 
   const handleQuickAssign = async (productId: string, cellId: string) => {
     try {
@@ -181,10 +186,10 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
       if (activeCellModal && activeCellModal.id === cellId) {
         const prod = products.find((p) => p.id === productId)
         if (prod) {
-          setActiveCellModal((prev: any) => {
+          setActiveCellModal((prev: ShelfCellRecord | null) => {
             if (!prev) return null
             const existing = prev.products || []
-            if (existing.some((x: any) => x.id === productId)) return prev
+            if (existing.some((x: ShelfProductSummary) => x.id === productId)) return prev
             return {
               ...prev,
               products: [
@@ -192,11 +197,10 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                 {
                   id: prod.id,
                   name: prod.name,
-                  oemCode: prod.sku || prod.oemCode || "",
-                  brand: prod.brand,
+                  oemCode: prod.sku || "",
                   category: prod.category,
-                  stockQuantity: prod.currentStock || prod.stockQuantity || 0,
-                  minStockLevel: prod.minStockLevel ?? 5,
+                  stockQuantity: prod.currentStock || 0,
+                  minStockLevel: prod.minimumStock ?? 5,
                 },
               ],
             }
@@ -225,27 +229,11 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
         try {
           await deleteShelfMutation.mutateAsync(shelfId)
           setSelectedShelfId(null)
-        } catch (e) {
+        } catch (_e) {
           // toast will handle
         }
       },
     })
-  }
-
-  const handleAssignProduct = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!activeCellModal || !assignProductId) return
-
-    try {
-      await assignProductCellMutation.mutateAsync({
-        productId: assignProductId,
-        shelfCellId: activeCellModal.id,
-      })
-      setActiveCellModal(null)
-      setAssignProductId("")
-    } catch (e) {
-      // toast will handle
-    }
   }
 
   const handleUnassignProduct = (productId: string, productName?: string) => {
@@ -261,11 +249,11 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
       onConfirm: async () => {
         try {
           // Optimistik olarak modal içindeki listeden çıkar
-          setActiveCellModal((prev: any) => {
+          setActiveCellModal((prev: ShelfCellRecord | null) => {
             if (!prev) return null
             return {
               ...prev,
-              products: prev.products?.filter((p: any) => p.id !== productId) || [],
+              products: prev.products?.filter((p: ShelfProductSummary) => p.id !== productId) || [],
             }
           })
 
@@ -273,7 +261,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
             productId,
             shelfCellId: null,
           })
-        } catch (e) {
+        } catch (_e) {
           // toast handles
         }
       },
@@ -300,7 +288,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                 {shelves.length === 0 ? (
                   <option value="">Henüz Tanımlı Raf Yok</option>
                 ) : (
-                  shelves.map((s: any) => (
+                  shelves.map((s: ShelfSummaryRecord) => (
                     <option key={s.id} value={s.id}>
                       {s.code} - {s.name} ({s.occupiedCells}/{s.totalCells} Dolu)
                     </option>
@@ -608,27 +596,28 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                         )
                       }
 
-                      const productCount = cell.products?.length || 0
+                      const cellProducts = cell.products || []
+                      const productCount = cellProducts.length
                       const hasProducts = productCount > 0
                       const isMulti = productCount > 1
                       const totalStock =
-                        cell.products?.reduce((sum: number, p: any) => sum + (p.stockQuantity || 0), 0) || 0
-                      const hasCritical = cell.products?.some(
-                        (p: any) => (p.stockQuantity || 0) <= (p.minStockLevel ?? 5)
+                        cellProducts.reduce((sum: number, p: ShelfProductSummary) => sum + (p.stockQuantity || 0), 0)
+                      const hasCritical = cellProducts.some(
+                        (p: ShelfProductSummary) => (p.stockQuantity || 0) <= (p.minStockLevel ?? 5)
                       )
 
                       const isMatch =
                         !searchQuery ||
                         cell.cellCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        cell.products?.some(
-                          (p: any) =>
+                        cellProducts.some(
+                          (p: ShelfProductSummary) =>
                             p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                            p.oemCode.toLowerCase().includes(searchQuery.toLowerCase())
+                            (p.oemCode && p.oemCode.toLowerCase().includes(searchQuery.toLowerCase()))
                         )
 
                       const tooltipText = hasProducts
-                        ? `${cell.cellCode}\n${cell.products
-                            .map((p: any) => `• ${p.name} (${p.oemCode}): ${p.stockQuantity} ad.`)
+                        ? `${cell.cellCode}\n${cellProducts
+                            .map((p: ShelfProductSummary) => `• ${p.name} (${p.oemCode || '-'}): ${p.stockQuantity} ad.`)
                             .join("\n")}`
                         : `${cell.cellCode} - Boş`
 
@@ -779,7 +768,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                               /* Çoklu Ürün Listesi */
                               <div className="flex-1 flex flex-col justify-between pt-1 w-full overflow-hidden min-w-0">
                                 <div className="space-y-0.5 overflow-hidden">
-                                  {cell.products.slice(0, 2).map((p: any) => (
+                                  {cellProducts.slice(0, 2).map((p: ShelfProductSummary) => (
                                     <div
                                       key={p.id}
                                       draggable="true"
@@ -822,9 +811,9 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                   draggable="true"
                                   onDragStart={(e) => {
                                     e.stopPropagation()
-                                    e.dataTransfer.setData("text/plain", cell.products[0].id)
+                                    e.dataTransfer.setData("text/plain", cellProducts[0].id)
                                     e.dataTransfer.effectAllowed = "move"
-                                    setDraggedProductId(cell.products[0].id)
+                                    setDraggedProductId(cellProducts[0].id)
                                   }}
                                   onDragEnd={() => {
                                     setDraggedProductId(null)
@@ -833,18 +822,18 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                   className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-sky-600 dark:group-hover:text-sky-300 transition-colors cursor-grab active:cursor-grabbing break-words"
                                   title="Başka bir göze taşımak için sürükleyin"
                                 >
-                                  {cell.products[0].name}
+                                  {cellProducts[0].name}
                                 </p>
                                 <div className="pt-1 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between text-[10px] shrink-0 gap-1">
                                   <span className="font-mono text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/80 px-1 py-0.5 rounded text-[9px] truncate max-w-[55%] border border-slate-200/60 dark:border-transparent">
-                                    {cell.products[0].oemCode}
+                                    {cellProducts[0].oemCode}
                                   </span>
                                   <span
                                     className={`font-bold font-mono shrink-0 ${
                                       hasCritical ? "text-amber-600 dark:text-amber-400" : "text-sky-600 dark:text-sky-400"
                                     }`}
                                   >
-                                    {cell.products[0].stockQuantity} Adet
+                                    {cellProducts[0].stockQuantity} Adet
                                   </span>
                                 </div>
                               </div>
@@ -946,7 +935,7 @@ function CreateShelfModal({
   onCreated,
 }: {
   onClose: () => void
-  onCreated: (shelf: any) => void
+  onCreated: (shelf: ShelfDetailRecord) => void
 }) {
   const [mounted, setMounted] = React.useState(false)
   const [name, setName] = React.useState("")
@@ -954,7 +943,6 @@ function CreateShelfModal({
   const [zone, setZone] = React.useState("Ana Depo")
   const [rows, setRows] = React.useState(4)
   const [columns, setColumns] = React.useState(6)
-  const [description, setDescription] = React.useState("")
 
   const createShelfMutation = useCreateShelf()
 
@@ -971,10 +959,9 @@ function CreateShelfModal({
         zone: zone.trim() || undefined,
         rows: Number(rows),
         columns: Number(columns),
-        description: description.trim() || undefined,
       })
       onCreated(res)
-    } catch (e) {
+    } catch (_err) {
       // toast handles
     }
   }
@@ -1121,24 +1108,27 @@ function CellDetailModal({
   onCreateProductForCell,
   isAssigning,
 }: {
-  cell: any
-  products: any[]
-  currentShelf: any
+  cell: ShelfCellRecord
+  products: Product[]
+  currentShelf: ShelfDetailRecord | null | undefined
   onClose: () => void
   onUnassignProduct: (productId: string, productName?: string) => void
   onQuickAssign: (productId: string, cellId: string) => void
-  onCreateProductForCell?: (cell: any, shelf: any) => void
+  onCreateProductForCell?: (
+    cell: ShelfCellRecord,
+    shelf?: ShelfDetailRecord | ShelfSummaryRecord | null
+  ) => void
   isAssigning: boolean
 }) {
   const [mounted, setMounted] = React.useState(false)
   const [modalSearch, setModalSearch] = React.useState("")
 
-  const [locallyAdded, setLocallyAdded] = React.useState<any[]>([])
+  const [locallyAdded, setLocallyAdded] = React.useState<ShelfProductSummary[]>([])
   const [locallyRemovedIds, setLocallyRemovedIds] = React.useState<string[]>([])
 
   // Sunucu verisi (currentShelf veya ilk cell)
   const serverProducts = React.useMemo(() => {
-    const found = currentShelf?.cells?.find((c: any) => c.id === cell?.id)
+    const found = currentShelf?.cells?.find((c: ShelfCellRecord) => c.id === cell?.id)
     return found?.products || cell?.products || []
   }, [currentShelf, cell])
 
@@ -1148,15 +1138,15 @@ function CellDetailModal({
 
   // Sunucudan güncel veriler geldiğinde eşleşen optimistik kayıtları temizle
   React.useEffect(() => {
-    const serverIds = new Set(serverProducts.map((p: any) => p.id))
+    const serverIds = new Set(serverProducts.map((p: ShelfProductSummary) => p.id))
     setLocallyAdded((prev) => prev.filter((p) => !serverIds.has(p.id)))
     setLocallyRemovedIds((prev) => prev.filter((id) => serverIds.has(id)))
   }, [serverProducts])
 
   // Nihai birleştirilmiş liste (Sıfır flicker, anında tepki, kararlı görünüm)
   const assignedProducts = React.useMemo(() => {
-    const filteredServer = serverProducts.filter((p: any) => !locallyRemovedIds.includes(p.id))
-    const existingIds = new Set(filteredServer.map((p: any) => p.id))
+    const filteredServer = serverProducts.filter((p: ShelfProductSummary) => !locallyRemovedIds.includes(p.id))
+    const existingIds = new Set(filteredServer.map((p: ShelfProductSummary) => p.id))
     const addedItems = locallyAdded.filter((p) => !existingIds.has(p.id))
     return [...filteredServer, ...addedItems]
   }, [serverProducts, locallyAdded, locallyRemovedIds])
@@ -1165,7 +1155,7 @@ function CellDetailModal({
 
   // Henüz bir hücreye atanmamış veya bu hücredeki ürünler
   const availableProducts = products.filter(
-    (p) => !p.shelfCellId || p.shelfCellId === cell.id || assignedProducts.some((a: any) => a.id === p.id)
+    (p) => !p.shelfCellId || p.shelfCellId === cell.id || assignedProducts.some((a: ShelfProductSummary) => a.id === p.id)
   )
 
   const filteredAvailable = availableProducts.filter((p) => {
@@ -1241,7 +1231,7 @@ function CellDetailModal({
               </div>
             ) : (
               <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                {assignedProducts.map((p: any) => (
+                {assignedProducts.map((p: ShelfProductSummary) => (
                   <div
                     key={p.id}
                     className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3"
@@ -1250,7 +1240,7 @@ function CellDetailModal({
                       <p className="text-xs font-bold text-slate-900 dark:text-slate-100">{p.name}</p>
                       <div className="flex items-center gap-2 mt-0.5">
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold">
-                          {p.oemCode}
+                          {p.oemCode || '-'}
                         </span>
                         <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400">
                           Stok: {p.stockQuantity} Adet
@@ -1302,7 +1292,7 @@ function CellDetailModal({
                 <p className="text-center py-4 text-xs text-slate-400">Eşleşen atanabilir parça bulunamadı.</p>
               ) : (
                 filteredAvailable.map((p) => {
-                  const isAlreadyHere = assignedProducts.some((a: any) => a.id === p.id) || p.shelfCellId === cell.id
+                  const isAlreadyHere = assignedProducts.some((a: ShelfProductSummary) => a.id === p.id) || p.shelfCellId === cell.id
                   return (
                     <div
                       key={p.id}
@@ -1311,7 +1301,7 @@ function CellDetailModal({
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">{p.name}</p>
                         <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-500 dark:text-slate-400">
-                          <span className="font-mono font-bold text-slate-600 dark:text-slate-300">{p.sku}</span>
+                          <span className="font-mono font-bold text-slate-600 dark:text-slate-300">{p.sku || '-'}</span>
                           <span>•</span>
                           <span className="text-sky-600 dark:text-sky-400 font-semibold">
                             Stok: {p.currentStock} Adet
@@ -1338,11 +1328,10 @@ function CellDetailModal({
                             const newItem = {
                               id: p.id,
                               name: p.name,
-                              oemCode: p.sku || p.oemCode || "",
-                              brand: p.brand,
+                              oemCode: p.sku || "",
                               category: p.category,
-                              stockQuantity: p.currentStock || p.stockQuantity || 0,
-                              minStockLevel: p.minStockLevel ?? 5,
+                              stockQuantity: p.currentStock || 0,
+                              minStockLevel: p.minimumStock ?? 5,
                             }
                             setLocallyRemovedIds((prev) => prev.filter((id) => id !== p.id))
                             setLocallyAdded((prev) => {

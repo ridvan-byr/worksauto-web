@@ -1,6 +1,14 @@
 "use client"
 
-import { useProducts, useCreateProduct, useStockMovement, type ProductRecord } from "@/features/inventory/api/use-inventory"
+import {
+  useProducts,
+  useCreateProduct,
+  useStockMovement,
+  type ProductRecord,
+  type ShelfCellRecord,
+  type ShelfDetailRecord,
+  type ShelfSummaryRecord,
+} from "@/features/inventory/api/use-inventory"
 
 import * as React from "react"
 import { useSearchParams, useRouter } from "next/navigation"
@@ -78,7 +86,10 @@ function InventoryPageContent() {
     shelfLocation?: string
   } | null>(null)
 
-  const handleOpenCreateForCell = (cell: any, shelf: any) => {
+  const handleOpenCreateForCell = (
+    cell: ShelfCellRecord,
+    shelf?: ShelfDetailRecord | ShelfSummaryRecord | null
+  ) => {
     setTargetCellForNewProduct({
       shelfId: shelf?.id,
       cellId: cell.id,

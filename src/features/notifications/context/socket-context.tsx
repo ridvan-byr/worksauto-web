@@ -200,7 +200,7 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       socketRef.current = null;
       setIsConnected(false);
     };
-  }, [isAuthenticated, user?.id, tenant?.id, queryClient, router]);
+  }, [isAuthenticated, isLoading, user?.id, tenant?.id, queryClient, router]);
 
   return (
     <SocketContext.Provider

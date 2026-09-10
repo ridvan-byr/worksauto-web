@@ -202,7 +202,7 @@ export function AppSidebar({
         roles: ["OWNER", "SERVICE_MANAGER", "tenant_admin"],
       },
     ]
-  }, [summary])
+  }, [summary, preferredInventoryTab])
 
   const visibleNavItems = React.useMemo(() => {
     if (!user?.role) return dynamicNavItems

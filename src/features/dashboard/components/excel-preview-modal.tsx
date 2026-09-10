@@ -6,7 +6,6 @@ import {
   Download,
   X,
   Search,
-  Check,
   Table as TableIcon,
   Layers,
   Sparkles,
@@ -57,8 +56,6 @@ export function ExcelPreviewModal({
     }
   }
 
-  // Column letters generator (A, B, C, D...)
-  const cols = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 
   // Filtered orders for tab 2
   const filteredOrders = (report.recentCompletedOrders || []).filter((o) => {

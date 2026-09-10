@@ -85,7 +85,7 @@ export default function AdminDashboardPage() {
     if (auditResponse?.meta?.totalPages && auditPage > auditResponse.meta.totalPages) {
       setAuditPage(1)
     }
-  }, [auditResponse?.meta?.totalPages])
+  }, [auditResponse?.meta?.totalPages, auditPage])
 
   const handleConfirmStatusToggle = async () => {
     if (!statusModalState) return
