@@ -17,7 +17,10 @@ export function ListView({ appointments, onSelectAppointment }: ListViewProps) {
   const [statusFilter, setStatusFilter] = React.useState<string>("all")
 
   const filtered = React.useMemo(() => {
+    const seen = new Set<string>()
     return appointments.filter((a) => {
+      if (!a.id || seen.has(a.id)) return false
+      seen.add(a.id)
       if (statusFilter !== "all" && a.status !== statusFilter) return false
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase().trim()

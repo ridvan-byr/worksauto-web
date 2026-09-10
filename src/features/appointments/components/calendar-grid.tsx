@@ -108,13 +108,17 @@ export function CalendarGrid({
 
                 {/* 7 Day Cells (Mon-Sun) */}
                 {weekDays.map((day) => {
-                  // Find appointments in this day and near this time slot
-                  const cellAppointments = appointments.filter((a) => {
-                    if (a.date !== day.dateStr) return false
+                  // Find appointments in this day and near this time slot, strictly deduplicated by id
+                  const cellAppointmentsMap = new Map<string, Appointment>()
+                  for (const a of appointments) {
+                    if (a.date !== day.dateStr) continue
                     const slotHour = parseInt(timeSlot.split(":")[0])
                     const appHour = parseInt(a.time.split(":")[0])
-                    return slotHour === appHour
-                  })
+                    if (slotHour === appHour && a.id) {
+                      cellAppointmentsMap.set(a.id, a)
+                    }
+                  }
+                  const cellAppointments = Array.from(cellAppointmentsMap.values())
 
                   return (
                     <div

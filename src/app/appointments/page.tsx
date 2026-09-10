@@ -48,32 +48,38 @@ export default function AppointmentsPage() {
   const markNoShowMutation = useMarkNoShow()
   const cancelAppointmentMutation = useCancelAppointment()
 
-  // Pure Live API sync (100% PostgreSQL)
+  // Pure Live API sync (100% PostgreSQL) with deduplication
   React.useEffect(() => {
     if (apiAppointments) {
-      const mapped: Appointment[] = apiAppointments.map((a: AppointmentRecord) => ({
-        id: a.id,
-        tenantId: a.tenantId || 'ten_1',
-        customerId: a.customerId,
-        customerName: a.customer ? `${a.customer.firstName || a.customer.name || ""} ${a.customer.lastName || a.customer.surname || ""}`.trim() : 'Müşteri',
-        customerPhone: a.customer?.phone || '',
-        vehicleId: a.vehicleId,
-        plate: a.vehicle?.plate || '34XX000',
-        brand: a.vehicle?.brand || 'Araç',
-        model: a.vehicle?.model || 'Model',
-        services: a.service ? [{ id: a.service.id, name: a.service.name, durationMinutes: a.service.defaultDurationMin || 60, price: Number(a.service.basePrice || 750) }] : [],
-        totalDurationMinutes: a.service?.defaultDurationMin || 60,
-        totalEstimatedPrice: Number(a.service?.basePrice || 750),
-        assignedStaffId: a.assignedMechanicId,
-        assignedStaffName: a.assignedMechanic?.user ? `${a.assignedMechanic.user.name} ${a.assignedMechanic.user.surname || ""}`.trim() : 'Usta',
-        date: new Date(a.slotDate).toISOString().split('T')[0],
-        time: new Date(a.slotStartTime).toTimeString().substring(0, 5),
-        status: (a.status as AppointmentStatus) || "CONFIRMED",
-        customerNote: a.customerNotes,
-        cancellationReason: a.cancellationReason,
-        createdAt: a.createdAt,
-        updatedAt: a.updatedAt,
-      }))
+      const seen = new Set<string>()
+      const mapped: Appointment[] = []
+      for (const a of apiAppointments as AppointmentRecord[]) {
+        if (!a.id || seen.has(a.id)) continue
+        seen.add(a.id)
+        mapped.push({
+          id: a.id,
+          tenantId: a.tenantId || 'ten_1',
+          customerId: a.customerId,
+          customerName: a.customer ? `${a.customer.firstName || a.customer.name || ""}`.trim() + " " + `${a.customer.lastName || a.customer.surname || ""}`.trim() : 'Müşteri',
+          customerPhone: a.customer?.phone || '',
+          vehicleId: a.vehicleId,
+          plate: a.vehicle?.plate || '34XX000',
+          brand: a.vehicle?.brand || 'Araç',
+          model: a.vehicle?.model || 'Model',
+          services: a.service ? [{ id: a.service.id, name: a.service.name, durationMinutes: a.service.defaultDurationMin || 60, price: Number(a.service.basePrice || 750) }] : [],
+          totalDurationMinutes: a.service?.defaultDurationMin || 60,
+          totalEstimatedPrice: Number(a.service?.basePrice || 750),
+          assignedStaffId: a.assignedMechanicId,
+          assignedStaffName: a.assignedMechanic?.user ? `${a.assignedMechanic.user.name} ${a.assignedMechanic.user.surname || ""}`.trim() : 'Usta',
+          date: new Date(a.slotDate).toISOString().split('T')[0],
+          time: new Date(a.slotStartTime).toTimeString().substring(0, 5),
+          status: (a.status as AppointmentStatus) || "CONFIRMED",
+          customerNote: a.customerNotes,
+          cancellationReason: a.cancellationReason,
+          createdAt: a.createdAt,
+          updatedAt: a.updatedAt,
+        })
+      }
       setAppointments(mapped)
     }
   }, [apiAppointments])
@@ -140,7 +146,7 @@ export default function AppointmentsPage() {
 
   // Handlers
   const handleCreateAppointment = (newApp: Appointment) => {
-    setAppointments((prev) => [newApp, ...prev])
+    setAppointments((prev) => [newApp, ...prev.filter((a) => a.id !== newApp.id)])
   }
 
   const handleConvertToWorkOrder = (id: string) => {
