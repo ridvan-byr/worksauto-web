@@ -1,6 +1,6 @@
 "use client"
 
-import { useCustomer } from "@/features/customers/api/use-customers"
+import { useCustomer, useDeleteCustomer } from "@/features/customers/api/use-customers"
 import { useDeleteVehicle, type VehicleRecord } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
@@ -41,11 +41,13 @@ export default function CustomerDetailPage() {
   const [activeTab, setActiveTab] = React.useState<"appointments" | "workOrders" | "invoices" | "movements">("workOrders")
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = React.useState(false)
   const [isEditCustomerModalOpen, setIsEditCustomerModalOpen] = React.useState(false)
+  const [isDeleteCustomerModalOpen, setIsDeleteCustomerModalOpen] = React.useState(false)
   const [vehicleToDelete, setVehicleToDelete] = React.useState<Vehicle | null>(null)
   const [vehicleToEdit, setVehicleToEdit] = React.useState<Vehicle | null>(null)
 
   const { data: apiCustomer } = useCustomer(customerId)
   const deleteVehicleMutation = useDeleteVehicle()
+  const deleteCustomerMutation = useDeleteCustomer()
 
   // Load customer data with live API sync and mock fallback
   React.useEffect(() => {
@@ -203,6 +205,17 @@ export default function CustomerDetailPage() {
           >
             <Edit3 size={13} />
             <span>Bilgileri Düzenle</span>
+          </Button>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsDeleteCustomerModalOpen(true)}
+            className="h-8 px-3 rounded-xl gap-1.5 text-xs font-semibold cursor-pointer border-rose-200 dark:border-rose-900/50 bg-rose-50/50 dark:bg-rose-950/20 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40"
+          >
+            <Trash2 size={13} />
+            <span>Müşteriyi Sil</span>
           </Button>
         </div>
       </div>
@@ -710,6 +723,68 @@ export default function CustomerDetailPage() {
           onClose={() => setIsEditCustomerModalOpen(false)}
           onUpdated={handleCustomerUpdated}
         />
+      )}
+
+      {/* Delete Customer Confirmation Modal */}
+      {isDeleteCustomerModalOpen && customer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center justify-center shrink-0">
+                <AlertTriangle size={24} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  Müşteriyi Silmek İstiyor Musunuz?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <strong>{displayName}</strong> adlı müşteri kaydı silinecektir.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-400 space-y-1">
+              <p className="font-semibold">⚠️ Güvenlik ve Mevzuat Kuralları:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-[10.5px]">
+                <li>Devam eden açık iş emri bulunan müşteriler silinemez.</li>
+                <li>Ödenmemiş cari borç bakiyesi olan müşteriler silinemez.</li>
+                <li>Geçmiş faturalar ve tahsilatlar muhasebe mevzuatı gereği korunur.</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDeleteCustomerModalOpen(false)}
+                disabled={deleteCustomerMutation.isPending}
+                className="h-10 px-4 text-xs font-semibold cursor-pointer"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await deleteCustomerMutation.mutateAsync(customer.id)
+                    router.push("/customers")
+                  } catch {}
+                }}
+                disabled={deleteCustomerMutation.isPending}
+                className="h-10 px-4 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer shadow-md shadow-rose-600/20"
+              >
+                {deleteCustomerMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span>Evet, Müşteriyi Sil</span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

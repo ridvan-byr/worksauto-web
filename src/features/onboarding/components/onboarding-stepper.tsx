@@ -14,11 +14,10 @@ import { cn } from "@/lib/utils"
 
 export const STEPS = [
   { id: 1, title: "Firma Kimliği", desc: "Servis adı, fatura & adres", icon: Building2 },
-  { id: 2, title: "Marka & Logo", desc: "Logo ve kurumsal renk", icon: Palette },
-  { id: 3, title: "Mesai Saatleri", desc: "Çalışma günleri ve saatleri", icon: Clock },
-  { id: 4, title: "Hizmetler", desc: "İşçilik ve servis kataloğu", icon: Wrench },
-  { id: 5, title: "Usta & Kadro", desc: "İlk teknisyen tanımları", icon: Users },
-  { id: 6, title: "Randevu & Stok", desc: "Slot ve eşik ayarları", icon: Settings2 },
+  { id: 2, title: "Mesai Saatleri", desc: "Çalışma günleri ve saatleri", icon: Clock },
+  { id: 3, title: "Hizmetler", desc: "İşçilik ve servis kataloğu", icon: Wrench },
+  { id: 4, title: "Usta & Kadro", desc: "İlk teknisyen tanımları", icon: Users },
+  { id: 5, title: "Atölye Kapasitesi", desc: "Lift, slot ve stok ayarları", icon: Settings2 },
 ]
 
 interface OnboardingStepperProps {

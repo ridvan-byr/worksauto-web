@@ -8,17 +8,18 @@ import { useAuth } from "@/features/auth/auth-context"
 import { ServiceItem, StaffMember } from "@/features/auth/types"
 import { OnboardingStepper } from "@/features/onboarding/components/onboarding-stepper"
 import { StepCompanyInfo } from "@/features/onboarding/components/step-company-info"
-import { StepBranding } from "@/features/onboarding/components/step-branding"
 import { StepWorkingHours } from "@/features/onboarding/components/step-working-hours"
 import { StepServices } from "@/features/onboarding/components/step-services"
 import { StepStaff } from "@/features/onboarding/components/step-staff"
 import { StepWorkshopSettings } from "@/features/onboarding/components/step-workshop-settings"
 import { OnboardingSuccessModal } from "@/features/onboarding/components/onboarding-success-modal"
+import { useTenantSettings } from "@/features/settings/api/use-settings"
 
 const ONBOARDING_STORAGE_KEY = "worksauto_onboarding_draft"
 
 export default function OnboardingPage() {
   const { user, tenant, completeOnboarding } = useAuth()
+  const { data: serverTenant } = useTenantSettings()
 
   const [currentStep, setCurrentStep] = React.useState(1)
   const [errors, setErrors] = React.useState<Record<string, string>>({})
@@ -33,9 +34,6 @@ export default function OnboardingPage() {
     city: tenant?.city || "İstanbul",
     district: tenant?.district || "",
     address: tenant?.address || "",
-    logo: tenant?.logo || "/brand/worksauto-icon-white-tight.png",
-    primaryColor: tenant?.primaryColor || "#0284c7",
-    slogan: tenant?.slogan || "",
     workingDays: tenant?.workingDays || ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
     workStartTime: tenant?.workStartTime || "08:30",
     workEndTime: tenant?.workEndTime || "18:30",
@@ -54,6 +52,22 @@ export default function OnboardingPage() {
     notifyReadyForPickup: tenant?.notifyReadyForPickup ?? true,
     criticalStockThreshold: tenant?.criticalStockThreshold || 5,
   })
+
+  // Prefill from server tenant if available (Superadmin entries)
+  React.useEffect(() => {
+    if (serverTenant) {
+      setFormData((prev) => ({
+        ...prev,
+        name: serverTenant.title || prev.name,
+        legalName: serverTenant.legalName || prev.legalName,
+        taxOffice: serverTenant.taxOffice || prev.taxOffice,
+        taxNumber: serverTenant.taxNumber || prev.taxNumber,
+        city: serverTenant.city || prev.city,
+        district: serverTenant.district || prev.district,
+        address: serverTenant.address || prev.address,
+      }))
+    }
+  }, [serverTenant])
 
   // Load draft from localStorage if present
   React.useEffect(() => {
@@ -96,22 +110,18 @@ export default function OnboardingPage() {
     }
 
     if (currentStep === 2) {
-      if (!formData.logo) errs.logo = "Lütfen bir servis logosu seçin veya yükleyin."
-    }
-
-    if (currentStep === 3) {
       if (!formData.workingDays || formData.workingDays.length === 0) {
         errs.workingDays = "En az bir çalışma günü seçilmelidir."
       }
     }
 
-    if (currentStep === 4) {
+    if (currentStep === 3) {
       if (!formData.services || formData.services.length === 0) {
         errs.services = "En az 1 adet aktif servis/işçilik tanımı eklemelisiniz."
       }
     }
 
-    if (currentStep === 5) {
+    if (currentStep === 4) {
       if (!formData.staff || formData.staff.length === 0) {
         errs.staff = "En az 1 adet usta / teknisyen personeli tanımlamalısınız."
       }
@@ -123,7 +133,7 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     if (validateCurrentStep()) {
-      if (currentStep < 6) {
+      if (currentStep < 5) {
         setCurrentStep((prev) => prev + 1)
         window.scrollTo({ top: 0, behavior: "smooth" })
       } else {
@@ -195,7 +205,7 @@ export default function OnboardingPage() {
     updateForm({ staff: formData.staff.filter((s) => s.id !== id) })
   }
 
-  const progressPercent = Math.round((currentStep / 6) * 100)
+  const progressPercent = Math.round((currentStep / 5) * 100)
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100 flex flex-col justify-between">
@@ -210,7 +220,7 @@ export default function OnboardingPage() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <span className="font-medium">Adım <strong>{currentStep}</strong>/6</span>
+          <span className="font-medium">Adım <strong>{currentStep}</strong>/5</span>
           <div className="w-16 sm:w-32 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
             <div
               className="h-full bg-sky-500 transition-all duration-300 rounded-full"
@@ -253,14 +263,10 @@ export default function OnboardingPage() {
           )}
 
           {currentStep === 2 && (
-            <StepBranding data={formData} errors={errors} onChange={updateForm} />
-          )}
-
-          {currentStep === 3 && (
             <StepWorkingHours data={formData} errors={errors} onChange={updateForm} />
           )}
 
-          {currentStep === 4 && (
+          {currentStep === 3 && (
             <StepServices
               services={formData.services}
               errors={errors}
@@ -271,7 +277,7 @@ export default function OnboardingPage() {
             />
           )}
 
-          {currentStep === 5 && (
+          {currentStep === 4 && (
             <StepStaff
               staff={formData.staff}
               errors={errors}
@@ -280,7 +286,7 @@ export default function OnboardingPage() {
             />
           )}
 
-          {currentStep === 6 && (
+          {currentStep === 5 && (
             <StepWorkshopSettings data={formData} onChange={updateForm} />
           )}
 
@@ -302,7 +308,7 @@ export default function OnboardingPage() {
               onClick={handleNext}
               className="h-11 px-5 sm:px-6 gap-1.5 text-xs font-semibold cursor-pointer shadow-sm flex-1 sm:flex-none justify-center"
             >
-              {currentStep === 6 ? (
+              {currentStep === 5 ? (
                 <>
                   <Sparkles size={15} />
                   <span>Kurulumu Tamamla</span>

@@ -14,11 +14,8 @@ export function getAccessToken(endpoint?: string): string | null {
 
     if (isAdmin) {
       if (inMemoryAdminToken) return inMemoryAdminToken;
-      const adminToken = localStorage.getItem('worksauto_admin_token');
-      if (adminToken) {
-        inMemoryAdminToken = adminToken;
-        return adminToken;
-      }
+      // Proactively remove any vulnerable legacy admin token from localStorage
+      localStorage.removeItem('worksauto_admin_token');
       return null;
     }
   }
@@ -46,11 +43,9 @@ export function setAccessToken(token: string | null): void {
 export function setAdminToken(token: string | null): void {
   inMemoryAdminToken = token;
   if (typeof window !== 'undefined') {
-    if (token) {
-      localStorage.setItem('worksauto_admin_token', token);
-    } else {
-      localStorage.removeItem('worksauto_admin_token');
-    }
+    // Security: Super Admin JWT is never stored in localStorage (prevents XSS leaks)
+    // The backend uses a dedicated httpOnly cookie 'adminAccessToken' sent automatically via credentials: 'include'
+    localStorage.removeItem('worksauto_admin_token');
   }
 }
 

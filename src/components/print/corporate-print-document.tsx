@@ -52,11 +52,11 @@ export function CorporatePrintDocument({
 
   const formattedDate = date || new Date().toISOString().split("T")[0]
 
-  const companyName = tenant?.title || "WorksAuto Servis Merkezi"
+  const companyName = (tenant as any)?.name || tenant?.title || "WorksAuto Servis Merkezi"
   const noticeText =
     legalNotice ||
     "Bu döküm, WorksAuto servis yönetim altyapısı üzerinden dijital olarak üretilmiştir."
-  const officialTitle = tenant?.legalName || tenant?.title || "WorksAuto Otomotiv Servis Hizmetleri A.Ş."
+  const officialTitle = tenant?.legalName || (tenant as any)?.name || tenant?.title || "WorksAuto Otomotiv Servis Hizmetleri A.Ş."
   const address = tenant?.address
     ? `${tenant.address} ${tenant.district || ""} / ${tenant.city || ""}`.trim()
     : "Maslak Oto Sanayi Sitesi 4. Blok No: 18, Sarıyer / İstanbul"

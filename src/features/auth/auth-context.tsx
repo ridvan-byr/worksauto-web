@@ -4,7 +4,7 @@ import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@/components/ui/sonner"
-import { getAccessToken, setAccessToken, refreshAccessToken, setSessionCookie } from "@/lib/api-client"
+import { getAccessToken, setAccessToken, refreshAccessToken, setSessionCookie, apiClient } from "@/lib/api-client"
 import { User, Tenant } from "./types"
 
 const AUTH_STORAGE_KEY = "worksauto_auth_session"
@@ -19,7 +19,7 @@ interface AuthContextType {
   isLoading: boolean
   sendOtp: (phone: string) => Promise<{ success: boolean; error?: string; devCode?: string }>
   verifyOtp: (phone: string, code: string) => Promise<{ success: boolean; error?: string }>
-  login: (phone: string, codeOrPass: string) => Promise<{ success: boolean; error?: string }>
+  login: (userData: User, tenantData: Tenant) => void
   logout: () => void
   completeOnboarding: (data: Partial<Tenant>) => void
 }
@@ -272,6 +272,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
+        setAccessToken(data.accessToken)
+        setSessionCookie(true)
+
+        let dbTenant: any = null
+        try {
+          const tenantRes = await fetch(`${API_BASE_URL}/tenants/current`, {
+            headers: { Authorization: `Bearer ${data.accessToken}` },
+          })
+          if (tenantRes.ok) {
+            dbTenant = await tenantRes.json()
+          }
+        } catch {
+          // fallback
+        }
+
         // Live user & tenant mapping
         const liveUser: User = {
           id: data.user.id,
@@ -284,31 +299,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const liveTenant: Tenant = {
           id: data.user.tenantId,
-          name: data.user.tenantTitle || "Bayar Oto Servis",
-          legalName: data.user.tenantTitle || "Bayar Oto Servis",
-          taxOffice: "İkitelli",
-          taxNumber: "1234567890",
-          city: "İstanbul",
-          district: "Başakşehir",
-          address: "İkitelli OSB, Dolapdere Sanayi Sitesi",
+          name: dbTenant?.title || data.user.tenantTitle || "Oto Servis",
+          legalName: dbTenant?.legalName || dbTenant?.title || data.user.tenantTitle || "Oto Servis",
+          taxOffice: dbTenant?.taxOffice || "",
+          taxNumber: dbTenant?.taxNumber || "",
+          city: dbTenant?.city || "İstanbul",
+          district: dbTenant?.district || "",
+          address: dbTenant?.address || "",
           logo: "/brand/worksauto-icon-white-tight.png",
           primaryColor: "#0284c7",
           slogan: "Güvenilir & Garantili Araç Bakım ve Onarım Merkezi",
-          workingDays: ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
-          workStartTime: "08:30",
-          workEndTime: "18:30",
+          workingDays: dbTenant?.workingDays || ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
+          workStartTime: dbTenant?.workStartTime || "08:30",
+          workEndTime: dbTenant?.workEndTime || "18:30",
+          breakStartTime: dbTenant?.breakStartTime || "12:30",
+          breakEndTime: dbTenant?.breakEndTime || "13:30",
           services: [],
           staff: [],
-          appointmentSlotDuration: 45,
+          appointmentSlotDuration: dbTenant?.appointmentSlotDuration || 45,
           autoWorkOrder: true,
-          criticalStockThreshold: 5,
-          onboardingCompleted: true,
+          criticalStockThreshold: dbTenant?.criticalStockThreshold || 5,
+          onboardingCompleted: dbTenant?.onboardingCompleted ?? true,
         }
 
         setUser(liveUser)
         setTenant(liveTenant)
-        setAccessToken(data.accessToken)
-        setSessionCookie(true)
 
         // Store 30-day non-sensitive profile session in localStorage; bearer token is stored strictly in-memory
         try {
@@ -319,7 +334,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // ignore
         }
 
-        router.push("/")
+        if (!liveTenant.onboardingCompleted) {
+          router.push("/onboarding")
+        } else {
+          router.push("/")
+        }
         return { success: true }
       } catch {
         return { success: false, error: "Sunucu bağlantı hatası oluştu. Lütfen API servisinin çalıştığından emin olun." }
@@ -329,10 +348,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   const login = React.useCallback(
-    async (rawPhone: string, codeOrPass: string) => {
-      return verifyOtp(rawPhone, codeOrPass)
+    (userData: User, tenantData: Tenant) => {
+      setUser(userData)
+      setTenant(tenantData)
+      setSessionCookie(true)
+      try {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: userData, tenant: tenantData }))
+      } catch {
+        // ignore
+      }
     },
-    [verifyOtp]
+    []
   )
 
   const logout = React.useCallback(async () => {
@@ -359,7 +385,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router, queryClient])
 
-  const completeOnboarding = React.useCallback((data: Partial<Tenant>) => {
+  const completeOnboarding = React.useCallback(async (data: any) => {
+    try {
+      await apiClient.post("/tenants/onboarding", data)
+      toast.success("Atölye kurulumu başarıyla tamamlandı!")
+    } catch (err: unknown) {
+      console.warn("API Onboarding sync error:", err)
+    }
+
     setTenant((prev) => {
       if (!prev) return null
       const updated = { ...prev, ...data, onboardingCompleted: true }
@@ -375,7 +408,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       return updated
     })
-  }, [])
+    router.push("/")
+  }, [router])
 
   const value = React.useMemo(
     () => ({
