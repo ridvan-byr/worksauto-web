@@ -33,6 +33,7 @@ export interface Product {
   name: string
   sku: string // OEM / Parça Kodu (Örn: "ENG-OIL-5W30", "MANN-W712")
   barcode?: string
+  brand?: string
   category: ProductCategory
   unit: StockUnit
   shelfLocation?: string // Depo Raf / Konum kodu (Örn: "RAF-A01-K1-G2")
@@ -42,6 +43,7 @@ export interface Product {
   rack?: string
   tier?: string
   bin?: string
+  shelfId?: string
   shelfCellId?: string
 
   // Prices

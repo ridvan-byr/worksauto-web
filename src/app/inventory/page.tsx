@@ -3,6 +3,7 @@
 import {
   useProducts,
   useCreateProduct,
+  useDeleteProduct,
   useStockMovement,
   type ProductRecord,
   type ShelfCellRecord,
@@ -25,9 +26,11 @@ import { Button } from "@/components/ui/button"
 import { Product, StockMovementType, ProductCategory } from "@/features/inventory/types"
 import { ProductTable } from "@/features/inventory/components/product-table"
 import { CreateProductModal } from "@/features/inventory/components/create-product-modal"
+import { EditProductModal } from "@/features/inventory/components/edit-product-modal"
 import { StockMovementModal } from "@/features/inventory/components/stock-movement-modal"
 import { MovementHistoryModal } from "@/features/inventory/components/movement-history-modal"
 import { ShelfMatrixView } from "@/features/inventory/components/shelf-matrix-view"
+import { ConfirmDialog } from "@/components/ui/confirm-dialog"
 
 function InventoryPageContent() {
   const searchParams = useSearchParams()
@@ -79,6 +82,8 @@ function InventoryPageContent() {
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
+  const [editingProduct, setEditingProduct] = React.useState<Product | null>(null)
+  const [deleteConfirmProduct, setDeleteConfirmProduct] = React.useState<Product | null>(null)
   const [targetCellForNewProduct, setTargetCellForNewProduct] = React.useState<{
     shelfId?: string
     cellId?: string
@@ -112,6 +117,7 @@ function InventoryPageContent() {
 
   const { data: apiProducts } = useProducts()
   const createProductMutation = useCreateProduct()
+  const deleteProductMutation = useDeleteProduct()
   const stockMovementMutation = useStockMovement()
 
   // Pure live API sync (100% PostgreSQL)
@@ -126,7 +132,8 @@ function InventoryPageContent() {
         category: (p.category || "GENERAL") as ProductCategory,
         unit: 'ADET',
         shelfLocation: p.shelfLocation || 'Depo',
-        shelfCellId: p.shelfCellId,
+        shelfId: p.shelfId || undefined,
+        shelfCellId: p.shelfCellId || undefined,
         aisle: p.aisle,
         rack: p.rack,
         tier: p.tier,
@@ -163,6 +170,7 @@ function InventoryPageContent() {
         stockQuantity: newProd.currentStock,
         minStockLevel: newProd.minimumStock,
         shelfLocation: newProd.shelfLocation,
+        shelfId: newProd.shelfId,
         shelfCellId: newProd.shelfCellId,
         aisle: newProd.aisle,
         rack: newProd.rack,
@@ -228,6 +236,22 @@ function InventoryPageContent() {
         }
       })
     )
+  }
+
+  const handleDeleteProduct = (product: Product) => {
+    setEditingProduct(null)
+    setDeleteConfirmProduct(product)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmProduct) return
+    try {
+      await deleteProductMutation.mutateAsync(deleteConfirmProduct.id)
+      setProducts((prev) => prev.filter((p) => p.id !== deleteConfirmProduct.id))
+      setDeleteConfirmProduct(null)
+    } catch (e) {
+      console.error("Failed to delete product:", e)
+    }
   }
 
   return (
@@ -343,6 +367,8 @@ function InventoryPageContent() {
           products={products}
           onOpenMovement={handleOpenMovement}
           onOpenHistory={handleOpenHistory}
+          onEditProduct={(p) => setEditingProduct(p)}
+          onDeleteProduct={handleDeleteProduct}
         />
       ) : (
         <ShelfMatrixView
@@ -350,6 +376,34 @@ function InventoryPageContent() {
           onCreateProductForCell={handleOpenCreateForCell}
         />
       )}
+
+      {/* Edit Product Modal */}
+      <EditProductModal
+        isOpen={!!editingProduct}
+        product={editingProduct}
+        onClose={() => setEditingProduct(null)}
+        onUpdated={(updatedProd) => {
+          setProducts((prev) => prev.map((p) => (p.id === updatedProd.id ? updatedProd : p)))
+          setEditingProduct(null)
+        }}
+        onDelete={handleDeleteProduct}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={!!deleteConfirmProduct}
+        title="Parçayı Envanterden Sil"
+        message={`"${deleteConfirmProduct?.name}" (${deleteConfirmProduct?.sku}) parçasını envanterden silmek istediğinize emin misiniz? Varsa raf hücresindeki konumu serbest bırakılacaktır.`}
+        variant="danger"
+        confirmText={deleteProductMutation.isPending ? "Siliniyor..." : "Evet, Parçayı Sil"}
+        cancelText="Vazgeç"
+        onConfirm={handleConfirmDelete}
+        onClose={() => {
+          if (!deleteProductMutation.isPending) {
+            setDeleteConfirmProduct(null)
+          }
+        }}
+      />
 
       {/* Create Product Modal */}
       <CreateProductModal

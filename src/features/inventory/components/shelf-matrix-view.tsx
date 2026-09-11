@@ -54,12 +54,214 @@ interface ConfirmModalState {
   onConfirm: () => void | Promise<void>
 }
 
+function createCustomDragImage(
+  e: React.DragEvent,
+  title: string,
+  subtitle?: string,
+  badge?: string
+) {
+  try {
+    const ghost = document.createElement("div")
+    ghost.style.position = "fixed"
+    ghost.style.top = "0px"
+    ghost.style.left = "0px"
+    ghost.style.transform = "translate(-9999px, -9999px)"
+    ghost.style.padding = "10px 14px"
+    ghost.style.borderRadius = "14px"
+    ghost.style.background = "#0f172a"
+    ghost.style.color = "#ffffff"
+    ghost.style.border = "1.5px solid #38bdf8"
+    ghost.style.boxShadow = "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)"
+    ghost.style.display = "flex"
+    ghost.style.alignItems = "center"
+    ghost.style.gap = "10px"
+    ghost.style.zIndex = "-1000"
+    ghost.style.pointerEvents = "none"
+    ghost.style.fontFamily = "system-ui, -apple-system, sans-serif"
+    ghost.style.maxWidth = "280px"
+    ghost.style.minWidth = "180px"
+
+    ghost.innerHTML = `
+      <div style="width: 32px; height: 32px; border-radius: 9px; background: rgba(2, 132, 199, 0.25); color: #38bdf8; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;">📦</div>
+      <div style="min-width: 0; flex: 1;">
+        <div style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #f8fafc;">${title}</div>
+        ${subtitle ? `<div style="font-size: 10px; color: #94a3b8; font-family: monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${subtitle}</div>` : ""}
+      </div>
+      ${badge ? `<div style="font-size: 10px; font-weight: 700; background: #0284c7; color: #ffffff; padding: 3px 8px; border-radius: 8px; white-space: nowrap; flex-shrink: 0;">${badge}</div>` : ""}
+    `
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 30, 20)
+    setTimeout(() => {
+      if (document.body.contains(ghost)) {
+        document.body.removeChild(ghost)
+      }
+    }, 150)
+  } catch {
+    // Fallback
+  }
+}
+
+function createCellDragImage(
+  e: React.DragEvent,
+  cell: ShelfCellRecord,
+  cellProducts: ShelfProductSummary[],
+  isMulti: boolean
+) {
+  try {
+    const ghost = document.createElement("div")
+    ghost.style.position = "fixed"
+    ghost.style.top = "0px"
+    ghost.style.left = "0px"
+    ghost.style.transform = "translate(-9999px, -9999px)"
+    ghost.style.width = "185px"
+    ghost.style.height = "115px"
+    ghost.style.padding = "12px"
+    ghost.style.borderRadius = "16px"
+    ghost.style.boxSizing = "border-box"
+    ghost.style.fontFamily = "system-ui, -apple-system, sans-serif"
+    ghost.style.zIndex = "-1000"
+    ghost.style.pointerEvents = "none"
+    ghost.style.display = "flex"
+    ghost.style.flexDirection = "column"
+    ghost.style.justifyContent = "space-between"
+    ghost.style.overflow = "hidden"
+
+    const totalStock = cellProducts.reduce((sum, p) => sum + p.stockQuantity, 0)
+    const productCount = cellProducts.length
+
+    if (isMulti) {
+      // Purple / Indigo card - Birebir mor raf kutusu görünümü
+      ghost.style.background = "#1e1b4b"
+      ghost.style.color = "#ffffff"
+      ghost.style.border = "1.5px solid #818cf8"
+      ghost.style.boxShadow = "0 25px 50px -12px rgba(99, 102, 241, 0.4), 0 10px 20px -5px rgba(0, 0, 0, 0.5)"
+
+      const itemsHtml = cellProducts.slice(0, 2).map(p => `
+        <div style="display: flex; align-items: center; justify-content: space-between; font-size: 10px; line-height: 1.2; gap: 4px;">
+          <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #e0e7ff;">${p.name}</span>
+          <span style="font-family: monospace; font-weight: 600; color: #a5b4fc; flex-shrink: 0;">${p.stockQuantity} ad.</span>
+        </div>
+      `).join("")
+
+      ghost.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span style="font-size: 10px; font-family: monospace; font-weight: bold; color: #c7d2fe;">K${cell.rowNumber}-G${cell.colNumber}</span>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <span style="padding: 2px 5px; border-radius: 6px; background: rgba(99, 102, 241, 0.25); color: #c7d2fe; font-family: monospace; font-size: 9px; font-weight: bold; border: 1px solid rgba(129, 140, 248, 0.4);">
+              ${productCount} Çeşit
+            </span>
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: #6366f1;"></span>
+          </div>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding-top: 4px; overflow: hidden;">
+          <div style="display: flex; flex-direction: column; gap: 2px; overflow: hidden;">
+            ${itemsHtml}
+            ${productCount > 2 ? `<div style="font-size: 9px; color: #818cf8; font-style: italic;">+${productCount - 2} parça daha...</div>` : ""}
+          </div>
+          <div style="padding-top: 4px; border-top: 1px solid rgba(129, 140, 248, 0.2); display: flex; align-items: center; justify-content: space-between; font-size: 9px; color: #94a3b8; font-family: monospace;">
+            <span>Toplam:</span>
+            <span style="font-weight: bold; color: #ffffff;">${totalStock} Adet</span>
+          </div>
+        </div>
+      `
+    } else {
+      // Single product card - Birebir mavi/yeşil raf kutusu görünümü
+      ghost.style.background = "#0f172a"
+      ghost.style.color = "#ffffff"
+      ghost.style.border = "1.5px solid #38bdf8"
+      ghost.style.boxShadow = "0 25px 50px -12px rgba(14, 165, 233, 0.4), 0 10px 20px -5px rgba(0, 0, 0, 0.5)"
+
+      const p = cellProducts[0]
+
+      ghost.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+          <span style="font-size: 10px; font-family: monospace; font-weight: bold; color: #94a3b8;">K${cell.rowNumber}-G${cell.colNumber}</span>
+          <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
+        </div>
+
+        <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between; padding-top: 4px; overflow: hidden;">
+          <div style="font-size: 12px; font-weight: bold; color: #ffffff; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+            ${p?.name || ""}
+          </div>
+          <div style="padding-top: 4px; border-top: 1px solid rgba(56, 189, 248, 0.2); display: flex; align-items: center; justify-content: space-between; font-size: 10px;">
+            <span style="font-family: monospace; color: #94a3b8; background: rgba(15, 23, 42, 0.8); padding: 2px 4px; border-radius: 4px; font-size: 9px;">
+              ${p?.oemCode || "-"}
+            </span>
+            <span style="font-family: monospace; font-weight: bold; color: #38bdf8;">
+              ${p?.stockQuantity || 0} Adet
+            </span>
+          </div>
+        </div>
+      `
+    }
+
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 90, 55)
+    setTimeout(() => {
+      if (document.body.contains(ghost)) {
+        document.body.removeChild(ghost)
+      }
+    }, 150)
+  } catch {
+    // Fallback
+  }
+}
+
+function createShelfPillDragImage(
+  e: React.DragEvent,
+  code: string,
+  totalProducts: number,
+  name?: string
+) {
+  try {
+    const ghost = document.createElement("div")
+    ghost.style.position = "fixed"
+    ghost.style.top = "0px"
+    ghost.style.left = "0px"
+    ghost.style.transform = "translate(-9999px, -9999px)"
+    ghost.style.padding = "6px 14px"
+    ghost.style.borderRadius = "12px"
+    ghost.style.background = "#0284c7"
+    ghost.style.color = "#ffffff"
+    ghost.style.border = "1.5px solid #38bdf8"
+    ghost.style.boxShadow = "0 15px 30px -5px rgba(2, 132, 199, 0.5)"
+    ghost.style.display = "flex"
+    ghost.style.alignItems = "center"
+    ghost.style.gap = "8px"
+    ghost.style.zIndex = "-1000"
+    ghost.style.pointerEvents = "none"
+    ghost.style.fontFamily = "system-ui, -apple-system, sans-serif"
+    ghost.style.fontWeight = "bold"
+    ghost.style.fontSize = "12px"
+
+    ghost.innerHTML = `
+      <span>📦 Raf: ${code}</span>
+      <span style="background: rgba(255,255,255,0.25); color: #ffffff; padding: 2px 6px; border-radius: 6px; font-size: 10px; font-family: monospace;">
+        ${totalProducts} Parça
+      </span>
+      ${name ? `<span style="font-size: 10px; color: #bae6fd; font-weight: 500;">(${name})</span>` : ""}
+    `
+    document.body.appendChild(ghost)
+    e.dataTransfer.setDragImage(ghost, 40, 15)
+    setTimeout(() => {
+      if (document.body.contains(ghost)) {
+        document.body.removeChild(ghost)
+      }
+    }, 150)
+  } catch {
+    // Fallback
+  }
+}
+
 export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatrixViewProps) {
   const { data: shelves = [], isLoading: isShelvesLoading } = useShelves()
   const [selectedShelfId, setSelectedShelfId] = React.useState<string | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [viewMode, setViewMode] = React.useState<"DETAILED" | "COMPACT">("DETAILED")
   const [selectedFloor, setSelectedFloor] = React.useState<string>("ALL")
+
+  const isDraggingRef = React.useRef(false)
 
   // Drag & Drop State
   const [draggedProductId, setDraggedProductId] = React.useState<string | null>(null)
@@ -70,6 +272,8 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
     type: "PRODUCT" | "CELL_BULK" | "SHELF_BULK"
     title: string
     count: number
+    cellId?: string
+    shelfId?: string
   } | null>(null)
   const [stagingSearch, setStagingSearch] = React.useState("")
   const [isStagingOpen, setIsStagingOpen] = React.useState(true)
@@ -414,7 +618,13 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                           e.dataTransfer.setData("application/json", JSON.stringify({ type: "SHELF_BULK", shelfId: s.id, productIds: allProdIds }))
                           e.dataTransfer.setData("text/plain", allProdIds.join(","))
                           e.dataTransfer.effectAllowed = "move"
-                          setDraggedBulkInfo({ type: "SHELF_BULK", title: `${s.code} (${allProdIds.length} Parça)`, count: allProdIds.length })
+                          createShelfPillDragImage(
+                            e,
+                            s.code,
+                            allProdIds.length,
+                            s.name
+                          )
+                          setDraggedBulkInfo({ type: "SHELF_BULK", title: `${s.code} (${allProdIds.length} Parça)`, count: allProdIds.length, shelfId: s.id })
                         }
                       }
                     }}
@@ -669,6 +879,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                         onDragStart={(e) => {
                           e.dataTransfer.setData("text/plain", p.id)
                           e.dataTransfer.effectAllowed = "move"
+                          createCustomDragImage(e, p.name, p.sku, `${p.currentStock} Adet`)
                           setDraggedProductId(p.id)
                         }}
                         onDragEnd={() => {
@@ -707,8 +918,11 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
           <div className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-slate-900/95 border border-slate-200/90 dark:border-slate-800 shadow-sm dark:shadow-2xl overflow-x-auto text-slate-900 dark:text-slate-100">
             {/* Tek Birleşik Master Grid - Katlar, Gözler ve Sütunlar Matematiksel Olarak Kilitli & Kusursuz Eşit */}
             <div
-              className="grid gap-2.5 w-max min-w-full"
+              className={`grid gap-2.5 ${
+                viewMode === "COMPACT" ? "w-max min-w-full" : currentShelf.columns > 6 ? "min-w-full" : "w-full min-w-full"
+              }`}
               style={{
+                width: viewMode === "DETAILED" && currentShelf.columns > 6 ? `${64 + currentShelf.columns * 190}px` : undefined,
                 gridTemplateColumns:
                   viewMode === "DETAILED"
                     ? currentShelf.columns > 6
@@ -788,16 +1002,24 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
 
                       const isDragOver = dragOverCellId === cell.id
 
+                      const isCellBeingDragged =
+                        (hasProducts && cellProducts.some((p: ShelfProductSummary) => p.id === draggedProductId)) ||
+                        draggedBulkInfo?.cellId === cell.id
+
                       if (viewMode === "COMPACT") {
                         /* Kuşbakışı Isı Haritası Modu */
                         return (
                           <button
                             key={cell.id}
                             type="button"
-                            onClick={() => setActiveCellModal(cell)}
+                            onClick={() => {
+                              if (isDraggingRef.current) return
+                              setActiveCellModal(cell)
+                            }}
                             draggable={hasProducts}
                             onDragStart={(e) => {
                               if (hasProducts) {
+                                isDraggingRef.current = true
                                 const pIds = cellProducts.map((p: ShelfProductSummary) => p.id)
                                 e.dataTransfer.setData(
                                   "application/json",
@@ -805,10 +1027,17 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                 )
                                 e.dataTransfer.setData("text/plain", pIds.join(","))
                                 e.dataTransfer.effectAllowed = "move"
+                                createCellDragImage(
+                                  e,
+                                  cell,
+                                  cellProducts,
+                                  isMulti
+                                )
                                 setDraggedBulkInfo({
                                   type: "CELL_BULK",
                                   title: `${cell.cellCode} (${pIds.length} Parça)`,
                                   count: pIds.length,
+                                  cellId: cell.id,
                                 })
                               }
                             }}
@@ -816,6 +1045,9 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                               setDraggedBulkInfo(null)
                               setDragOverCellId(null)
                               setDragOverShelfId(null)
+                              setTimeout(() => {
+                                isDraggingRef.current = false
+                              }, 100)
                             }}
                             onDragEnter={(e) => {
                               e.preventDefault()
@@ -834,7 +1066,9 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                             onDrop={(e) => handleDropPayload(e, { cellId: cell.id })}
                             title={tooltipText}
                             className={`w-9 h-9 rounded-lg border text-[10px] font-mono font-bold transition-all flex items-center justify-center cursor-pointer relative group ${
-                              isDragOver
+                              isCellBeingDragged
+                                ? "opacity-40 border-dashed border-sky-400 bg-sky-500/20 scale-95 ring-1 ring-sky-400/50"
+                                : isDragOver
                                 ? "ring-2 ring-sky-500 bg-sky-500/30 dark:bg-sky-500/40 scale-110 shadow-lg shadow-sky-500/50 z-20"
                                 : hasProducts
                                 ? isMulti
@@ -860,7 +1094,60 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                         <button
                           key={cell.id}
                           type="button"
-                          onClick={() => setActiveCellModal(cell)}
+                          onClick={() => {
+                            if (isDraggingRef.current) return
+                            setActiveCellModal(cell)
+                          }}
+                          draggable={hasProducts}
+                          onDragStart={(e) => {
+                            if (!hasProducts) return
+                            isDraggingRef.current = true
+                            if (isMulti) {
+                              const pIds = cellProducts.map((p: ShelfProductSummary) => p.id)
+                              e.dataTransfer.setData(
+                                "application/json",
+                                JSON.stringify({ type: "CELL_BULK", cellId: cell.id, productIds: pIds })
+                              )
+                              e.dataTransfer.setData("text/plain", pIds.join(","))
+                              e.dataTransfer.effectAllowed = "move"
+                              createCellDragImage(
+                                e,
+                                cell,
+                                cellProducts,
+                                true
+                              )
+                              setDraggedBulkInfo({
+                                type: "CELL_BULK",
+                                title: `${cell.cellCode} (${pIds.length} Parça)`,
+                                count: pIds.length,
+                                cellId: cell.id,
+                              })
+                            } else {
+                              const p = cellProducts[0]
+                              e.dataTransfer.setData(
+                                "application/json",
+                                JSON.stringify({ type: "PRODUCT", productId: p.id, productIds: [p.id] })
+                              )
+                              e.dataTransfer.setData("text/plain", p.id)
+                              e.dataTransfer.effectAllowed = "move"
+                              createCellDragImage(
+                                e,
+                                cell,
+                                cellProducts,
+                                false
+                              )
+                              setDraggedProductId(p.id)
+                            }
+                          }}
+                          onDragEnd={() => {
+                            setDraggedBulkInfo(null)
+                            setDraggedProductId(null)
+                            setDragOverCellId(null)
+                            setDragOverShelfId(null)
+                            setTimeout(() => {
+                              isDraggingRef.current = false
+                            }, 100)
+                          }}
                           onDragEnter={(e) => {
                             e.preventDefault()
                             if (dragOverCellId !== cell.id) setDragOverCellId(cell.id)
@@ -876,8 +1163,14 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                             }
                           }}
                           onDrop={(e) => handleDropPayload(e, { cellId: cell.id })}
-                          className={`group relative p-3 rounded-2xl border text-left transition-all duration-200 cursor-pointer flex flex-col justify-between h-[115px] overflow-hidden min-w-0 ${
-                            isDragOver
+                          className={`group relative p-3 rounded-2xl border text-left transition-all duration-200 select-none flex flex-col justify-between h-[115px] overflow-hidden min-w-0 ${
+                            hasProducts ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
+                          } ${
+                            isCellBeingDragged
+                              ? isMulti
+                                ? "opacity-45 border-dashed border-indigo-400 bg-indigo-500/15 scale-[0.98] ring-1 ring-indigo-400/40"
+                                : "opacity-45 border-dashed border-sky-400 bg-sky-500/10 scale-[0.98] ring-1 ring-sky-400/40"
+                              : isDragOver
                               ? "ring-2 ring-sky-500 bg-sky-50 dark:bg-sky-500/25 scale-[1.03] shadow-lg shadow-sky-500/20 z-20"
                               : hasProducts
                               ? isMulti
@@ -890,6 +1183,15 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                               : "bg-slate-50/70 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 hover:border-sky-400/60 hover:bg-sky-50/30 dark:hover:bg-slate-800/80"
                           } ${!isMatch && searchQuery ? "opacity-30 grayscale" : ""}`}
                         >
+                          {/* Sürükleme Kaynağı Görsel Efekti */}
+                          {isCellBeingDragged && (
+                            <div className={`absolute inset-0 backdrop-blur-[1px] flex items-center justify-center z-30 font-semibold text-[10px] pointer-events-none select-none gap-1 ${
+                              isMulti ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-300" : "bg-sky-500/10 text-sky-600 dark:text-sky-300"
+                            }`}>
+                              <span>📦 Taşınıyor...</span>
+                            </div>
+                          )}
+
                           {/* Sürükleme Hedefi Görsel Efekti - pointer-events-none ile FLICKER BUG'I ÇÖZÜLDÜ */}
                           {isDragOver && (
                             <div className="absolute inset-0 bg-sky-600/30 backdrop-blur-xs flex items-center justify-center z-30 font-bold text-xs text-sky-800 dark:text-white pointer-events-none select-none gap-1 animate-pulse">
@@ -917,6 +1219,7 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                   onClick={(e) => e.stopPropagation()}
                                   onDragStart={(e) => {
                                     e.stopPropagation()
+                                    isDraggingRef.current = true
                                     const pIds = cellProducts.map((p: ShelfProductSummary) => p.id)
                                     e.dataTransfer.setData(
                                       "application/json",
@@ -924,18 +1227,32 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                     )
                                     e.dataTransfer.setData("text/plain", pIds.join(","))
                                     e.dataTransfer.effectAllowed = "move"
+                                    createCellDragImage(
+                                      e,
+                                      cell,
+                                      cellProducts,
+                                      isMulti
+                                    )
                                     setDraggedBulkInfo({
                                       type: "CELL_BULK",
                                       title: `${cell.cellCode} (${pIds.length} Parça)`,
                                       count: pIds.length,
+                                      cellId: cell.id,
                                     })
                                   }}
                                   onDragEnd={() => {
                                     setDraggedBulkInfo(null)
                                     setDragOverCellId(null)
                                     setDragOverShelfId(null)
+                                    setTimeout(() => {
+                                      isDraggingRef.current = false
+                                    }, 100)
                                   }}
-                                  className="p-1 rounded-md bg-sky-500/10 hover:bg-sky-500/25 text-sky-600 dark:text-sky-400 cursor-grab active:cursor-grabbing transition-colors"
+                                  className={`p-1 rounded-md cursor-grab active:cursor-grabbing transition-colors ${
+                                    isMulti
+                                      ? "bg-indigo-500/15 hover:bg-indigo-500/30 text-indigo-600 dark:text-indigo-400 border border-indigo-300/40 dark:border-indigo-500/30"
+                                      : "bg-sky-500/10 hover:bg-sky-500/25 text-sky-600 dark:text-sky-400 border border-sky-300/40 dark:border-sky-500/30"
+                                  }`}
                                   title={`Tüm gözü (${productCount} parça) başka hücreye veya yukarıdaki raflardan birine topluca taşımak için sürükleyin`}
                                 >
                                   <GripVertical size={12} />
@@ -974,19 +1291,31 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                       draggable="true"
                                       onDragStart={(e) => {
                                         e.stopPropagation()
+                                        isDraggingRef.current = true
                                         e.dataTransfer.setData(
                                           "application/json",
                                           JSON.stringify({ type: "PRODUCT", productId: p.id, productIds: [p.id] })
                                         )
                                         e.dataTransfer.setData("text/plain", p.id)
                                         e.dataTransfer.effectAllowed = "move"
+                                        createCustomDragImage(
+                                          e,
+                                          p.name,
+                                          p.oemCode ? `OEM: ${p.oemCode}` : cell.cellCode,
+                                          `${p.stockQuantity} Adet`
+                                        )
                                         setDraggedProductId(p.id)
                                       }}
                                       onDragEnd={() => {
                                         setDraggedProductId(null)
                                         setDragOverCellId(null)
+                                        setTimeout(() => {
+                                          isDraggingRef.current = false
+                                        }, 100)
                                       }}
-                                      className="flex items-center justify-between text-[10px] leading-tight gap-1 cursor-grab active:cursor-grabbing hover:bg-indigo-100/60 dark:hover:bg-white/10 rounded px-1 -mx-1 transition-colors"
+                                      className={`flex items-center justify-between text-[10px] leading-tight gap-1 cursor-grab active:cursor-grabbing hover:bg-indigo-100/60 dark:hover:bg-white/10 rounded px-1 -mx-1 transition-colors ${
+                                        draggedProductId === p.id ? "opacity-30" : ""
+                                      }`}
                                       title="Başka bir göze veya rafa taşımak için sürükleyin"
                                     >
                                       <span className="text-slate-800 dark:text-white font-medium truncate group-hover:text-indigo-600 dark:group-hover:text-indigo-200">
@@ -1009,32 +1338,46 @@ export function ShelfMatrixView({ products, onCreateProductForCell }: ShelfMatri
                                 </div>
                               </div>
                             ) : (
-                              /* Tek Ürün Görünümü */
-                              <div className="flex-1 flex flex-col justify-between pt-1 w-full overflow-hidden min-w-0">
-                                <p
-                                  draggable="true"
-                                  onDragStart={(e) => {
-                                    e.stopPropagation()
-                                    e.dataTransfer.setData(
-                                      "application/json",
-                                      JSON.stringify({ type: "PRODUCT", productId: cellProducts[0].id, productIds: [cellProducts[0].id] })
-                                    )
-                                    e.dataTransfer.setData("text/plain", cellProducts[0].id)
-                                    e.dataTransfer.effectAllowed = "move"
-                                    setDraggedProductId(cellProducts[0].id)
-                                  }}
-                                  onDragEnd={() => {
-                                    setDraggedProductId(null)
-                                    setDragOverCellId(null)
-                                  }}
-                                  className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-sky-600 dark:group-hover:text-sky-300 transition-colors cursor-grab active:cursor-grabbing break-words"
-                                  title="Başka bir göze veya rafa taşımak için sürükleyin"
-                                >
-                                  {cellProducts[0].name}
-                                </p>
+                              /* Tek Ürün Görünümü - Kutunun herhangi bir yerinden sürüklenebilir */
+                              <div
+                                onDragStart={(e) => {
+                                  e.stopPropagation()
+                                  isDraggingRef.current = true
+                                  e.dataTransfer.setData(
+                                    "application/json",
+                                    JSON.stringify({ type: "PRODUCT", productId: cellProducts[0].id, productIds: [cellProducts[0].id] })
+                                  )
+                                  e.dataTransfer.setData("text/plain", cellProducts[0].id)
+                                  e.dataTransfer.effectAllowed = "move"
+                                  createCellDragImage(
+                                    e,
+                                    cell,
+                                    cellProducts,
+                                    false
+                                  )
+                                  setDraggedProductId(cellProducts[0].id)
+                                }}
+                                onDragEnd={() => {
+                                  setDraggedProductId(null)
+                                  setDragOverCellId(null)
+                                  setTimeout(() => {
+                                    isDraggingRef.current = false
+                                  }, 100)
+                                }}
+                                className={`flex-1 flex flex-col justify-between pt-1 w-full overflow-hidden min-w-0 rounded-lg transition-all ${
+                                  draggedProductId === cellProducts[0].id ? "opacity-30" : ""
+                                }`}
+                                title="Bu ürünü tutup başka bir rafa veya göze taşımak için sürükleyin"
+                              >
+                                <div className="flex items-start justify-between gap-1">
+                                  <p className="text-xs font-bold text-slate-900 dark:text-white line-clamp-2 leading-snug group-hover:text-sky-600 dark:group-hover:text-sky-300 transition-colors break-words">
+                                    {cellProducts[0].name}
+                                  </p>
+                                  <GripVertical size={13} className="text-slate-400 dark:text-slate-500 shrink-0 opacity-40 group-hover:opacity-100 transition-opacity" />
+                                </div>
                                 <div className="pt-1 border-t border-slate-200 dark:border-slate-700/50 flex items-center justify-between text-[10px] shrink-0 gap-1">
                                   <span className="font-mono text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-900/80 px-1 py-0.5 rounded text-[9px] truncate max-w-[55%] border border-slate-200/60 dark:border-transparent">
-                                    {cellProducts[0].oemCode}
+                                    {cellProducts[0].oemCode || "-"}
                                   </span>
                                   <span
                                     className={`font-bold font-mono shrink-0 ${

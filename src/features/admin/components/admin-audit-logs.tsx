@@ -71,6 +71,10 @@ export function getActionTitle(action: string) {
   switch (action) {
     case "SECURITY_LOGIN_SUCCESS": return "Platform Girişi Başarılı"
     case "SECURITY_LOGIN_FAILED": return "Yetkisiz veya Hatalı Giriş Denemesi"
+    case "SECURITY_SUPERADMIN_CREATED": return "Yeni Platform Yöneticisi (Super Admin) Oluşturuldu"
+    case "SECURITY_SUPERADMIN_ACTIVATED": return "Platform Yöneticisi Hesabı Aktifleştirildi"
+    case "SECURITY_SUPERADMIN_SUSPENDED": return "Platform Yöneticisi Hesabı Askıya Alındı"
+    case "SECURITY_SUPERADMIN_DELETED": return "Platform Yöneticisi Hesabı Silindi"
     case "TENANT_CREATED": return "Yeni Servis (Tenant) Kaydı Açıldı"
     case "TENANT_DELETED": return "Servis Kaydı ve Verileri Silindi"
     case "TENANT_ACTIVATED": return "Servis Lisansı Onaylandı ve Aktifleştirildi"
@@ -80,22 +84,43 @@ export function getActionTitle(action: string) {
     case "service.created": return "Yeni Standart Hizmet Tanımlandı"
     case "service.updated": return "Hizmet Bilgileri Güncellendi"
     case "appointment.created": return "Yeni Servis Randevusu Oluşturuldu"
+    case "appointment.approved": return "Servis Randevusu Onaylandı"
+    case "appointment.rescheduled": return "Servis Randevusu Tarih/Saati Güncellendi"
     case "appointment.status_changed": return "Randevu Durumu Güncellendi"
     case "appointment.cancelled": return "Servis Randevusu İptal Edildi"
+    case "appointment.no_show": return "Müşteri Randevu Vaktinde Gelmedi (No-Show)"
+    case "appointment.converted_to_wo": return "Randevu İş Emrine Dönüştürüldü"
     case "work_order.status_changed": return "İş Emri Süreç / Aşama Değişikliği"
     case "work_order.created": return "Yeni Araç Kabul ve İş Emri Açıldı"
+    case "work_order.completed": return "İş Emri Başarıyla Tamamlandı"
     case "work_order.item_quantity_updated": return "İş Emrinde Parça / Kalem Adedi Güncellendi"
     case "work_order.item_added": return "İş Emrine Yeni Parça / Kalem Eklendi"
     case "work_order.item_removed": return "İş Emrinden Parça / Kalem Silindi"
+    case "ADD_WORK_ORDER_NOTE": return "İş Emrine Teknisyen Notu Eklendi"
+    case "UPDATE_WORK_ORDER_NOTE": return "İş Emrindeki Teknisyen Notu Güncellendi"
+    case "DELETE_WORK_ORDER_NOTE": return "İş Emrindeki Teknisyen Notu Silindi"
     case "invoice.auto_created_on_wo_complete": return "İş Emri Tamamlanması Sonrası Otomatik Fatura"
     case "invoice.created": return "Servis Faturası Düzenlendi"
+    case "invoice.cancelled": return "Düzenlenen Fatura İptal Edildi"
     case "payment.created": return "Tahsilat / Ödeme Kaydı Alındı"
+    case "payment.cancelled": return "Alınan Tahsilat İptal Edildi"
     case "staff.lift_changed": return "Personele Atanan Lift Değiştirildi"
     case "staff.created": return "Yeni Personel Hesabı Oluşturuldu"
     case "staff.updated": return "Personel Bilgileri / Yetkileri Güncellendi"
     case "staff.deactivated": return "Personel Hesabı Pasife Alındı"
     case "staff.deleted": return "Personel Hesabı Silindi"
-    default: return action.replace(/_/g, " ").replace(/\./g, " › ")
+    case "customer.kvkk_consent_granted": return "Müşteri KVKK ve İletişim İzni Onaylandı"
+    case "customer.consent_sms_sent": return "Müşteriye KVKK Onay SMS'i Gönderildi"
+    default: {
+      const n = action.toLowerCase().replace(/_/g, " ").replace(/\./g, " ")
+      if (n.includes("superadmin")) {
+        if (n.includes("activat")) return "Yönetici Aktifleştirildi"
+        if (n.includes("suspend")) return "Yönetici Askıya Alındı"
+        if (n.includes("delet")) return "Yönetici Silindi"
+        if (n.includes("creat")) return "Yeni Yönetici Oluşturuldu"
+      }
+      return action.replace(/_/g, " ").replace(/\./g, " › ")
+    }
   }
 }
 
@@ -277,13 +302,99 @@ export function getActionBadge(action: string) {
           <span>Personel Silindi</span>
         </span>
       )
-    default:
+    case "SECURITY_SUPERADMIN_CREATED":
       return (
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-          <Tag size={10} />
-          <span className="capitalize">{action.replace(/_/g, " ").replace(/\./g, " › ")}</span>
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+          <Shield size={12} />
+          <span>Yeni Yönetici Açıldı</span>
         </span>
       )
+    case "SECURITY_SUPERADMIN_ACTIVATED":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <CheckCircle2 size={12} />
+          <span>Yönetici Aktifleştirildi</span>
+        </span>
+      )
+    case "SECURITY_SUPERADMIN_SUSPENDED":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+          <Pause size={12} />
+          <span>Yönetici Askıya Alındı</span>
+        </span>
+      )
+    case "SECURITY_SUPERADMIN_DELETED":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+          <Trash2 size={12} />
+          <span>Yönetici Silindi</span>
+        </span>
+      )
+    case "appointment.approved":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <CheckCircle2 size={12} />
+          <span>Randevu Onaylandı</span>
+        </span>
+      )
+    case "appointment.rescheduled":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+          <RefreshCw size={12} />
+          <span>Randevu Ertelendi</span>
+        </span>
+      )
+    case "appointment.no_show":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+          <AlertCircle size={12} />
+          <span>Randevuya Gelmedi</span>
+        </span>
+      )
+    case "appointment.converted_to_wo":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <Wrench size={12} />
+          <span>İş Emrine Dönüştü</span>
+        </span>
+      )
+    case "ADD_WORK_ORDER_NOTE":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30">
+          <Plus size={12} />
+          <span>Not Eklendi</span>
+        </span>
+      )
+    case "UPDATE_WORK_ORDER_NOTE":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+          <Wrench size={12} />
+          <span>Not Güncellendi</span>
+        </span>
+      )
+    case "DELETE_WORK_ORDER_NOTE":
+      return (
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+          <Trash2 size={12} />
+          <span>Not Silindi</span>
+        </span>
+      )
+    default: {
+      const n = action.toLowerCase().replace(/_/g, " ").replace(/\./g, " ")
+      let label = action.replace(/_/g, " ").replace(/\./g, " › ")
+      if (n.includes("superadmin")) {
+        if (n.includes("activat")) label = "Yönetici Aktifleştirildi"
+        else if (n.includes("suspend")) label = "Yönetici Askıya Alındı"
+        else if (n.includes("delet")) label = "Yönetici Silindi"
+        else if (n.includes("creat")) label = "Yeni Yönetici Açıldı"
+      }
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+          <Tag size={10} />
+          <span className="capitalize">{label}</span>
+        </span>
+      )
+    }
   }
 }
 

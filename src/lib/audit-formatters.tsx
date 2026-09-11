@@ -129,16 +129,26 @@ export function formatRole(role: string | undefined): string {
   }
 }
 
+const CANCELLATION_REASON_MAP: Record<string, string> = {
+  CUSTOMER_REQUEST: "Müşteri randevuyu iptal etti / vazgeçti",
+  PARTS_UNAVAILABLE: "Gerekli yedek parça temin edilemedi",
+  CAPACITY_FULL: "Servis atölye lift kapasitesi dolu",
+  PRICE_DISAGREEMENT: "Fiyat konusunda anlaşılamadı",
+  NO_SHOW: "Randevuya gelinmedi (No-Show)",
+  OTHER: "Diğer gerekçe",
+}
+
 /**
  * Reason and explanation translator
  */
 export function formatReason(reason: string | undefined): string {
   if (!reason) return ""
   if (reason.startsWith("Appointment cancelled:")) {
-    const detail = reason.replace("Appointment cancelled:", "").trim()
+    const rawDetail = reason.replace("Appointment cancelled:", "").trim()
+    const detail = CANCELLATION_REASON_MAP[rawDetail] || rawDetail
     return `Randevu iptali nedeniyle: ${detail || "İş emri sonlandırıldı"}`
   }
-  return reason
+  return CANCELLATION_REASON_MAP[reason] || reason
 }
 
 /**
@@ -245,6 +255,19 @@ export function getActionBadge(action: string): React.ReactNode {
       return (
         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">
           <span>Randevu Oluşturuldu</span>
+        </span>
+      )
+    case "appointment.approved":
+    case "appointment.confirmed":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span>Randevu Onaylandı</span>
+        </span>
+      )
+    case "appointment.rescheduled":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+          <span>Randevu Ertelendi</span>
         </span>
       )
     case "appointment.status_changed":
@@ -406,6 +429,109 @@ export function getActionBadge(action: string): React.ReactNode {
           <span>İşletme Bilgileri Güncellendi</span>
         </span>
       )
+    case "tenant_created":
+    case "tenant.created":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+          <span>Yeni Servis Eklendi</span>
+        </span>
+      )
+    case "tenant_deleted":
+    case "tenant.deleted":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+          <span>Servis Silindi</span>
+        </span>
+      )
+    case "tenant_activated":
+    case "tenant.activated":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span>Lisans Onaylandı</span>
+        </span>
+      )
+    case "tenant_suspended":
+    case "tenant.suspended":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+          <span>Servis Askıya Alındı</span>
+        </span>
+      )
+
+    // Platform Superadmin & Security
+    case "security_superadmin_activated":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span>Yönetici Aktifleştirildi</span>
+        </span>
+      )
+    case "security_superadmin_suspended":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+          <span>Yönetici Askıya Alındı</span>
+        </span>
+      )
+    case "security_superadmin_created":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+          <span>Yeni Yönetici Açıldı</span>
+        </span>
+      )
+    case "security_superadmin_deleted":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+          <span>Yönetici Silindi</span>
+        </span>
+      )
+    case "security_login_success":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span>Giriş Başarılı</span>
+        </span>
+      )
+    case "security_login_failed":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+          <span>Hatalı Giriş</span>
+        </span>
+      )
+
+    // Work Order Notes
+    case "add_work_order_note":
+    case "work_order.note_added":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30">
+          <span>Not Eklendi</span>
+        </span>
+      )
+    case "update_work_order_note":
+    case "work_order.note_updated":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
+          <span>Not Güncellendi</span>
+        </span>
+      )
+    case "delete_work_order_note":
+    case "work_order.note_deleted":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+          <span>Not Silindi</span>
+        </span>
+      )
+
+    // Customer KVKK & Consent
+    case "customer.kvkk_consent_granted":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+          <span>KVKK Onayı Verildi</span>
+        </span>
+      )
+    case "customer.consent_sms_sent":
+      return (
+        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
+          <span>Onay SMS Gönderildi</span>
+        </span>
+      )
 
     default: {
       const translated = smartTranslateAction(action)
@@ -426,11 +552,37 @@ function smartTranslateAction(action: string): string {
 
   const normalized = action.toLowerCase().replace(/_/g, " ").replace(/\./g, " ")
 
+  if (normalized.includes("superadmin") || normalized.includes("super admin")) {
+    if (normalized.includes("activat")) return "Yönetici Aktifleştirildi"
+    if (normalized.includes("suspend")) return "Yönetici Askıya Alındı"
+    if (normalized.includes("delet") || normalized.includes("remov")) return "Yönetici Silindi"
+    if (normalized.includes("creat") || normalized.includes("add")) return "Yeni Yönetici Eklendi"
+    return "Yönetici Güvenlik İşlemi"
+  }
+
+  if (normalized.includes("login")) {
+    if (normalized.includes("fail")) return "Hatalı Giriş Denemesi"
+    if (normalized.includes("success")) return "Başarılı Giriş"
+    return "Oturum İşlemi"
+  }
+
   if (normalized.includes("lift")) {
     return "Lift Ataması Değiştirildi"
   }
   if (normalized.includes("item quantity") || normalized.includes("quantity")) {
     return "Parça Adedi Güncellendi"
+  }
+  if (normalized.includes("note")) {
+    if (normalized.includes("add") || normalized.includes("create")) return "Not Eklendi"
+    if (normalized.includes("updat") || normalized.includes("edit")) return "Not Güncellendi"
+    if (normalized.includes("delet") || normalized.includes("remov")) return "Not Silindi"
+    return "Not İşlemi"
+  }
+  if (normalized.includes("reschedul")) {
+    return "Randevu Ertelendi"
+  }
+  if (normalized.includes("approv") || normalized.includes("confirm")) {
+    return "Randevu Onaylandı"
   }
   if (normalized.includes("create") || normalized.includes("add")) {
     return "Yeni Kayıt Eklendi"
@@ -454,7 +606,30 @@ function smartTranslateAction(action: string): string {
     return "Tamamlandı"
   }
 
-  return action.replace(/_/g, " ").replace(/\./g, " › ")
+  const turkishTerms: Record<string, string> = {
+    appointment: "Randevu",
+    work_order: "İş Emri",
+    invoice: "Fatura",
+    payment: "Tahsilat",
+    customer: "Müşteri",
+    vehicle: "Araç",
+    service: "Hizmet",
+    staff: "Personel",
+    inventory: "Stok",
+    tenant: "İşletme",
+    security: "Güvenlik",
+    approved: "Onaylandı",
+    created: "Oluşturuldu",
+    updated: "Güncellendi",
+    deleted: "Silindi",
+    cancelled: "İptal Edildi",
+    suspended: "Askıya Alındı",
+    activated: "Aktifleştirildi",
+  }
+
+  const parts = action.toLowerCase().split(/[._\s]+/)
+  const translatedParts = parts.map((p) => turkishTerms[p] || p)
+  return translatedParts.join(" ")
 }
 
 /**
@@ -462,7 +637,9 @@ function smartTranslateAction(action: string): string {
  */
 export function getActionTitle(action: string | undefined): string {
   if (!action) return "İşlem Denetim Kaydı"
-  switch (action) {
+  const normalizedKey = action.toLowerCase().trim()
+
+  switch (normalizedKey) {
     case "work_order.created":
       return "Yeni Araç Kabul ve İş Emri Açıldı"
     case "work_order.status_changed":
@@ -480,6 +657,16 @@ export function getActionTitle(action: string | undefined): string {
     case "work_order.deleted":
       return "İş Emri Sistemden Silindi"
 
+    case "add_work_order_note":
+    case "work_order.note_added":
+      return "İş Emrine Teknisyen Notu Eklendi"
+    case "update_work_order_note":
+    case "work_order.note_updated":
+      return "İş Emrindeki Teknisyen Notu Güncellendi"
+    case "delete_work_order_note":
+    case "work_order.note_deleted":
+      return "İş Emrindeki Teknisyen Notu Silindi"
+
     case "invoice.created":
       return "Servis Faturası Düzenlendi"
     case "invoice.auto_created_on_wo_complete":
@@ -494,6 +681,11 @@ export function getActionTitle(action: string | undefined): string {
 
     case "appointment.created":
       return "Yeni Servis Randevusu Oluşturuldu"
+    case "appointment.approved":
+    case "appointment.confirmed":
+      return "Servis Randevusu Onaylandı"
+    case "appointment.rescheduled":
+      return "Servis Randevusu Tarih/Saati Güncellendi"
     case "appointment.status_changed":
       return "Randevu Durumu Güncellendi"
     case "appointment.cancelled":
@@ -529,6 +721,10 @@ export function getActionTitle(action: string | undefined): string {
       return "Müşteri Bilgileri Güncellendi"
     case "customer.deleted":
       return "Müşteri Kaydı Silindi"
+    case "customer.kvkk_consent_granted":
+      return "Müşteri KVKK ve İletişim İzni Onaylandı"
+    case "customer.consent_sms_sent":
+      return "Müşteriye KVKK Onay SMS'i Gönderildi"
 
     case "vehicle.created":
       return "Yeni Araç Kaydı Tanımlandı"
@@ -551,6 +747,31 @@ export function getActionTitle(action: string | undefined): string {
 
     case "tenant.updated":
       return "İşletme Bilgileri Güncellendi"
+    case "tenant_created":
+    case "tenant.created":
+      return "Yeni Servis (İşletme) Kaydı Açıldı"
+    case "tenant_deleted":
+    case "tenant.deleted":
+      return "Servis Kaydı ve Verileri Silindi"
+    case "tenant_activated":
+    case "tenant.activated":
+      return "Servis Lisansı Onaylandı ve Aktifleştirildi"
+    case "tenant_suspended":
+    case "tenant.suspended":
+      return "Servis Hesabı Donduruldu / Askıya Alındı"
+
+    case "security_superadmin_activated":
+      return "Platform Yöneticisi Hesabı Aktifleştirildi"
+    case "security_superadmin_suspended":
+      return "Platform Yöneticisi Hesabı Askıya Alındı"
+    case "security_superadmin_created":
+      return "Yeni Platform Yöneticisi (Super Admin) Oluşturuldu"
+    case "security_superadmin_deleted":
+      return "Platform Yöneticisi Hesabı Silindi"
+    case "security_login_success":
+      return "Platform Girişi Başarılı"
+    case "security_login_failed":
+      return "Yetkisiz veya Hatalı Giriş Denemesi"
 
     default:
       return smartTranslateAction(action)

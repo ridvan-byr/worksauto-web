@@ -21,7 +21,8 @@ export interface ProductRecord {
   rack?: string;
   tier?: string;
   bin?: string;
-  shelfCellId?: string;
+  shelfId?: string | null;
+  shelfCellId?: string | null;
 }
 
 export interface CreateProductInput {
@@ -43,7 +44,8 @@ export interface CreateProductInput {
   rack?: string;
   tier?: string;
   bin?: string;
-  shelfCellId?: string;
+  shelfId?: string | null;
+  shelfCellId?: string | null;
 }
 
 export interface CreateShelfInput {
@@ -135,10 +137,14 @@ export interface StockMovementInput {
 export interface StockMovementRecord {
   id: string;
   productId: string;
-  type: 'IN' | 'OUT' | 'ADJUSTMENT';
+  type?: 'IN' | 'OUT' | 'ADJUSTMENT' | string;
+  movementType?: string;
   quantity: number;
   unitPrice?: number;
   reason?: string;
+  note?: string;
+  referenceId?: string;
+  createdBy?: string;
   createdAt: string;
   user?: {
     name: string;
@@ -174,6 +180,46 @@ export function useCreateProduct() {
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'Parça kaydedilemedi.';
+      toast.error(message);
+    },
+  });
+}
+
+export interface UpdateProductInput extends Partial<CreateProductInput> {
+  id: string;
+}
+
+export function useUpdateProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, ...data }: UpdateProductInput) => apiClient.patch<ProductRecord>(`/inventory/${id}`, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-shelves'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-shelf-matrix'] });
+      toast.success('Parça bilgileri başarıyla güncellendi.');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Parça güncellenemedi.';
+      toast.error(message);
+    },
+  });
+}
+
+export function useDeleteProduct() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => apiClient.delete<{ success: boolean; message: string }>(`/inventory/${id}`),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-shelves'] });
+      queryClient.invalidateQueries({ queryKey: ['inventory-shelf-matrix'] });
+      toast.success(data?.message || 'Parça başarıyla silindi.');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Parça silinemedi.';
       toast.error(message);
     },
   });

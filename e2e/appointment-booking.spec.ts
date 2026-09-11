@@ -48,8 +48,15 @@ test.describe('Appointment Booking & Public Portal E2E', () => {
     await page.getByPlaceholder('34 ABC 123').fill('34XYZ789');
     await page.getByPlaceholder(/Örn: BMW 320i/i).fill('Renault Megane 2021');
 
-    // 6. Select service from dropdown
+    // 6. Select service from dropdown & ensure future date for enabled slots
     await page.locator('select').first().selectOption({ index: 0 });
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = tomorrow.toISOString().split('T')[0];
+    const dateInput = page.locator('input[type="date"]');
+    if (await dateInput.count() > 0) {
+      await dateInput.fill(tomorrowStr);
+    }
 
     // 7. Submit appointment request
     const submitBtn = page.getByRole('button', { name: /Randevu Talebini Gönder/i });

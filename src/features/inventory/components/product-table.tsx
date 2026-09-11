@@ -7,6 +7,8 @@ import {
   ArrowUpRight,
   History,
   MapPin,
+  Pencil,
+  Trash2,
 } from "lucide-react"
 import { Product } from "../types"
 import { StockBadge } from "./stock-badge"
@@ -17,9 +19,17 @@ interface ProductTableProps {
   products: Product[]
   onOpenMovement: (product: Product, direction: "IN" | "OUT") => void
   onOpenHistory: (product: Product) => void
+  onEditProduct?: (product: Product) => void
+  onDeleteProduct?: (product: Product) => void
 }
 
-export function ProductTable({ products, onOpenMovement, onOpenHistory }: ProductTableProps) {
+export function ProductTable({
+  products,
+  onOpenMovement,
+  onOpenHistory,
+  onEditProduct,
+  onDeleteProduct,
+}: ProductTableProps) {
   const [searchQuery, setSearchQuery] = React.useState("")
   const [categoryFilter, setCategoryFilter] = React.useState<string>("all")
 
@@ -81,7 +91,7 @@ export function ProductTable({ products, onOpenMovement, onOpenHistory }: Produc
                     : "bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-transparent shadow-xs"
                   : tab.highlight
                   ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20"
-                  : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
+                  : "bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
               )}
             >
               {tab.label}
@@ -190,6 +200,18 @@ export function ProductTable({ products, onOpenMovement, onOpenHistory }: Produc
                       {/* Quick Actions */}
                       <td className="py-4 px-4 sm:px-6 text-right">
                         <div className="inline-flex items-center gap-1.5">
+                          {onEditProduct && (
+                            <button
+                              type="button"
+                              onClick={() => onEditProduct(product)}
+                              className="h-8 px-2.5 rounded-lg border border-sky-200 dark:border-sky-800/60 bg-sky-50/50 dark:bg-sky-950/30 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Parça Bilgilerini Düzenle"
+                            >
+                              <Pencil size={12} />
+                              <span>Düzenle</span>
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() => onOpenMovement(product, "IN")}
@@ -213,12 +235,24 @@ export function ProductTable({ products, onOpenMovement, onOpenHistory }: Produc
                           <button
                             type="button"
                             onClick={() => onOpenHistory(product)}
-                            className="h-8 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
-                            title="Hareket Geçmişi"
+                            className="h-8 px-2.5 rounded-lg border border-purple-200 dark:border-purple-900/50 bg-purple-50/50 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Stok Hareket Geçmişi"
                           >
                             <History size={13} />
                             <span>Geçmiş</span>
                           </button>
+
+                          {onDeleteProduct && (
+                            <button
+                              type="button"
+                              onClick={() => onDeleteProduct(product)}
+                              className="h-8 px-2 rounded-lg border border-rose-200 dark:border-rose-900/40 text-rose-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                              title="Parçayı Envanterden Sil"
+                            >
+                              <Trash2 size={12} />
+                              <span>Sil</span>
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

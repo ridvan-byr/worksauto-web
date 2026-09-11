@@ -60,6 +60,34 @@ function getTypeBadgeStyles(type: NotificationType) {
   }
 }
 
+function formatNotificationType(type: NotificationType): string {
+  switch (type) {
+    case "SUCCESS": return "Başarılı";
+    case "WARNING": return "Uyarı";
+    case "ERROR": return "Hata";
+    case "CRITICAL": return "Kritik";
+    case "INFO": return "Bilgi";
+    default: return type;
+  }
+}
+
+const REASON_TR: Record<string, string> = {
+  CUSTOMER_REQUEST: "Müşteri randevuyu iptal etti / vazgeçti",
+  PARTS_UNAVAILABLE: "Gerekli yedek parça temin edilemedi",
+  CAPACITY_FULL: "Servis atölye lift kapasitesi dolu",
+  PRICE_DISAGREEMENT: "Fiyat konusunda anlaşılamadı",
+  NO_SHOW: "Randevuya gelinmedi (No-Show)",
+  OTHER: "Diğer gerekçe",
+};
+
+function formatNotificationMessage(message: string): string {
+  if (!message) return message;
+  return message.replace(
+    /Neden:\s*(CUSTOMER_REQUEST|PARTS_UNAVAILABLE|CAPACITY_FULL|PRICE_DISAGREEMENT|NO_SHOW|OTHER)/gi,
+    (_match, reason: string) => `Neden: ${REASON_TR[reason.toUpperCase()] || reason}`
+  );
+}
+
 function formatRelativeTime(dateStr: string): string {
   try {
     const diffMs = Date.now() - new Date(dateStr).getTime();
@@ -317,7 +345,7 @@ export function NotificationPopover() {
                     </div>
 
                     <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-snug line-clamp-2">
-                      {item.message}
+                      {formatNotificationMessage(item.message)}
                     </p>
 
                     <div className="mt-1.5 flex items-center gap-2">
@@ -327,7 +355,7 @@ export function NotificationPopover() {
                           getTypeBadgeStyles(item.type)
                         )}
                       >
-                        {item.type}
+                        {formatNotificationType(item.type)}
                       </span>
                       {item.link && (
                         <span className="text-[10px] text-sky-500 dark:text-sky-400 flex items-center gap-0.5 hover:underline font-medium">
