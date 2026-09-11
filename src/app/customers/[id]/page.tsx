@@ -30,6 +30,7 @@ import { AddVehicleModal } from "@/features/customers/components/add-vehicle-mod
 import { EditCustomerModal } from "@/features/customers/components/edit-customer-modal"
 import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
 import { KvkkConsentBadge } from "@/features/customers/components/kvkk-consent-badge"
+import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/vehicle-formatters"
 import { cn } from "@/lib/utils"
 
 export default function CustomerDetailPage() {
@@ -73,8 +74,8 @@ export default function CustomerDetailPage() {
           model: v.model,
           year: v.year,
           kilometer: v.kilometer ?? 0,
-          fuelType: v.fuelType,
-          transmission: v.transmission,
+          fuelType: formatFuelType(v.fuelType),
+          transmission: formatTransmission(v.transmission),
         })),
         appointments: (apiCustomer.appointments || []).map((app) => ({
           id: app.id,
@@ -344,7 +345,7 @@ export default function CustomerDetailPage() {
                     {v.brand} {v.model}
                   </p>
                   <p className="text-[11px] text-slate-400">
-                    {v.year} Model • {v.fuelType || "Benzin"} • {v.transmission || "Otomatik"}
+                    {v.year} Model • {formatFuelType(v.fuelType)} • {formatTransmission(v.transmission)}
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5">

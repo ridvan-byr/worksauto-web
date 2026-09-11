@@ -27,6 +27,7 @@ import { ExcelImportModal } from "@/features/import-export/components/excel-impo
 import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
 import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
 
+import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/vehicle-formatters"
 import { cn } from "@/lib/utils"
 
 export default function CustomersPage() {
@@ -66,8 +67,8 @@ export default function CustomersPage() {
           model: v.model,
           year: v.year,
           kilometer: v.currentKm ?? v.mileage ?? 0,
-          fuelType: v.fuelType,
-          transmission: v.transmission,
+          fuelType: formatFuelType(v.fuelType),
+          transmission: formatTransmission(v.transmission),
         })),
         appointments: [],
         workOrders: [],

@@ -28,6 +28,7 @@ import { ExcelImportModal } from "@/features/import-export/components/excel-impo
 import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
 import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
 import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
+import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/vehicle-formatters"
 import { cn } from "@/lib/utils"
 
 export default function VehiclesPage() {
@@ -137,8 +138,8 @@ export default function VehiclesPage() {
       model: v.model || "",
       year: v.year || "",
       kilometer: v.kilometer || 0,
-      fuelType: v.fuelType || "",
-      transmission: v.transmission || "",
+      fuelType: formatFuelType(v.fuelType),
+      transmission: formatTransmission(v.transmission),
       customerName: v.customerName || "",
       customerPhone: v.customerPhone || "",
     }))
@@ -400,7 +401,7 @@ export default function VehiclesPage() {
                     <td className="py-4 px-4 text-slate-600 dark:text-slate-400 text-[11px]">
                       <p>{v.year} Model</p>
                       <p className="text-slate-400 mt-0.5">
-                        {v.fuelType || "Benzin"} • {v.transmission || "Otomatik"}
+                        {formatFuelType(v.fuelType)} • {formatTransmission(v.transmission)}
                       </p>
                     </td>
 
