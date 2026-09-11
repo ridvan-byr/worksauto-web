@@ -43,6 +43,8 @@ export interface Tenant {
   city?: string
   district?: string
   address?: string
+  phone?: string
+  email?: string
   logo?: string
   primaryColor?: string
   slogan?: string

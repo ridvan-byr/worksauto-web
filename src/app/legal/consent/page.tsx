@@ -1,9 +1,10 @@
 "use client"
 
 import * as React from "react"
+import Image from "next/image"
 import { useAuth } from "@/features/auth/auth-context"
 import { apiClient } from "@/lib/api-client"
-import { FileText, CheckCircle2, Lock, ArrowRight, LogOut, ShieldAlert } from "lucide-react"
+import { FileText, CheckCircle2, Lock, ArrowRight, LogOut, ShieldAlert, Building2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/components/ui/sonner"
@@ -83,28 +84,37 @@ export default function LegalConsentPage() {
     <div className="min-h-screen bg-[#070a11] text-slate-100 flex flex-col justify-between p-4 sm:p-8 font-sans selection:bg-slate-700 selection:text-white">
       {/* Top Brand Header */}
       <header className="max-w-6xl mx-auto w-full flex items-center justify-between pb-6 border-b border-slate-800/60">
-        <div className="flex items-center gap-3">
-          <div className="h-9 w-9 rounded-xl bg-slate-900 border border-slate-700/80 flex items-center justify-center text-white font-bold text-sm shadow-sm">
-            W
+        <div className="flex items-center gap-4">
+          <div className="relative h-8 w-[150px] flex items-center">
+            <Image
+              src="/brand/worksauto-logo-white.png"
+              alt="WorksAuto"
+              width={150}
+              height={32}
+              priority
+              className="h-8 w-auto object-contain"
+            />
           </div>
-          <div>
-            <h1 className="text-base font-bold tracking-tight text-white flex items-center gap-2">
-              WorksAuto <span className="text-[11px] font-normal px-2.5 py-0.5 rounded-full bg-slate-800/90 text-slate-300 border border-slate-700/60">Sözleşme Onayı</span>
-            </h1>
-            <p className="text-xs text-slate-400">Bulut Servis Yönetim Platformu &bull; B2B Lisans ve KVKK Protokolü</p>
+          <div className="h-6 w-px bg-slate-800 hidden sm:block" />
+          <div className="hidden sm:block">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-200">B2B Yasal Onay Kapısı</span>
+              <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800/90 text-slate-300 border border-slate-700/60">Zorunlu Sözleşme</span>
+            </div>
+            <p className="text-[11px] text-slate-500">6698 Sayılı KVKK &bull; B2B SaaS Lisansı &bull; HMK Md. 193 Delil Protokolü</p>
           </div>
         </div>
 
         <div className="flex items-center gap-4">
           <div className="hidden sm:flex flex-col text-right">
-            <span className="text-xs font-medium text-slate-200">{tenant?.title || "İşletme"}</span>
-            <span className="text-[11px] text-slate-500">{user?.name} {user?.surname} ({user?.role})</span>
+            <span className="text-xs font-medium text-slate-200">{tenant?.legalName || tenant?.title || tenant?.name || "İşletme"}</span>
+            <span className="text-[11px] text-slate-500">{user?.name} {user?.surname} ({user?.role || "OWNER"})</span>
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={logout}
-            className="text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-slate-800 rounded-xl px-3 py-1.5 flex items-center gap-1.5"
+            className="text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800/80 border border-slate-800 rounded-xl px-3 py-1.5 flex items-center gap-1.5 cursor-pointer"
           >
             <LogOut className="h-3.5 w-3.5" />
             <span>Çıkış Yap</span>
@@ -116,7 +126,7 @@ export default function LegalConsentPage() {
       <main className="max-w-6xl mx-auto w-full my-auto py-8 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
         {/* Left Column: Contract Document Viewer */}
-        <section className="lg:col-span-7 bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 flex flex-col h-[560px] shadow-xl backdrop-blur-xs">
+        <section className="lg:col-span-7 bg-slate-900/40 border border-slate-800/80 rounded-2xl p-6 flex flex-col h-[580px] shadow-xl backdrop-blur-xs">
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800/60">
             <div className="flex items-center gap-2 text-slate-300 font-semibold text-xs sm:text-sm">
               <FileText className="h-4 w-4 text-slate-400" />
@@ -154,9 +164,52 @@ export default function LegalConsentPage() {
               <h2 className="text-sm font-bold text-white tracking-tight">Sisteme Giriş Öncesi Zorunlu Onay</h2>
             </div>
             
-            <p className="text-xs text-slate-400 leading-relaxed mb-6">
-              WorksAuto platformunu ve oto servis yönetim modüllerini kullanabilmeniz için işletmeniz adına yasal B2B hizmet sözleşmesi ve KVKK veri işleme taahhüdünü onaylamanız zorunludur.
+            <p className="text-xs text-slate-400 leading-relaxed mb-4">
+              WorksAuto platformunu ve oto servis yönetim modüllerini kullanabilmeniz için işletmeniz adına yasal B2B lisans sözleşmesi ve KVKK veri işleme protokolünü onaylamanız gerekmektedir.
             </p>
+
+            {/* Yasal Taraf & Kimlik Doğrulama Parametreleri */}
+            <div className="mb-5 rounded-xl border border-slate-800/90 bg-slate-950/70 p-3.5 text-xs space-y-2">
+              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium pb-2 border-b border-slate-800/60">
+                <span className="flex items-center gap-1.5 text-slate-300 font-semibold">
+                  <Building2 className="h-3.5 w-3.5 text-slate-400" />
+                  Sözleşme Tarafı & Doğrulanan Kimlik
+                </span>
+                <span className="text-emerald-400 flex items-center gap-1 font-mono text-[10px]">
+                  <CheckCircle2 className="h-3 w-3" /> Doğrulandı
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                <div>
+                  <span className="text-slate-500 block text-[10px]">İşletme / Servis:</span>
+                  <span className="text-slate-200 font-medium truncate block" title={tenant?.legalName || tenant?.title || tenant?.name}>
+                    {tenant?.legalName || tenant?.title || tenant?.name || "Kayıtlı İşletme"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Vergi / Sicil No:</span>
+                  <span className="text-slate-200 font-medium truncate block">
+                    {tenant?.taxNumber ? `${tenant.taxOffice ? tenant.taxOffice + " - " : ""}${tenant.taxNumber}` : "B2B Kurumsal Kayıt"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">İmza Yetkilisi:</span>
+                  <span className="text-slate-200 font-medium truncate block">
+                    {user?.name} {user?.surname} ({user?.role || "OWNER"})
+                  </span>
+                </div>
+                <div>
+                  <span className="text-slate-500 block text-[10px]">Tebligat Hattı:</span>
+                  <span className="text-slate-200 font-medium truncate block">
+                    {user?.phone || tenant?.phone || "Kayıtlı GSM"}
+                  </span>
+                </div>
+              </div>
+              <div className="pt-2 border-t border-slate-800/50 flex items-center justify-between text-[10px] text-slate-400">
+                <span>Hukuki Rol: <strong className="text-slate-300">Veri Sorumlusu</strong></span>
+                <span>Platform: <strong className="text-slate-300">Veri İşleyen (RLS)</strong></span>
+              </div>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-3.5">
               {/* Checkbox 1: SaaS Terms */}
