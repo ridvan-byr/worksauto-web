@@ -21,11 +21,13 @@ interface StepWorkshopSettingsProps {
     notifyReadyForPickup: boolean
     criticalStockThreshold: number
   }>) => void
+  errors?: Record<string, string>
 }
 
 export function StepWorkshopSettings({
   data,
   onChange,
+  errors = {},
 }: StepWorkshopSettingsProps) {
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
@@ -38,6 +40,12 @@ export function StepWorkshopSettings({
           Servisinizin eşzamanlı lift kapasitesini, randevu aralıklarını ve müşteri otomatik bildirim kurallarını yapılandırın.
         </p>
       </div>
+
+      {errors.workshop && (
+        <div className="p-3 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50 dark:bg-rose-950/20 text-xs text-rose-600 dark:text-rose-400">
+          {errors.workshop}
+        </div>
+      )}
 
       {/* 1. Lift & Workshop Capacity Setting */}
       <div className="space-y-2">
@@ -115,13 +123,15 @@ export function StepWorkshopSettings({
             onClick={() => onChange({ autoWorkOrder: !data.autoWorkOrder })}
             className={cn(
               "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-              data.autoWorkOrder ? "bg-sky-500" : "bg-slate-300 dark:bg-slate-700"
+              data.autoWorkOrder ? "bg-slate-900 dark:bg-white" : "bg-slate-300 dark:bg-slate-700"
             )}
           >
             <span
               className={cn(
-                "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out",
-                data.autoWorkOrder ? "translate-x-5" : "translate-x-0"
+                "pointer-events-none inline-block h-5 w-5 transform rounded-full shadow-sm ring-0 transition duration-200 ease-in-out",
+                data.autoWorkOrder
+                  ? "translate-x-5 bg-white dark:bg-slate-950"
+                  : "translate-x-0 bg-white dark:bg-slate-300"
               )}
             />
           </button>
@@ -142,13 +152,15 @@ export function StepWorkshopSettings({
             onClick={() => onChange({ notifyAppointmentReminder: !data.notifyAppointmentReminder })}
             className={cn(
               "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-              data.notifyAppointmentReminder ? "bg-sky-500" : "bg-slate-300 dark:bg-slate-700"
+              data.notifyAppointmentReminder ? "bg-slate-900 dark:bg-white" : "bg-slate-300 dark:bg-slate-700"
             )}
           >
             <span
               className={cn(
-                "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out",
-                data.notifyAppointmentReminder ? "translate-x-5" : "translate-x-0"
+                "pointer-events-none inline-block h-5 w-5 transform rounded-full shadow-sm ring-0 transition duration-200 ease-in-out",
+                data.notifyAppointmentReminder
+                  ? "translate-x-5 bg-white dark:bg-slate-950"
+                  : "translate-x-0 bg-white dark:bg-slate-300"
               )}
             />
           </button>
@@ -169,13 +181,15 @@ export function StepWorkshopSettings({
             onClick={() => onChange({ notifyReadyForPickup: !data.notifyReadyForPickup })}
             className={cn(
               "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none",
-              data.notifyReadyForPickup ? "bg-sky-500" : "bg-slate-300 dark:bg-slate-700"
+              data.notifyReadyForPickup ? "bg-slate-900 dark:bg-white" : "bg-slate-300 dark:bg-slate-700"
             )}
           >
             <span
               className={cn(
-                "pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out",
-                data.notifyReadyForPickup ? "translate-x-5" : "translate-x-0"
+                "pointer-events-none inline-block h-5 w-5 transform rounded-full shadow-sm ring-0 transition duration-200 ease-in-out",
+                data.notifyReadyForPickup
+                  ? "translate-x-5 bg-white dark:bg-slate-950"
+                  : "translate-x-0 bg-white dark:bg-slate-300"
               )}
             />
           </button>
@@ -191,10 +205,13 @@ export function StepWorkshopSettings({
           <input
             type="number"
             min={1}
-            max={50}
+            max={100}
             value={data.criticalStockThreshold}
-            onChange={(e) => onChange({ criticalStockThreshold: parseInt(e.target.value) || 5 })}
-            className="w-28 h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all font-semibold text-center"
+            onChange={(e) => {
+              const val = parseInt(e.target.value) || 1
+              onChange({ criticalStockThreshold: Math.max(1, Math.min(100, val)) })
+            }}
+            className="w-28 h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all font-semibold text-center"
           />
           <span className="text-xs text-slate-500 dark:text-slate-400">
             adet veya altına indiğinde dashboard'da kırmızı stok uyarısı verilir.

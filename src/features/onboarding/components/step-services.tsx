@@ -38,14 +38,24 @@ export function StepServices({
     durationMinutes: 45,
     laborPrice: 800,
   })
+  const [customError, setCustomError] = React.useState<string | null>(null)
 
   const handleCustomSubmit = () => {
-    if (!customService.name.trim()) return
+    const trimmedName = customService.name.trim()
+    if (!trimmedName || trimmedName.length < 2) {
+      setCustomError("Lütfen en az 2 karakterden oluşan bir hizmet adı yazınız.")
+      return
+    }
+
+    const duration = Math.max(5, Math.min(1440, Number(customService.durationMinutes) || 45))
+    const price = Math.max(0, Math.min(1000000, Number(customService.laborPrice) || 0))
+
+    setCustomError(null)
     onAddCustomService({
-      name: customService.name.trim(),
+      name: trimmedName,
       category: customService.category,
-      durationMinutes: Number(customService.durationMinutes) || 45,
-      laborPrice: Number(customService.laborPrice) || 500,
+      durationMinutes: duration,
+      laborPrice: price,
     })
     setCustomService({ name: "", category: "Motor & Mekanik", durationMinutes: 45, laborPrice: 800 })
   }
@@ -120,7 +130,10 @@ export function StepServices({
             type="text"
             placeholder="Hizmet Adı (Örn: Şanzıman Yağ Değişimi)"
             value={customService.name}
-            onChange={(e) => setCustomService({ ...customService, name: e.target.value })}
+            onChange={(e) => {
+              setCustomService({ ...customService, name: e.target.value })
+              if (customError) setCustomError(null)
+            }}
             className="h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-400 dark:focus:border-slate-600"
           />
           <select
@@ -140,22 +153,36 @@ export function StepServices({
           <div className="flex gap-2">
             <input
               type="number"
+              min={5}
+              max={1440}
               placeholder="Süre dk"
               title="Tahmini Süre (dakika)"
               value={customService.durationMinutes}
-              onChange={(e) => setCustomService({ ...customService, durationMinutes: Number(e.target.value) })}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0
+                setCustomService({ ...customService, durationMinutes: Math.max(5, Math.min(1440, val)) })
+              }}
               className="w-1/2 h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 text-center"
             />
             <input
               type="number"
+              min={0}
+              max={1000000}
               placeholder="Fiyat ₺"
               title="İşçilik Fiyatı (TL)"
               value={customService.laborPrice}
-              onChange={(e) => setCustomService({ ...customService, laborPrice: Number(e.target.value) })}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0
+                setCustomService({ ...customService, laborPrice: Math.max(0, Math.min(1000000, val)) })
+              }}
               className="w-1/2 h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 text-center font-bold"
             />
           </div>
         </div>
+
+        {customError && (
+          <p className="text-[11px] text-rose-500 font-medium">{customError}</p>
+        )}
 
         <div className="flex justify-end pt-1">
           <Button
@@ -214,12 +241,14 @@ export function StepServices({
                     <input
                       type="number"
                       min={5}
+                      max={1440}
                       step={5}
                       value={srv.durationMinutes}
-                      onChange={(e) =>
-                        onUpdateServiceItem(srv.id, { durationMinutes: Number(e.target.value) })
-                      }
-                      className="w-14 h-7 text-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 5
+                        onUpdateServiceItem(srv.id, { durationMinutes: Math.max(5, Math.min(1440, val)) })
+                      }}
+                      className="w-16 h-7 text-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                     />
                     <span className="text-[11px] text-slate-500">dk</span>
                   </div>
@@ -229,12 +258,14 @@ export function StepServices({
                     <input
                       type="number"
                       min={0}
+                      max={1000000}
                       step={50}
                       value={srv.laborPrice}
-                      onChange={(e) =>
-                        onUpdateServiceItem(srv.id, { laborPrice: Number(e.target.value) })
-                      }
-                      className="w-20 h-7 text-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-sky-600 dark:text-sky-400 focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value) || 0
+                        onUpdateServiceItem(srv.id, { laborPrice: Math.max(0, Math.min(1000000, val)) })
+                      }}
+                      className="w-20 h-7 text-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                     />
                     <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">₺</span>
                   </div>

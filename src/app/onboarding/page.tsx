@@ -100,27 +100,59 @@ export default function OnboardingPage() {
     const errs: Record<string, string> = {}
 
     if (currentStep === 1) {
-      if (!formData.name.trim()) errs.name = "Servis adı zorunludur."
-      if (!formData.taxOffice.trim()) errs.taxOffice = "Vergi dairesi zorunludur."
-      if (!formData.taxNumber.trim()) {
+      if (!formData.name.trim() || formData.name.trim().length < 2) {
+        errs.name = "Servis / atölye adı en az 2 karakter olmalıdır."
+      }
+      const taxOfficeValidation = validatePersonName(formData.taxOffice, "Vergi dairesi")
+      if (!taxOfficeValidation.isValid) {
+        errs.taxOffice = taxOfficeValidation.error || "Vergi dairesi yalnızca harflerden oluşmalıdır."
+      }
+      const cleanTax = formData.taxNumber.replace(/\D/g, "")
+      if (!cleanTax) {
         errs.taxNumber = "Vergi numarası / TCKN zorunludur."
-      } else if (formData.taxNumber.length < 10) {
-        errs.taxNumber = "Vergi numarası en az 10 hane olmalıdır."
+      } else if (cleanTax.length !== 10 && cleanTax.length !== 11) {
+        errs.taxNumber = "Vergi numarası 10 haneli VKN veya 11 haneli TCKN olmalıdır."
       }
       if (!formData.city.trim()) errs.city = "İl seçimi zorunludur."
-      if (!formData.district.trim()) errs.district = "İlçe zorunludur."
-      if (!formData.address.trim()) errs.address = "Açık servis adresi zorunludur."
+      if (!formData.district.trim()) errs.district = "İlçe seçimi zorunludur."
+      // Keep address comfortable/flexible ("bir tık daha rahat tut"):
+      if (!formData.address.trim() || formData.address.trim().length < 5) {
+        errs.address = "Lütfen açık servis adresini yazınız (en az 5 karakter)."
+      }
     }
 
     if (currentStep === 2) {
       if (!formData.workingDays || formData.workingDays.length === 0) {
         errs.workingDays = "En az bir çalışma günü seçilmelidir."
+      } else if (formData.workStartTime && formData.workEndTime && formData.workStartTime >= formData.workEndTime) {
+        errs.workingDays = "Mesai bitiş saati, mesai başlangıç saatinden sonra olmalıdır."
+      } else if (formData.breakStartTime && formData.breakEndTime) {
+        if (formData.breakStartTime >= formData.breakEndTime) {
+          errs.workingDays = "Öğle molası bitiş saati, başlangıç saatinden sonra olmalıdır."
+        } else if (
+          (formData.workStartTime && formData.breakStartTime < formData.workStartTime) ||
+          (formData.workEndTime && formData.breakEndTime > formData.workEndTime)
+        ) {
+          errs.workingDays = "Öğle molası mesai saatleri (başlangıç ve bitiş) aralığında olmalıdır."
+        }
       }
     }
 
     if (currentStep === 3) {
       if (!formData.services || formData.services.length === 0) {
         errs.services = "En az 1 adet aktif servis/işçilik tanımı eklemelisiniz."
+      } else {
+        const invalidService = formData.services.find(
+          (s) =>
+            !s.name.trim() ||
+            s.name.trim().length < 2 ||
+            s.durationMinutes < 5 ||
+            s.durationMinutes > 1440 ||
+            s.laborPrice < 0
+        )
+        if (invalidService) {
+          errs.services = "Hizmet süreleri 5 ile 1440 dakika arasında, işçilik fiyatları 0 TL veya üzerinde olmalıdır."
+        }
       }
     }
 
@@ -143,6 +175,14 @@ export default function OnboardingPage() {
             errs.staff = `"${invalidStaff.name} ${invalidStaff.surname}" personeli için geçerli bir cep telefonu numarası (05XX XXX XX XX) zorunludur. Usta sisteme cep telefonu numarasıyla giriş yapacaktır.`
           }
         }
+      }
+    }
+
+    if (currentStep === 5) {
+      if (!formData.activeLiftCount || formData.activeLiftCount < 1) {
+        errs.workshop = "En az 1 adet aktif lift kapasitesi seçilmelidir."
+      } else if (!formData.criticalStockThreshold || formData.criticalStockThreshold < 1) {
+        errs.workshop = "Kritik stok eşiği en az 1 adet olmalıdır."
       }
     }
 
@@ -303,7 +343,7 @@ export default function OnboardingPage() {
           )}
 
           {currentStep === 5 && (
-            <StepWorkshopSettings data={formData} onChange={updateForm} />
+            <StepWorkshopSettings data={formData} onChange={updateForm} errors={errors} />
           )}
 
           {/* Navigation Footer Buttons */}

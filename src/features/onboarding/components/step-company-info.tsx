@@ -5,6 +5,7 @@ import { Building2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { TURKEY_PROVINCES, getDistrictsForProvince } from "@/lib/turkey-locations"
 import { SearchableSelect } from "@/components/ui/searchable-select"
+import { filterPersonNameInput } from "@/lib/name-utils"
 
 interface StepCompanyInfoProps {
   data: {
@@ -91,7 +92,7 @@ export function StepCompanyInfo({
           <input
             type="text"
             value={data.taxOffice}
-            onChange={(e) => onChange({ taxOffice: e.target.value })}
+            onChange={(e) => onChange({ taxOffice: filterPersonNameInput(e.target.value) })}
             placeholder="Örn: Bornova"
             className={cn(
               "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all",
@@ -110,10 +111,10 @@ export function StepCompanyInfo({
             type="text"
             maxLength={11}
             value={data.taxNumber}
-            onChange={(e) => onChange({ taxNumber: e.target.value.replace(/\D/g, "") })}
-            placeholder="10 haneli VKN veya 11 TCKN"
+            onChange={(e) => onChange({ taxNumber: e.target.value.replace(/\D/g, "").slice(0, 11) })}
+            placeholder="10 haneli VKN veya 11 haneli TCKN"
             className={cn(
-              "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all",
+              "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all font-mono",
               errors.taxNumber ? "border-rose-500" : "border-slate-200 dark:border-slate-800"
             )}
           />
@@ -176,7 +177,7 @@ export function StepCompanyInfo({
             onChange={(e) => onChange({ address: e.target.value })}
             placeholder="Örn: 2. Sanayi Sitesi 352 Sokak No: 18 Bornova / İzmir"
             className={cn(
-              "w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all resize-none",
+              "w-full p-3 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all resize-none",
               errors.address ? "border-rose-500" : "border-slate-200 dark:border-slate-800"
             )}
           />
