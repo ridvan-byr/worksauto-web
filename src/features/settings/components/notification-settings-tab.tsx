@@ -32,7 +32,7 @@ export function NotificationSettingsTab() {
       try {
         const res = await apiClient.get<NotificationSettingsData>("/tenants/notification-settings")
         setSettings(res)
-      } catch (err: unknown) {
+      } catch {
         toast.error("Bildirim ayarları yüklenemedi.")
       } finally {
         setIsLoading(false)
@@ -56,7 +56,7 @@ export function NotificationSettingsTab() {
       })
       setSettings(res)
       toast.success("İletişim ve bildirim tercihleri başarıyla güncellendi!")
-    } catch (err: unknown) {
+    } catch {
       toast.error("Ayarlar kaydedilirken bir hata oluştu.")
     } finally {
       setIsSaving(false)

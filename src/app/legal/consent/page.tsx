@@ -3,7 +3,7 @@
 import * as React from "react"
 import { useAuth } from "@/features/auth/auth-context"
 import { apiClient } from "@/lib/api-client"
-import { ShieldAlert, FileText, CheckCircle2, Lock, ArrowRight, Building2, UserCheck, AlertTriangle } from "lucide-react"
+import { ShieldAlert, FileText, CheckCircle2, Lock, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/components/ui/sonner"
@@ -31,7 +31,7 @@ export default function LegalConsentPage() {
         }>("/legal/contract-details")
         setContractText(res.contractText)
         setContractVersion(res.version)
-      } catch (err: unknown) {
+      } catch {
         toast.error("Sözleşme metni sunucudan yüklenemedi.")
       } finally {
         setIsLoading(false)
@@ -68,8 +68,9 @@ export default function LegalConsentPage() {
       if (res.success && res.tenant) {
         completeB2bConsent(res.tenant)
       }
-    } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || "Sözleşme onaylanırken bir hata oluştu."
+    } catch (err: unknown) {
+      const errorObj = err as { response?: { data?: { message?: string } }; message?: string }
+      const msg = errorObj.response?.data?.message || errorObj.message || "Sözleşme onaylanırken bir hata oluştu."
       toast.error(msg)
     } finally {
       setIsSubmitting(false)
