@@ -101,7 +101,7 @@ export default function LegalConsentPage() {
               <span className="text-xs font-semibold text-slate-200">B2B Yasal Onay Kapısı</span>
               <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-800/90 text-slate-300 border border-slate-700/60">Zorunlu Sözleşme</span>
             </div>
-            <p className="text-[11px] text-slate-500">6698 Sayılı KVKK &bull; B2B SaaS Lisansı &bull; HMK Md. 193 Delil Protokolü</p>
+            <p className="text-[11px] text-slate-500">6698 Sayılı KVKK &bull; 6563 Sayılı ETK &bull; HMK Md. 193 Delil Protokolü</p>
           </div>
         </div>
 
@@ -130,7 +130,7 @@ export default function LegalConsentPage() {
           <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-800/60">
             <div className="flex items-center gap-2 text-slate-300 font-semibold text-xs sm:text-sm">
               <FileText className="h-4 w-4 text-slate-400" />
-              <span>B2B Hizmet Şartları & KVKK Veri İşleyen Protokolü</span>
+              <span>Kurumsal Hizmet Sözleşmesi, KVKK ve Ticari İleti Protokolü</span>
             </div>
             <span className="text-[11px] px-2 py-0.5 rounded bg-slate-800/80 text-slate-400 font-mono border border-slate-700/50">
               v{contractVersion}
@@ -221,7 +221,7 @@ export default function LegalConsentPage() {
                   className="mt-0.5"
                 />
                 <label htmlFor="saas" className="text-xs text-slate-300 leading-snug cursor-pointer select-none">
-                  <strong className="text-slate-100 font-medium">WorksAuto B2B SaaS Lisans Sözleşmesi</strong>&apos;ni okudum, hizmet ve lisans şartlarını gayrikabili rücu kabul ediyorum. <span className="text-slate-400">*</span>
+                  <strong className="text-slate-100 font-medium">WorksAuto Kurumsal Hizmet ve Lisans Sözleşmesi</strong>&apos;ni okudum, servis yönetimi kullanım şartlarını ve veri güvenliği ilkelerini kabul ediyorum. <span className="text-slate-400">*</span>
                 </label>
               </div>
 
@@ -234,11 +234,11 @@ export default function LegalConsentPage() {
                   className="mt-0.5"
                 />
                 <label htmlFor="dataProcessing" className="text-xs text-slate-300 leading-snug cursor-pointer select-none">
-                  6698 sayılı KVKK kapsamında platforma kaydedilecek araç sahiplerine ait kişisel verilerde <strong className="text-slate-100 font-medium">Veri Sorumlusu</strong> sıfatıyla hareket edeceğimi taahhüt ederim. <span className="text-slate-400">*</span>
+                  6698 sayılı KVKK uyarınca; servisime gelen araç sahiplerine ait kişisel verilerde <strong className="text-slate-100 font-medium">Veri Sorumlusu</strong> sıfatıyla hareket edeceğimi ve müşterilerime yasal aydınlatma yapacağımı taahhüt ederim. <span className="text-slate-400">*</span>
                 </label>
               </div>
 
-              {/* Checkbox 3: Marketing & Notifications (Optional) */}
+              {/* Checkbox 3: Commercial Electronic Communication (ETK 6563) */}
               <div className="flex items-start gap-3 p-3.5 rounded-xl border border-slate-800/80 bg-slate-950/50 hover:border-slate-700/80 transition-colors">
                 <Checkbox
                   id="marketing"
@@ -247,7 +247,7 @@ export default function LegalConsentPage() {
                   className="mt-0.5"
                 />
                 <label htmlFor="marketing" className="text-xs text-slate-300 leading-snug cursor-pointer select-none">
-                  Fatura, kritik stok, platform güncellemeleri ve teknik bildirimlerin <strong className="text-slate-100 font-medium">WhatsApp ve E-Posta</strong> ile tarafıma iletilmesini onaylıyorum.
+                  <strong className="text-slate-100 font-medium">6563 Sayılı Kanun Kapsamında Ticari Elektronik İleti İzni:</strong> WorksAuto tarafından işletmeme sunulan yeni özellikler, kampanyalar, indirimler ve sektörel bilgilendirmelerin WhatsApp, E-Posta ve SMS ile tarafıma iletilmesini onaylıyorum. <span className="text-slate-500 text-[10px] block mt-0.5">(İsteğe bağlıdır; dilediğiniz an ücretsiz vazgeçme hakkınız saklıdır)</span>
                 </label>
               </div>
 
@@ -279,7 +279,7 @@ export default function LegalConsentPage() {
 
       {/* Footer Notice */}
       <footer className="max-w-6xl mx-auto w-full text-center text-[11px] text-slate-500 border-t border-slate-800/60 pt-4">
-        WorksAuto Enterprise Systems &bull; 6698 Sayılı KVKK ve HMK Elektronik İmza Güvencesi Altındadır.
+        WorksAuto Kurumsal Servis Sistemleri &bull; 6698 Sayılı KVKK, 6563 Sayılı ETK ve 6100 Sayılı HMK Elektronik İmza Güvencesi Altındadır.
       </footer>
     </div>
   )
