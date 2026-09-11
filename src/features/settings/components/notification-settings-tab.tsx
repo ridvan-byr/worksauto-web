@@ -39,13 +39,24 @@ export function NotificationSettingsTab() {
   const [isSaving, setIsSaving] = React.useState(false)
   const [showQrModal, setShowQrModal] = React.useState(false)
 
+  // 6563 ETK Commercial Communication State
+  const [marketingAccepted, setMarketingAccepted] = React.useState<boolean>(true)
+  const [isUpdatingMarketing, setIsUpdatingMarketing] = React.useState<boolean>(false)
+
   // Fetch settings on mount
   React.useEffect(() => {
     async function loadSettings() {
       try {
-        const res = await apiClient.get<NotificationSettingsData>("/tenants/notification-settings")
-        if (res && res.channelPriority) {
-          setSettings(res)
+        const [notifRes, legalRes] = await Promise.allSettled([
+          apiClient.get<NotificationSettingsData>("/tenants/notification-settings"),
+          apiClient.get<{ latestConsent?: { marketingAccepted?: boolean } }>("/legal/status"),
+        ])
+
+        if (notifRes.status === "fulfilled" && notifRes.value?.channelPriority) {
+          setSettings(notifRes.value)
+        }
+        if (legalRes.status === "fulfilled" && legalRes.value?.latestConsent) {
+          setMarketingAccepted(legalRes.value.latestConsent.marketingAccepted ?? true)
         }
       } catch {
         // Fallback gracefully to default settings
@@ -55,6 +66,24 @@ export function NotificationSettingsTab() {
     }
     loadSettings()
   }, [])
+
+  const handleToggleMarketingConsent = async (checked: boolean | "indeterminate") => {
+    const newValue = !!checked
+    setIsUpdatingMarketing(true)
+    try {
+      await apiClient.patch("/legal/marketing-consent", { marketingAccepted: newValue })
+      setMarketingAccepted(newValue)
+      toast.success(
+        newValue
+          ? "Ticari elektronik ileti izniniz aktif edildi."
+          : "Ticari elektronik ileti izniniz iptal edildi (Ret talebiniz işlendi)."
+      )
+    } catch {
+      toast.error("Tercih güncellenirken bir hata oluştu.")
+    } finally {
+      setIsUpdatingMarketing(false)
+    }
+  }
 
   const handleSave = async () => {
     if (!settings) return
@@ -316,6 +345,54 @@ export function NotificationSettingsTab() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Section 4: WorksAuto Platform Bildirimleri & Ticari Elektronik İleti İzni (6563 Sayılı Kanun) */}
+      <div className="p-6 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-500" />
+            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              WorksAuto Kurumsal İletişim & Ticari İleti Tercihi (6563 Sayılı Kanun)
+            </h3>
+          </div>
+          <span className={`text-[11px] font-medium px-2.5 py-0.5 rounded-full border ${
+            marketingAccepted
+              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+              : "bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700"
+          }`}>
+            {marketingAccepted ? "İzin Verildi (Aktif)" : "İzin İptal Edildi (Pasif / Ret)"}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          WorksAuto tarafından işletmenize sunulan yeni özellikler, kampanyalar, indirimler ve sektörel duyuruların WhatsApp, E-Posta ve SMS kanallarıyla iletilmesine ilişkin izin durumunuzu buradan dilediğiniz zaman tek tıkla değiştirebilir veya iptal edebilirsiniz.
+        </p>
+
+        <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <Checkbox
+              id="marketingConsentToggle"
+              checked={marketingAccepted}
+              onCheckedChange={handleToggleMarketingConsent}
+              disabled={isUpdatingMarketing}
+              className="mt-0.5"
+            />
+            <label htmlFor="marketingConsentToggle" className="text-xs text-slate-800 dark:text-slate-200 cursor-pointer select-none leading-snug">
+              <strong>WorksAuto ticari ve tanıtım iletilerini almak istiyorum.</strong>
+              <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                İşareti kaldırdığınızda ticari ileti izniniz anında iptal edilir ve ret bildiriminiz yasal mevzuat uyarınca sisteme işlenir.
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800">
+          <AlertCircle className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+          <span>
+            Ayrıca tarafınıza iletilen SMS&apos;lerdeki ücretsiz ret kodu veya e-postalardaki ayrılma bağlantısı üzerinden de anında vazgeçebilirsiniz.
+          </span>
+        </div>
       </div>
 
       {/* QR Modal Simulation */}
