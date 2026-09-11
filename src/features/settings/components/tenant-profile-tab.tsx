@@ -5,6 +5,8 @@ import { Building2, Save } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { TenantSettings } from "@/features/settings/api/use-settings"
+import { TURKEY_PROVINCES, getDistrictsForProvince } from "@/lib/turkey-locations"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 interface TenantProfileTabProps {
   initialData?: TenantSettings
@@ -53,6 +55,18 @@ export function TenantProfileTab({
       setAutoInvoice(initialData.autoInvoiceOnComplete ?? true)
     }
   }, [initialData])
+
+  const availableDistricts = React.useMemo(() => {
+    return getDistrictsForProvince(city)
+  }, [city])
+
+  const handleCityChange = (newCity: string) => {
+    setCity(newCity)
+    const newDistricts = getDistrictsForProvince(newCity)
+    if (!newDistricts.includes(district)) {
+      setDistrict("")
+    }
+  }
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -153,28 +167,36 @@ export function TenantProfileTab({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                Şehir / İl
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>Şehir / İl</span>
+                <span className="text-[10px] text-slate-400 font-normal">81 İl</span>
               </label>
-              <input
-                type="text"
+              <SearchableSelect
+                options={TURKEY_PROVINCES as unknown as string[]}
                 value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500"
-                placeholder="İstanbul"
+                onChange={handleCityChange}
+                placeholder="İl seçiniz veya arayınız..."
+                searchPlaceholder="81 il içinde ara..."
               />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
-                İlçe / Semt
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>İlçe / Semt</span>
+                {city && availableDistricts.length > 0 && (
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    {availableDistricts.length} İlçe
+                  </span>
+                )}
               </label>
-              <input
-                type="text"
+              <SearchableSelect
+                options={availableDistricts}
                 value={district}
-                onChange={(e) => setDistrict(e.target.value)}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500"
-                placeholder="Sarıyer"
+                onChange={setDistrict}
+                disabled={!city}
+                disabledMessage="Önce İl Seçiniz"
+                placeholder={city ? "İlçe seçiniz veya arayınız..." : "Önce İl Seçiniz"}
+                searchPlaceholder={`${city || "İlçe"} ilçelerinde ara...`}
               />
             </div>
           </div>

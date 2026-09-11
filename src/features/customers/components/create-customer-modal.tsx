@@ -16,6 +16,8 @@ import { Button } from "@/components/ui/button"
 import { Customer, Vehicle } from "../types"
 import { PlateBadge } from "./plate-badge"
 import { cn } from "@/lib/utils"
+import { TURKEY_PROVINCES, getDistrictsForProvince } from "@/lib/turkey-locations"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 
 import { useForm, type Resolver } from "react-hook-form"
@@ -145,6 +147,18 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
     if (formatted.length >= 7) res += " " + formatted.slice(7, 9)
     if (formatted.length >= 9) res += " " + formatted.slice(9, 11)
     setValue("phone", res, { shouldValidate: true })
+  }
+
+  const selectedCity = watch("city") || ""
+  const selectedDistrict = watch("district") || ""
+  const availableDistricts = React.useMemo(() => getDistrictsForProvince(selectedCity), [selectedCity])
+
+  const handleCityChange = (city: string) => {
+    setValue("city", city, { shouldValidate: true })
+    const newDistricts = getDistrictsForProvince(city)
+    if (!newDistricts.includes(selectedDistrict)) {
+      setValue("district", "", { shouldValidate: true })
+    }
   }
 
   // Validate Step 1 before transitioning to Step 2
@@ -389,21 +403,38 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">İl</label>
-                  <input
-                    type="text"
-                    {...register("city")}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>İl</span>
+                    <span className="text-[10px] text-slate-400 font-normal">81 İl</span>
+                  </label>
+                  <SearchableSelect
+                    options={TURKEY_PROVINCES as unknown as string[]}
+                    value={selectedCity}
+                    onChange={handleCityChange}
+                    placeholder="İl seçiniz..."
+                    searchPlaceholder="81 il içinde ara..."
+                    error={!!errors.city}
                   />
                   {errors.city && <p className="text-[10px] text-rose-500">{errors.city.message}</p>}
                 </div>
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">İlçe</label>
-                  <input
-                    type="text"
-                    placeholder="Örn: Kadıköy"
-                    {...register("district")}
-                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>İlçe</span>
+                    {selectedCity && availableDistricts.length > 0 && (
+                      <span className="text-[10px] text-slate-400 font-normal">
+                        {availableDistricts.length} İlçe
+                      </span>
+                    )}
+                  </label>
+                  <SearchableSelect
+                    options={availableDistricts}
+                    value={selectedDistrict}
+                    onChange={(val) => setValue("district", val, { shouldValidate: true })}
+                    disabled={!selectedCity}
+                    disabledMessage="Önce İl Seçiniz"
+                    placeholder={selectedCity ? "İlçe seçiniz..." : "Önce İl Seçiniz"}
+                    searchPlaceholder={`${selectedCity || "İlçe"} ilçelerinde ara...`}
+                    error={!!errors.district}
                   />
                   {errors.district && <p className="text-[10px] text-rose-500">{errors.district.message}</p>}
                 </div>

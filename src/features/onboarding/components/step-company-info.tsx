@@ -3,6 +3,8 @@
 import * as React from "react"
 import { Building2 } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { TURKEY_PROVINCES, getDistrictsForProvince } from "@/lib/turkey-locations"
+import { SearchableSelect } from "@/components/ui/searchable-select"
 
 interface StepCompanyInfoProps {
   data: {
@@ -23,6 +25,19 @@ export function StepCompanyInfo({
   errors,
   onChange,
 }: StepCompanyInfoProps) {
+  const availableDistricts = React.useMemo(() => {
+    return getDistrictsForProvince(data.city)
+  }, [data.city])
+
+  const handleCityChange = (newCity: string) => {
+    const newDistricts = getDistrictsForProvince(newCity)
+    const keepDistrict = newDistricts.includes(data.district) ? data.district : ""
+    onChange({ city: newCity, district: keepDistrict })
+  }
+
+  const handleDistrictChange = (newDistrict: string) => {
+    onChange({ district: newDistrict })
+  }
   return (
     <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200">
       <div>
@@ -64,7 +79,7 @@ export function StepCompanyInfo({
             value={data.legalName}
             onChange={(e) => onChange({ legalName: e.target.value })}
             placeholder="Örn: Ege Otomotiv San. ve Tic. Ltd. Şti."
-            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all"
           />
         </div>
 
@@ -79,7 +94,7 @@ export function StepCompanyInfo({
             onChange={(e) => onChange({ taxOffice: e.target.value })}
             placeholder="Örn: Bornova"
             className={cn(
-              "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all",
+              "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all",
               errors.taxOffice ? "border-rose-500" : "border-slate-200 dark:border-slate-800"
             )}
           />
@@ -98,46 +113,54 @@ export function StepCompanyInfo({
             onChange={(e) => onChange({ taxNumber: e.target.value.replace(/\D/g, "") })}
             placeholder="10 haneli VKN veya 11 TCKN"
             className={cn(
-              "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all",
+              "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all",
               errors.taxNumber ? "border-rose-500" : "border-slate-200 dark:border-slate-800"
             )}
           />
           {errors.taxNumber && <p className="text-[11px] text-rose-500">{errors.taxNumber}</p>}
         </div>
 
-        {/* City & District */}
+        {/* City & District (Searchable Combobox) */}
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-            İl <span className="text-rose-500">*</span>
+          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+            <span>
+              İl <span className="text-rose-500">*</span>
+            </span>
+            <span className="text-[11px] text-slate-400 font-normal">81 İl</span>
           </label>
-          <select
+          <SearchableSelect
+            options={TURKEY_PROVINCES as unknown as string[]}
             value={data.city}
-            onChange={(e) => onChange({ city: e.target.value })}
-            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all cursor-pointer"
-          >
-            <option value="İstanbul">İstanbul</option>
-            <option value="İzmir">İzmir</option>
-            <option value="Ankara">Ankara</option>
-            <option value="Bursa">Bursa</option>
-            <option value="Antalya">Antalya</option>
-            <option value="Kocaeli">Kocaeli</option>
-            <option value="Adana">Adana</option>
-          </select>
+            onChange={handleCityChange}
+            placeholder="İl seçiniz veya arayınız..."
+            searchPlaceholder="81 il içinde ara..."
+            error={!!errors.city}
+          />
+          {errors.city && <p className="text-[11px] text-rose-500">{errors.city}</p>}
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-            İlçe <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            value={data.district}
-            onChange={(e) => onChange({ district: e.target.value })}
-            placeholder="Örn: Bornova"
-            className={cn(
-              "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all",
-              errors.district ? "border-rose-500" : "border-slate-200 dark:border-slate-800"
+          <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+            <span>
+              İlçe <span className="text-rose-500">*</span>
+            </span>
+            {data.city && availableDistricts.length > 0 && (
+              <span className="text-[11px] text-slate-400 font-normal">
+                {availableDistricts.length} İlçe
+              </span>
             )}
+          </label>
+          <SearchableSelect
+            options={availableDistricts}
+            value={data.district}
+            onChange={handleDistrictChange}
+            disabled={!data.city}
+            disabledMessage="Önce İl Seçiniz"
+            placeholder={
+              data.city ? "İlçe seçiniz veya arayınız..." : "Önce İl Seçiniz"
+            }
+            searchPlaceholder={`${data.city || "İlçe"} ilçelerinde ara...`}
+            error={!!errors.district}
           />
           {errors.district && <p className="text-[11px] text-rose-500">{errors.district}</p>}
         </div>

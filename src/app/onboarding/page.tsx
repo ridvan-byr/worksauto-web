@@ -106,6 +106,7 @@ export default function OnboardingPage() {
       } else if (formData.taxNumber.length < 10) {
         errs.taxNumber = "Vergi numarası en az 10 hane olmalıdır."
       }
+      if (!formData.city.trim()) errs.city = "İl seçimi zorunludur."
       if (!formData.district.trim()) errs.district = "İlçe zorunludur."
       if (!formData.address.trim()) errs.address = "Açık servis adresi zorunludur."
     }
