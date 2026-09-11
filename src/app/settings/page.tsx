@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Building2, Wrench, Users, Shield, Check, Layers } from "lucide-react"
+import { Building2, Wrench, Users, Shield, Check, Layers, MessageSquare } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/features/auth/auth-context"
 import {
@@ -29,6 +29,7 @@ import { TenantProfileTab } from "@/features/settings/components/tenant-profile-
 import { ServicesTab } from "@/features/settings/components/services-tab"
 import { StaffTab } from "@/features/settings/components/staff-tab"
 import { WorkshopBaysTab } from "@/features/settings/components/workshop-bays-tab"
+import { NotificationSettingsTab } from "@/features/settings/components/notification-settings-tab"
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -55,7 +56,7 @@ export default function SettingsPage() {
   const deleteBayMutation = useDeleteWorkshopBay()
 
   // Tab State
-  const [activeTab, setActiveTab] = React.useState<"profile" | "services" | "staff" | "bays">("profile")
+  const [activeTab, setActiveTab] = React.useState<"profile" | "services" | "staff" | "bays" | "notifications">("profile")
   const [saveSuccess, setSaveSuccess] = React.useState(false)
 
   // Local soft-delete tracking
@@ -309,6 +310,19 @@ export default function SettingsPage() {
           <Layers size={15} />
           <span>İstasyonlar & Liftler</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("notifications")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === "notifications"
+              ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          }`}
+        >
+          <MessageSquare size={15} />
+          <span>Bildirim & WhatsApp</span>
+        </button>
       </div>
 
       {/* Tab Contents */}
@@ -366,6 +380,10 @@ export default function SettingsPage() {
           isUpdating={updateBayMutation.isPending}
           isDeleting={deleteBayMutation.isPending}
         />
+      )}
+
+      {activeTab === "notifications" && (
+        <NotificationSettingsTab />
       )}
     </div>
   )

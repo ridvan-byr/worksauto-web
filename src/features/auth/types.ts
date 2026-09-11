@@ -64,6 +64,9 @@ export interface Tenant {
   criticalStockThreshold?: number
   // Status
   onboardingCompleted: boolean
+  b2bConsentAccepted?: boolean
+  b2bConsentAcceptedAt?: string | null
+  b2bContractVersion?: string
 }
 
 export interface AuthState {

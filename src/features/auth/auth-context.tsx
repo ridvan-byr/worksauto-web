@@ -22,6 +22,7 @@ interface AuthContextType {
   login: (userData: User, tenantData: Tenant) => void
   logout: () => void
   completeOnboarding: (data: Partial<Tenant>) => void
+  completeB2bConsent: (updatedTenant: Partial<Tenant>) => void
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
@@ -185,6 +186,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!currentPath) return
 
     const isAuthRoute = currentPath === "/sign-in" || currentPath === "/login"
+    const isLegalConsentRoute = currentPath === "/legal/consent"
     const isOnboardingRoute = currentPath === "/onboarding"
     const isPublicRoute = currentPath.startsWith("/book")
     const isAdminRoute = currentPath.startsWith("/admin")
@@ -203,6 +205,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // 2. Authenticated users should not see sign-in page
     if (isAuthRoute) {
       router.replace("/")
+      return
+    }
+
+    // 2.5. STRICT GATEKEEPER: B2B Legal KVKK Consent MUST be accepted before anything else!
+    if (tenant.b2bConsentAccepted === false) {
+      if (!isLegalConsentRoute) {
+        router.replace("/legal/consent")
+      }
+      return
+    }
+
+    // If B2B consent is already accepted, do not allow staying on /legal/consent
+    if (tenant.b2bConsentAccepted && isLegalConsentRoute) {
+      router.replace(tenant.onboardingCompleted ? "/" : "/onboarding")
       return
     }
 
@@ -411,6 +427,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.push("/")
   }, [router])
 
+  const completeB2bConsent = React.useCallback((updatedTenant: Partial<Tenant>) => {
+    setTenant((prev) => {
+      if (!prev) return null
+      const updated = {
+        ...prev,
+        ...updatedTenant,
+        b2bConsentAccepted: true,
+        b2bConsentAcceptedAt: new Date().toISOString(),
+      }
+      try {
+        const saved = localStorage.getItem(AUTH_STORAGE_KEY)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          parsed.tenant = updated
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed))
+        }
+      } catch {
+        // ignore
+      }
+      return updated
+    })
+    toast.success("B2B Sözleşmesi ve KVKK Protokolü başarıyla onaylandı!")
+    router.replace("/")
+  }, [router])
+
   const value = React.useMemo(
     () => ({
       user,
@@ -422,8 +463,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       login,
       logout,
       completeOnboarding,
+      completeB2bConsent,
     }),
-    [user, tenant, isLoading, sendOtp, verifyOtp, login, logout, completeOnboarding]
+    [user, tenant, isLoading, sendOtp, verifyOtp, login, logout, completeOnboarding, completeB2bConsent]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
