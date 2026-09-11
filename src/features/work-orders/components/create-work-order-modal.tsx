@@ -4,37 +4,23 @@ import * as React from "react"
 import { createPortal } from "react-dom"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { X, Wrench, Play, ArrowRight, ArrowLeft } from "lucide-react"
+import { X, Wrench, Play, ArrowRight, ArrowLeft, Plus, User, Search, UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { WorkOrder } from "../types"
 import { useCustomers } from "@/features/customers/api/use-customers"
 import { useCreateWorkOrder } from "@/features/work-orders/api/use-work-orders"
 import { useStaff, useWorkshopBays } from "@/features/settings/api/use-settings"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import {
+  CustomerSearchSelect,
+  CustomerOption,
+} from "@/features/appointments/components/customer-search-select"
+import { QuickLeadSubForm } from "@/features/appointments/components/quick-lead-sub-form"
+import {
   createWorkOrderModalSchema,
   CreateWorkOrderModalValues,
 } from "../schemas/work-order.schema"
-
-interface ModalVehicle {
-  id: string
-  plate: string
-  brand: string
-  model: string
-  year?: number
-  kilometer: number
-  vin?: string
-}
-
-interface ModalCustomer {
-  id: string
-  name: string
-  surname?: string
-  phone: string
-  type: "corporate" | "individual"
-  companyTitle?: string
-  vehicles: ModalVehicle[]
-}
 
 interface CreateWorkOrderModalProps {
   isOpen: boolean
@@ -45,6 +31,7 @@ interface CreateWorkOrderModalProps {
 export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkOrderModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const [step, setStep] = React.useState<1 | 2>(1)
+  const [customerMode, setCustomerMode] = React.useState<"search" | "quick-lead">("search")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const { data: apiCustomers } = useCustomers()
@@ -63,13 +50,14 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
     })
   }, [staffList])
 
-  const customers: ModalCustomer[] = React.useMemo(() => {
+  const customers: CustomerOption[] = React.useMemo(() => {
     if (!apiCustomers) return []
     return apiCustomers.map((c) => ({
       id: c.id,
       name: c.firstName || c.name,
       surname: c.lastName || c.surname,
       phone: c.phone,
+      isLead: Boolean(c.isLead),
       type: (c.type === "CORPORATE" || c.type === "corporate") ? "corporate" : "individual",
       companyTitle: c.companyTitle,
       vehicles: (c.vehicles || []).map((v) => ({
@@ -79,7 +67,6 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
         model: v.model,
         year: v.year,
         kilometer: Number(v.kilometer ?? 0),
-        vin: v.vin,
       })),
     }))
   }, [apiCustomers])
@@ -113,26 +100,20 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
     setMounted(true)
   }, [])
 
-  // Auto-select first customer & vehicle if none selected
-  React.useEffect(() => {
-    if (customers.length > 0 && !selectedCustomerId) {
-      setValue("customerId", customers[0].id)
-      if (customers[0].vehicles.length > 0) {
-        setValue("vehicleId", customers[0].vehicles[0].id)
-      }
-    }
-  }, [customers, selectedCustomerId, setValue])
-
   // Sync vehicle when customer changes
   React.useEffect(() => {
+    if (!selectedCustomerId) {
+      setValue("vehicleId", "")
+      return
+    }
     const cust = customers.find((c) => c.id === selectedCustomerId)
     if (cust && cust.vehicles.length > 0) {
-      const exists = cust.vehicles.some((v: ModalVehicle) => v.id === selectedVehicleId)
+      const exists = cust.vehicles.some((v) => v.id === selectedVehicleId)
       if (!exists) {
-        setValue("vehicleId", cust.vehicles[0].id)
+        setValue("vehicleId", cust.vehicles[0].id, { shouldValidate: true })
       }
     } else {
-      setValue("vehicleId", "")
+      setValue("vehicleId", "", { shouldValidate: true })
     }
   }, [selectedCustomerId, selectedVehicleId, customers, setValue])
 
@@ -149,6 +130,13 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId)
   const selectedVehicle = selectedCustomer?.vehicles.find((v) => v.id === selectedVehicleId)
+
+  const handleClose = () => {
+    reset()
+    setStep(1)
+    setCustomerMode("search")
+    onClose()
+  }
 
   const handleNextStep = async () => {
     const isValid = await trigger(["customerId", "vehicleId"])
@@ -191,6 +179,7 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
       onCreated(createdOrder)
       reset()
       setStep(1)
+      setCustomerMode("search")
       onClose()
     } catch (err) {
       console.error("İş emri oluşturulamadı:", err)
@@ -217,14 +206,14 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
                 {step === 1
-                  ? "Randevusuz hızlı kabul yapılacak aracı seçin"
+                  ? "Randevusuz hızlı kabul yapılacak aracı seçin veya anında kaydedin"
                   : "Lift, usta ataması ve yapılacak ilk işlemi belirleyin"}
               </p>
             </div>
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={handleClose}
             className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X size={18} />
@@ -234,51 +223,96 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
         {/* Step 1: Customer & Vehicle */}
         {step === 1 && (
           <div className="p-6 space-y-4 animate-in fade-in duration-200">
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                Müşteri Seçin <span className="text-rose-500">*</span>
-              </label>
-              <select
-                {...register("customerId")}
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-              >
-                {customers.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.type === "corporate" && c.companyTitle
-                      ? c.companyTitle
-                      : `${c.name} ${c.surname || ""}`.trim()}{" "}
-                    ({c.phone})
-                  </option>
-                ))}
-              </select>
+            {/* Mode Switcher Tabs */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <User size={15} className="text-sky-500" />
+                Müşteri Belirleme
+              </span>
+
+              <div className="flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setCustomerMode("search")}
+                  className={cn(
+                    "px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5",
+                    customerMode === "search"
+                      ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                  )}
+                >
+                  <Search size={12} />
+                  <span>Kayıtlı Müşteri Ara</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCustomerMode("quick-lead")}
+                  className={cn(
+                    "px-3 py-1 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1.5",
+                    customerMode === "quick-lead"
+                      ? "bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-xs"
+                      : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+                  )}
+                >
+                  <UserPlus size={13} className="text-amber-500" />
+                  <span>Hızlı Kayıt (Potansiyel)</span>
+                </button>
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                Kabul Edilen Araç <span className="text-rose-500">*</span>
-              </label>
-              <select
-                {...register("vehicleId")}
-                className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-              >
-                {selectedCustomer?.vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.plate} — {v.brand} {v.model} (
-                    {Number(v.kilometer ?? 0).toLocaleString("tr-TR")} KM)
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {errors.customerId && (
-              <p className="text-[11px] text-rose-500 font-medium">{errors.customerId.message}</p>
+            {customerMode === "search" ? (
+              <CustomerSearchSelect
+                customers={customers}
+                selectedCustomerId={selectedCustomerId}
+                selectedVehicleId={selectedVehicleId}
+                onSelectCustomer={(id) => setValue("customerId", id, { shouldValidate: true })}
+                onSelectVehicle={(id) => setValue("vehicleId", id, { shouldValidate: true })}
+                onSwitchToQuickLead={() => setCustomerMode("quick-lead")}
+                customerError={errors.customerId?.message}
+                vehicleError={errors.vehicleId?.message}
+              />
+            ) : (
+              <QuickLeadSubForm
+                onSuccess={(cust, veh) => {
+                  setValue("customerId", cust.id, { shouldValidate: true })
+                  setValue("vehicleId", veh.id, { shouldValidate: true })
+                  setCustomerMode("search")
+                }}
+                onCancel={() => setCustomerMode("search")}
+                submitLabel="Kaydet ve İş Emrine Seç"
+                description="Servise ilk kez gelen müşteri ve aracı tek adımda kaydedip doğrudan iş emri başlatın."
+              />
             )}
-            {errors.vehicleId && (
-              <p className="text-[11px] text-rose-500 font-medium">{errors.vehicleId.message}</p>
-            )}
 
+            {customerMode === "search" && (
+              <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800/80 flex justify-end gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleClose}
+                  className="h-10 px-4 text-xs font-semibold cursor-pointer"
+                >
+                  Vazgeç
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleNextStep}
+                  disabled={!selectedCustomerId || !selectedVehicleId}
+                  className="h-10 px-5 text-xs font-semibold gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  <span>Atölye Detaylarına Geç</span>
+                  <ArrowRight size={14} />
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Step 2: Workshop Operations */}
+        {step === 2 && (
+          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 animate-in fade-in duration-200">
             {selectedVehicle && (
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
+              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5">
                   <PlateBadge plate={selectedVehicle.plate} size="sm" />
                   <div>
@@ -286,38 +320,22 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                       {selectedVehicle.brand} {selectedVehicle.model}
                     </p>
                     <p className="text-[10px] text-slate-400 font-mono">
-                      {Number(selectedVehicle.kilometer ?? 0).toLocaleString("tr-TR")} KM •{" "}
-                      {selectedCustomer?.phone}
+                      {selectedCustomer?.type === "corporate" && selectedCustomer.companyTitle
+                        ? selectedCustomer.companyTitle
+                        : `${selectedCustomer?.name} ${selectedCustomer?.surname || ""}`.trim()}{" "}
+                      • {selectedCustomer?.phone}
                     </p>
                   </div>
                 </div>
+                <button
+                  type="button"
+                  onClick={() => setStep(1)}
+                  className="text-[11px] text-sky-600 dark:text-sky-400 font-semibold hover:underline cursor-pointer"
+                >
+                  Değiştir
+                </button>
               </div>
             )}
-
-            <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800/80 flex justify-end gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onClose}
-                className="h-10 px-4 text-xs font-semibold cursor-pointer"
-              >
-                Vazgeç
-              </Button>
-              <Button
-                type="button"
-                onClick={handleNextStep}
-                className="h-10 px-5 text-xs font-semibold gap-1.5 cursor-pointer"
-              >
-                <span>Atölye Detaylarına Geç</span>
-                <ArrowRight size={14} />
-              </Button>
-            </div>
-          </div>
-        )}
-
-        {/* Step 2: Workshop Operations */}
-        {step === 2 && (
-          <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4 animate-in fade-in duration-200">
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">

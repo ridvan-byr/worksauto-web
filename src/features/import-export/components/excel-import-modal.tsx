@@ -23,6 +23,7 @@ import {
   ChevronDown,
   Zap,
   RefreshCw,
+  SlidersHorizontal,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
@@ -511,6 +512,7 @@ export function ExcelImportModal({
   const colLetters = ["A", "B", "C", "D", "E", "F", "G", "H", "I", "J"]
 
   // Renderer for a clean mapping row
+  // Renderer for a clean minimal mapping row
   const renderFieldRow = (
     fieldKey: string,
     label: string,
@@ -522,51 +524,40 @@ export function ExcelImportModal({
       ? getColumnSampleValues(currentExcelHeader, fileRows, 3)
       : []
 
-    const tooltipText = [
-      description,
-      sampleValues.length > 0 ? `Canlı Örnekler: ${sampleValues.join(", ")}` : null,
-    ]
-      .filter(Boolean)
-      .join(" • ")
+    // Metnin üzerine gelindiğinde görünecek ipucu (tooltip)
+    const tooltipParts: string[] = []
+    if (description) {
+      tooltipParts.push(description)
+    }
+    if (currentExcelHeader && sampleValues.length > 0) {
+      tooltipParts.push(`Excel Örnekleri: ${sampleValues.join(", ")}`)
+    }
+    const tooltipText = tooltipParts.length > 0 ? tooltipParts.join(" • ") : label
 
     return (
       <div
         key={fieldKey}
-        className={cn(
-          "px-4 py-2.5 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3",
-          currentExcelHeader
-            ? "bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-800 shadow-2xs"
-            : isRequired
-            ? "bg-rose-50/40 dark:bg-rose-950/15 border-rose-200/80 dark:border-rose-900/40"
-            : "bg-slate-50/60 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/60"
-        )}
+        className="py-2.5 px-3.5 rounded-xl hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/60 last:border-b-0"
       >
-        {/* Sol: Alan Başlığı (Üzerine gelindiğinde açıklama & örnekler çıkar) */}
-        <div className="flex items-center gap-1.5">
+        {/* Sol: Alan Başlığı & İpucu (Üzerine gelindiğinde ipucu/örnek değerler açılır) */}
+        <div className="flex items-center gap-1.5 min-w-0">
           <span
-            className={cn(
-              "text-xs font-bold text-slate-900 dark:text-slate-100",
-              tooltipText && "cursor-help underline decoration-dotted decoration-slate-400/50 underline-offset-4"
-            )}
-            title={tooltipText || label}
+            className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate cursor-help border-b border-dotted border-slate-300/80 dark:border-slate-700/80 hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+            title={tooltipText}
           >
             {label}
           </span>
+          {isRequired && (
+            <span className="text-xs font-bold text-rose-500 shrink-0" title="Zorunlu Alan">
+              *
+            </span>
+          )}
         </div>
 
-        {/* Sağ: Sütun Seçici (Üzerine gelindiğinde canlı örnekler çıkar) */}
-        <div className="w-full sm:w-80 shrink-0">
+        {/* Sağ: Sütun Seçici & Yeşil Onay Rozeti */}
+        <div className="flex items-center gap-2 w-full sm:w-72 shrink-0">
           <select
             value={currentExcelHeader}
-            title={
-              sampleValues.length > 0
-                ? `Dosyadaki Canlı Örnekler: ${sampleValues.join(", ")}`
-                : currentExcelHeader
-                ? "Bu sütunda örnek veri bulunamadı"
-                : isRequired
-                ? "Zorunlu alan - Lütfen Excel dosyanızdaki sütunu seçiniz"
-                : "İsteğe bağlı alan"
-            }
             onChange={(e) => {
               const val = e.target.value
               setMappings((prev) => {
@@ -582,14 +573,14 @@ export function ExcelImportModal({
             className={cn(
               "w-full h-9 px-3 rounded-xl border text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer transition-colors [color-scheme:light] dark:[color-scheme:dark]",
               currentExcelHeader
-                ? "border-sky-500 bg-sky-50/50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-semibold ring-1 ring-sky-500/20"
+                ? "border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold"
                 : isRequired
-                ? "border-rose-300 dark:border-rose-800 bg-white dark:bg-slate-900 text-rose-600 dark:text-rose-400"
-                : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400"
+                ? "border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10 text-rose-600 dark:text-rose-400"
+                : "border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-slate-400"
             )}
           >
-            <option value="" className="bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 py-1">
-              -- Eşleştirilmedi / Boş Bırak --
+            <option value="" className="bg-white dark:bg-slate-900 text-slate-400 py-1">
+              -- Eşleştirilmedi --
             </option>
             {fileHeaders.map((header) => (
               <option
@@ -601,6 +592,13 @@ export function ExcelImportModal({
               </option>
             ))}
           </select>
+          {currentExcelHeader ? (
+            <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <Check size={12} strokeWidth={3} />
+            </div>
+          ) : (
+            <div className="w-5 shrink-0" />
+          )}
         </div>
       </div>
     )
@@ -749,335 +747,449 @@ export function ExcelImportModal({
           )}
 
           {/* STEP 2: SIMPLE FAST-TRACK READY CARD */}
+          {/* STEP 2: SIMPLE FAST-TRACK READY CARD (MINIMAL & UNIFIED) */}
           {currentStep === "simple_ready" && (
-            <div className="space-y-5 animate-in fade-in zoom-in-95 duration-200">
-              {/* Celebratory Banner */}
-              <div className="p-5 rounded-3xl bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/20 text-center space-y-2">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto shadow-inner">
-                  <Sparkles size={24} />
+            <div className="space-y-4 animate-in fade-in duration-200">
+              {/* 1. Üst Durum Çubuğu */}
+              <div className="p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <CheckCircle2 size={20} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        Dosya Başarıyla Çözümlendi
+                      </h3>
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        {validRowCount} Kayıt Hazır
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">{fileName}</span> dosyasındaki zorunlu alanlar otomatik eşleştirildi.
+                    </p>
+                  </div>
                 </div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                  Dosyanız Başarıyla Çözümlendi! 🎉
-                </h3>
-                <p className="text-xs text-slate-600 dark:text-slate-300 max-w-md mx-auto">
-                  Sistemimiz <strong>{fileName}</strong> dosyanızdaki sütunları otomatik eşleştirdi ve{" "}
-                  <strong>{validRowCount}</strong> adet geçerli müşteri & araç kaydını aktarıma hazır hale getirdi.
-                </p>
+
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep("advanced_mapping")}
+                  className="text-xs font-semibold text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-2xs hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors cursor-pointer self-start sm:self-auto shrink-0"
+                >
+                  <SlidersHorizontal size={13} className="text-slate-400" />
+                  <span>Sütunları Düzenle</span>
+                </button>
               </div>
 
-              {/* Quick Summary Cards of the Matched Mandatory Columns */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                {/* Plaka */}
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400">Araç Plakası</span>
-                    <CheckCircle2 size={14} className="text-emerald-500" />
-                  </div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                    Sütun: &ldquo;{mappings.plate}&rdquo;
-                  </p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                    Örnek: {samplePlate || "-"}
-                  </p>
+              {/* 2. Eşleşen Bilgiler Özeti (Tek ve Şık Liste Kartı) */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-2xs">
+                <div className="px-4 py-2.5 bg-slate-50/70 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                    Otomatik Eşleşen Bilgiler
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    İpucu için alan adına gelebilirsiniz
+                  </span>
                 </div>
 
-                {/* Telefon */}
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400">İletişim / Tel</span>
-                    <CheckCircle2 size={14} className="text-emerald-500" />
+                <div className="p-2 divide-y divide-slate-100 dark:divide-slate-800/60">
+                  {/* Plaka */}
+                  <div className="py-2.5 px-3 flex items-center justify-between gap-3 text-xs">
+                    <span
+                      className="font-medium text-slate-700 dark:text-slate-300 cursor-help border-b border-dotted border-slate-300/80 dark:border-slate-700/80 hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                      title={`Resmi Araç Plakası • Excel Örneği: ${samplePlate || "-"}`}
+                    >
+                      Araç Plakası *
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                        Sütun: <strong className="text-slate-900 dark:text-slate-100 font-semibold">{mappings.plate}</strong>
+                      </span>
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <Check size={12} strokeWidth={3} />
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                    Sütun: &ldquo;{mappings.phone || mappings.companyTitle}&rdquo;
-                  </p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                    Örnek: {samplePhone || "-"}
-                  </p>
+
+                  {/* Telefon */}
+                  <div className="py-2.5 px-3 flex items-center justify-between gap-3 text-xs">
+                    <span
+                      className="font-medium text-slate-700 dark:text-slate-300 cursor-help border-b border-dotted border-slate-300/80 dark:border-slate-700/80 hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                      title={`İletişim Numarası • Excel Örneği: ${samplePhone || "-"}`}
+                    >
+                      İletişim / Telefon *
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                        Sütun: <strong className="text-slate-900 dark:text-slate-100 font-semibold">{mappings.phone || mappings.companyTitle}</strong>
+                      </span>
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <Check size={12} strokeWidth={3} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Müşteri Adı */}
+                  <div className="py-2.5 px-3 flex items-center justify-between gap-3 text-xs">
+                    <span
+                      className="font-medium text-slate-700 dark:text-slate-300 cursor-help border-b border-dotted border-slate-300/80 dark:border-slate-700/80 hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                      title={`Müşteri Adı / Ünvanı • Excel Örneği: ${sampleName || "-"}`}
+                    >
+                      Müşteri Adı Soyadı *
+                    </span>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px] font-mono text-slate-500 dark:text-slate-400">
+                        Sütun:{" "}
+                        <strong className="text-slate-900 dark:text-slate-100 font-semibold">
+                          {nameMode === "single"
+                            ? mappings.fullName || mappings.companyTitle
+                            : `${mappings.firstName || ""} + ${mappings.lastName || ""}`}
+                        </strong>
+                      </span>
+                      <div className="w-5 h-5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <Check size={12} strokeWidth={3} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Ek Alanlar (Varsa tek bir satırda gösterilir) */}
+                  {mappedOptionalCount > 0 && (
+                    <div className="py-2.5 px-3 flex items-center justify-between gap-3 text-xs">
+                      <span className="text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                        <Car size={14} className="text-slate-400" />
+                        <span>Ek Araç / Müşteri Alanları</span>
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                          {mappedOptionalCount} alan eşleşti (Marka, Model, KM vb.)
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setCurrentStep("advanced_mapping")}
+                          className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer ml-1"
+                        >
+                          Gör
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Müşteri */}
-                <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-semibold text-slate-400">Müşteri Adı</span>
-                    <CheckCircle2 size={14} className="text-emerald-500" />
+                {/* 3. Mükerrer Kayıt Stratejisi (Kartın Alt Satırı Olarak Bütünleşik) */}
+                <div className="px-4 py-3 bg-slate-50/50 dark:bg-slate-950/50 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 text-xs">
+                  <div className="flex items-center gap-2">
+                    <RefreshCw size={13} className="text-slate-400 shrink-0" />
+                    <span className="text-slate-600 dark:text-slate-400 text-[11px] sm:text-xs">
+                      Mevcut kayıt tespit edildiğinde:
+                    </span>
                   </div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                    Sütun: &ldquo;
-                    {nameMode === "single"
-                      ? mappings.fullName || mappings.companyTitle
-                      : `${mappings.firstName || ""} + ${mappings.lastName || ""}`}
-                    &rdquo;
-                  </p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                    Örnek: {sampleName || "-"}
-                  </p>
+                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80 shrink-0 self-end sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => setDuplicateStrategy("skip")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer",
+                        duplicateStrategy === "skip"
+                          ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs font-bold"
+                          : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                      )}
+                    >
+                      Mevcutu Koru
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDuplicateStrategy("update")}
+                      className={cn(
+                        "px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer",
+                        duplicateStrategy === "update"
+                          ? "bg-amber-500 text-white shadow-2xs font-bold"
+                          : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                      )}
+                    >
+                      Bilgileri Güncelle
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {/* Secondary details badge if other fields were auto-mapped */}
-              {mappedOptionalCount > 0 && (
-                <div className="p-3 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-xs text-sky-700 dark:text-sky-300 flex items-center justify-between">
-                  <span className="flex items-center gap-1.5 font-medium">
-                    <CheckCircle2 size={14} className="text-sky-500" />
-                    Ayrıca {mappedOptionalCount} ek alan (Marka, Model, Yıl, KM vb.) otomatik olarak eşleştirildi.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep("advanced_mapping")}
-                    className="text-[11px] font-bold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
-                  >
-                    Gör & Düzenle
-                  </button>
-                </div>
-              )}
+              {/* 4. İşlem Butonları (Kutudan Arındırılmış Temiz Buton Grubu) */}
+              <div className="pt-2 flex flex-col sm:flex-row items-center justify-end gap-2.5">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setPreviewSource("simple_ready")
+                    setCurrentStep("preview_table")
+                  }}
+                  className="w-full sm:w-auto h-10 px-4 text-xs font-semibold gap-1.5 cursor-pointer bg-white dark:bg-slate-900"
+                >
+                  <TableIcon size={14} className="text-sky-500" />
+                  <span>Önizleme & Düzenleme</span>
+                </Button>
 
-              {/* Duplicate Strategy Option */}
-              <div className="flex flex-col sm:flex-row items-center justify-between p-3 px-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 gap-2.5 text-left">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <RefreshCw size={13} className="text-sky-500" />
-                    Mevcut Kayıt Stratejisi
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
-                    Sistemde olan plaka veya telefon tespit edildiğinde:
-                  </span>
-                </div>
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => setDuplicateStrategy("skip")}
-                    className={cn(
-                      "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                      duplicateStrategy === "skip"
-                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/60 dark:border-slate-700/60 font-bold"
-                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                    )}
-                  >
-                    Mevcutu Koru
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setDuplicateStrategy("update")}
-                    className={cn(
-                      "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                      duplicateStrategy === "update"
-                        ? "bg-amber-600 text-white shadow-sm font-bold"
-                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                    )}
-                  >
-                    Bilgileri Güncelle
-                  </button>
-                </div>
-              </div>
-
-              {/* Fast Action Container */}
-              <div className="p-5 rounded-3xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40 space-y-3 text-center">
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Dosyanızı hemen aktarabilir veya aktarmadan önce canlı Excel tablosunda inceleyebilirsiniz.
-                </p>
-
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-1">
-                  <Button
-                    type="button"
-                    onClick={handleExecuteImport}
-                    disabled={batchImportMutation.isPending || validRowCount === 0}
-                    className="w-full sm:w-auto h-11 px-8 text-xs font-bold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-lg shadow-emerald-600/25 transition-all hover:scale-[1.02]"
-                  >
-                    {batchImportMutation.isPending ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        <span>İçe Aktarılıyor...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Zap size={16} />
-                        <span>Hemen İçe Aktar ({validRowCount} Kayıt)</span>
-                      </>
-                    )}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setPreviewSource("simple_ready")
-                      setCurrentStep("preview_table")
-                    }}
-                    className="w-full sm:w-auto h-11 px-5 text-xs font-semibold gap-1.5 cursor-pointer bg-white dark:bg-slate-900"
-                  >
-                    <TableIcon size={15} className="text-sky-500" />
-                    <span>Önizleme & Düzenleme</span>
-                  </Button>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep("advanced_mapping")}
-                    className="text-xs font-semibold text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 hover:underline inline-flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <Settings2 size={13} className="text-slate-400" />
-                    <span>Gelişmiş Eşleştirme Ayarlarına Git</span>
-                  </button>
-                </div>
+                <Button
+                  type="button"
+                  onClick={handleExecuteImport}
+                  disabled={batchImportMutation.isPending || validRowCount === 0}
+                  className="w-full sm:w-auto h-10 px-6 text-xs font-semibold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-md shadow-emerald-600/20 transition-all"
+                >
+                  {batchImportMutation.isPending ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>İçe Aktarılıyor...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Zap size={14} />
+                      <span>Hemen İçe Aktar ({validRowCount} Kayıt)</span>
+                    </>
+                  )}
+                </Button>
               </div>
             </div>
           )}
 
-          {/* STEP 3: REDESIGNED CLEAN UNIFIED MAPPING SCREEN */}
+          {/* STEP 3: CLEAN & MINIMAL UNIFIED MAPPING SCREEN (TOP TABLE PRESERVED) */}
           {currentStep === "advanced_mapping" && (
             <div className="space-y-4 animate-in fade-in duration-200">
               
-              {/* Top Banner: File Summary & Header Row Controls */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
-                    <FileSpreadsheet size={18} />
+              {/* 1. ÜST KISIM: CANLI EXCEL VERİ TABLOSU ÖNİZLEMESİ (Kullanıcının İstediği Tablo) */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-2xs">
+                {/* Tablo Üst Çubuğu */}
+                <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                      {fileName}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-400 shrink-0">
+                      {fileRows.length} Satır • {fileHeaders.length} Sütun
+                    </span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        {fileName}
-                      </span>
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                        {fileRows.length} Satır • {fileHeaders.length} Sütun
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 mt-0.5">
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 hidden sm:inline">
                       Başlık Satırı: <strong>{selectedHeaderRowIndex + 1}. Satır</strong>
-                    </p>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowHeaderPicker((prev) => !prev)}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/30 transition-colors cursor-pointer"
+                    >
+                      {showHeaderPicker ? "Seçimi Kapat" : "Başlığı Değiştir"}
+                    </button>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowHeaderPicker((prev) => !prev)}
-                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1.5 transition-colors cursor-pointer"
-                  >
-                    <TableIcon size={13} className="text-sky-500" />
-                    <span>{showHeaderPicker ? "Tabloyu Gizle" : "Başlık Satırını Değiştir"}</span>
-                    <ChevronDown
-                      size={13}
-                      className={cn("transition-transform duration-200", showHeaderPicker && "rotate-180")}
-                    />
-                  </button>
+                {/* Tablo Gövdesi */}
+                <div className="overflow-x-auto max-h-44 overflow-y-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-slate-50/70 dark:bg-slate-950/70 text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 text-[10px] font-mono sticky top-0 backdrop-blur-xs">
+                        <th className="px-2.5 py-1.5 text-center w-12 border-r border-slate-100 dark:border-slate-800/80">
+                          #
+                        </th>
+                        {colLetters.slice(0, previewColCount).map((l, cIdx) => (
+                          <th key={l} className="px-2.5 py-1.5 min-w-[110px] border-r border-slate-100 dark:border-slate-800/80 truncate font-semibold">
+                            {l}: {fileHeaders[cIdx] || `Sütun ${l}`}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-mono text-[11px]">
+                      {previewRows.slice(0, 6).map((r, idx) => {
+                        const isHeader = idx === selectedHeaderRowIndex
+                        return (
+                          <tr
+                            key={idx}
+                            onClick={() => showHeaderPicker && handleSelectHeaderRow(idx)}
+                            className={cn(
+                              "transition-colors",
+                              showHeaderPicker && "cursor-pointer hover:bg-sky-50/50 dark:hover:bg-sky-950/30",
+                              isHeader
+                                ? "bg-emerald-500/10 dark:bg-emerald-950/30 font-semibold text-emerald-900 dark:text-emerald-200"
+                                : "text-slate-700 dark:text-slate-300"
+                            )}
+                          >
+                            <td className="px-2.5 py-1 text-center border-r border-slate-100 dark:border-slate-800/80 text-[10px]">
+                              {isHeader ? (
+                                <span className="px-1 py-0.2 rounded bg-emerald-500 text-white font-bold text-[9px]">
+                                  Başlık
+                                </span>
+                              ) : (
+                                idx + 1
+                              )}
+                            </td>
+                            {Array.from({ length: previewColCount }).map((_, cIdx) => (
+                              <td
+                                key={cIdx}
+                                className="px-2.5 py-1 border-r border-slate-100 dark:border-slate-800/80 truncate max-w-[140px]"
+                              >
+                                {Array.isArray(r) && r[cIdx] !== undefined ? String(r[cIdx]) : "-"}
+                              </td>
+                            ))}
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              {/* Collapsible Header Row Selector (Shown only if user clicks to change header row) */}
-              {showHeaderPicker && (
-                <div className="p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                      <TableIcon size={14} className="text-sky-500" />
-                      Başlık Satırı Olarak Kullanmak İstediğiniz Satıra Tıklayın:
-                    </span>
-                    <span className="text-[10px] text-slate-400">İlk 10 satır listelenmiştir</span>
-                  </div>
-
-                  <div className="overflow-x-auto max-h-[220px] overflow-y-auto rounded-xl border border-slate-200/80 dark:border-slate-800">
-                    <table className="w-full text-left border-collapse text-xs">
-                      <thead>
-                        <tr className="bg-slate-50 dark:bg-slate-950 text-slate-400 border-b border-slate-200 dark:border-slate-800 font-mono text-[10px]">
-                          <th className="px-2 py-1.5 text-center w-14">Satır</th>
-                          {colLetters.slice(0, previewColCount).map((l) => (
-                            <th key={l} className="px-2 py-1.5 min-w-[100px]">
-                              Sütun {l}
-                            </th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                        {previewRows.map((r, idx) => {
-                          const isSelected = idx === selectedHeaderRowIndex
-                          return (
-                            <tr
-                              key={idx}
-                              onClick={() => handleSelectHeaderRow(idx)}
-                              className={cn(
-                                "cursor-pointer transition-colors text-xs",
-                                isSelected
-                                  ? "bg-emerald-500/15 dark:bg-emerald-950/40 font-bold text-emerald-900 dark:text-emerald-100"
-                                  : "hover:bg-slate-100/70 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300"
-                              )}
-                            >
-                              <td className="px-2 py-1.5 text-center font-mono font-bold">
-                                {isSelected ? (
-                                  <span className="px-1.5 py-0.5 rounded-md bg-emerald-500 text-white text-[10px]">
-                                    ✓ {idx + 1}
-                                  </span>
-                                ) : (
-                                  idx + 1
-                                )}
-                              </td>
-                              {Array.from({ length: previewColCount }).map((_, cIdx) => (
-                                <td key={cIdx} className="px-2 py-1.5 font-mono text-[11px] truncate max-w-[130px]">
-                                  {Array.isArray(r) && r[cIdx] !== undefined ? String(r[cIdx]) : "-"}
-                                </td>
-                              ))}
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-
-              {/* Sufficiency Status Alert */}
-              {!isReadyToProceed ? (
-                <div className="p-3 rounded-2xl bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/40 flex items-start gap-2.5 text-xs text-amber-900 dark:text-amber-200">
-                  <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <span className="font-bold">Eksik Zorunlu Alanlar Bulunuyor</span>
-                    <p className="text-[11px] text-amber-700 dark:text-amber-300 mt-0.5">
-                      İlerlemek için lütfen aşağıdaki kırmızı ile işaretlenmiş alanları dosyanızdaki uygun sütunla eşleştirin:{" "}
-                      <strong>{sufficiency.missingRequired.join(", ")}</strong>.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-3 rounded-2xl bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/40 flex items-center justify-between gap-2.5 text-xs text-emerald-900 dark:text-emerald-200">
+              {/* 2. ORTA KISIM: SÜTUN EŞLEŞTİRME (Minimal, Sade 2-Sütunlu Liste) */}
+              <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 overflow-hidden shadow-2xs">
+                {/* Eşleştirme Başlığı ve Durum Rozeti */}
+                <div className="px-4 py-3 bg-slate-50/70 dark:bg-slate-950/70 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    <ShieldCheck size={16} className="text-emerald-500 shrink-0" />
-                    <span className="font-bold">
-                      Tüm zorunlu alanlar eşleştirildi! Dilerseniz doğrudan hızlı kuruluma dönebilir veya önizlemeye geçebilirsiniz.
-                    </span>
+                    <SlidersHorizontal size={14} className="text-sky-500" />
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Sütun Eşleştirme
+                    </h3>
                   </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentStep("simple_ready")}
-                    className="h-7 px-2.5 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 border-emerald-500/40 hover:bg-emerald-500/20 shrink-0 cursor-pointer bg-white dark:bg-slate-900"
-                  >
-                    <Zap size={12} className="mr-1" />
-                    Hızlı Kuruluma Dön
-                  </Button>
-                </div>
-              )}
 
-              {/* Duplicate Strategy Option in Advanced Mapping */}
-              <div className="flex flex-col sm:flex-row items-center justify-between p-3.5 px-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 gap-2.5 text-left">
-                <div className="space-y-0.5">
-                  <span className="text-xs font-semibold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                    <RefreshCw size={13} className="text-sky-500" />
-                    Mükerrer Kayıt Stratejisi
-                  </span>
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
-                    Sistemde zaten kayıtlı olan plaka veya telefon tespit edildiğinde ne yapılsın?
+                  {isReadyToProceed ? (
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+                      <CheckCircle2 size={12} />
+                      <span>Zorunlu Alanlar Eşleşti</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+                      <AlertCircle size={12} />
+                      <span>{sufficiency.missingRequired.length} Zorunlu Alan Eksik</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="p-2 space-y-0.5">
+                  {/* Araç Plakası */}
+                  {renderFieldRow("plate", "Araç Plakası", "Resmi araç plakası", true)}
+
+                  {/* Telefon Numarası */}
+                  {renderFieldRow("phone", "Telefon Numarası", "Müşteri iletişim numarası", true)}
+
+                  {/* Müşteri İsim Formatı ve Alan Seçimi */}
+                  <div className="py-2.5 px-3.5 rounded-xl hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800/60">
+                    <span
+                      className="text-xs font-semibold text-slate-900 dark:text-slate-100 cursor-help border-b border-dotted border-slate-300/80 dark:border-slate-700/80 hover:border-sky-500 hover:text-sky-600 dark:hover:text-sky-400 transition-colors"
+                      title="Excel tablonuzda müşteri isimleri tek bir sütunda mı (Ahmet Yılmaz) yoksa iki ayrı sütunda mı (Ad, Soyad) yer alıyor?"
+                    >
+                      Müşteri İsim Formatı
+                    </span>
+                    <div className="flex items-center p-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700/80 text-[11px] shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNameMode("single")
+                          setMappings((prev) => {
+                            const copy = { ...prev }
+                            delete copy.firstName
+                            delete copy.lastName
+                            return copy
+                          })
+                        }}
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-md font-semibold transition-all cursor-pointer",
+                          nameMode === "single"
+                            ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-2xs font-bold"
+                            : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                        )}
+                      >
+                        Tek Sütun (Ad Soyad)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNameMode("split")
+                          setMappings((prev) => {
+                            const copy = { ...prev }
+                            delete copy.fullName
+                            return copy
+                          })
+                        }}
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-md font-semibold transition-all cursor-pointer",
+                          nameMode === "split"
+                            ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-2xs font-bold"
+                            : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                        )}
+                      >
+                        Ayrı Sütunlar (Ad + Soyad)
+                      </button>
+                    </div>
+                  </div>
+
+                  {nameMode === "single" ? (
+                    renderFieldRow("fullName", "Müşteri Adı Soyadı", "Örn: Ahmet Yılmaz", true)
+                  ) : (
+                    <>
+                      {renderFieldRow("firstName", "Müşteri Adı", "Örn: Ahmet", true)}
+                      {renderFieldRow("lastName", "Müşteri Soyadı", "Örn: Yılmaz", true)}
+                    </>
+                  )}
+                </div>
+
+                {/* Akordeon: İsteğe Bağlı Ek Bilgiler */}
+                <div className="border-t border-slate-200 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowOptionalFields((prev) => !prev)}
+                    className="w-full p-3 px-4 flex items-center justify-between text-left hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Car size={14} className="text-slate-400" />
+                      <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                        İsteğe Bağlı Ek Bilgiler (Marka, Model, Yıl, KM, Şasi vb.)
+                      </span>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        ({mappedOptionalCount} alan eşleşti)
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-1 text-xs font-medium text-slate-400">
+                      <span>{showOptionalFields ? "Gizle" : "Genişlet"}</span>
+                      <ChevronDown
+                        size={14}
+                        className={cn("transition-transform duration-200", showOptionalFields && "rotate-180")}
+                      />
+                    </div>
+                  </button>
+
+                  {showOptionalFields && (
+                    <div className="p-2 border-t border-slate-100 dark:border-slate-800/60 bg-slate-50/30 dark:bg-slate-950/20">
+                      {renderFieldRow("brand", "Araç Markası", "Örn: Renault, Fiat, Volkswagen")}
+                      {renderFieldRow("model", "Araç Modeli", "Örn: Megane, Egea, Passat")}
+                      {renderFieldRow("year", "Model Yılı", "Örn: 2022, 2020")}
+                      {renderFieldRow("kilometer", "Güncel KM", "Örn: 85000")}
+                      {renderFieldRow("vin", "Şasi Numarası (VIN)", "17 haneli şasi no")}
+                      {renderFieldRow("fuelType", "Yakıt Tipi", "Benzin, Dizel, LPG vb.")}
+                      {renderFieldRow("transmission", "Vites Türü", "Manuel, Otomatik")}
+                      {renderFieldRow("companyTitle", "Şirket Ünvanı", "Kurumsal müşteriler için")}
+                      {renderFieldRow("email", "E-Posta Adresi", "İletişim e-posta")}
+                      {renderFieldRow("taxNumber", "Vergi Kimlik No (VKN / TCKN)", "Vergi veya kimlik no")}
+                      {renderFieldRow("taxOffice", "Vergi Dairesi", "Vergi dairesi adı")}
+                      {renderFieldRow("notes", "Müşteri / Servis Notu", "Özel notlar ve açıklamalar")}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* 3. MÜKERRER KAYIT STRATEJİSİ (Sade & Kompakt) */}
+              <div className="flex items-center justify-between p-3 px-4 rounded-2xl bg-slate-50/60 dark:bg-slate-900/40 border border-slate-200/80 dark:border-slate-800 text-xs">
+                <div className="flex items-center gap-2">
+                  <RefreshCw size={13} className="text-slate-400 shrink-0" />
+                  <span className="text-slate-600 dark:text-slate-400">
+                    Sistemde zaten kayıtlı olan plaka veya telefon varsa:
                   </span>
                 </div>
-                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700/80 shrink-0">
+                <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg border border-slate-200/80 dark:border-slate-700/80 shrink-0">
                   <button
                     type="button"
                     onClick={() => setDuplicateStrategy("skip")}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                      "px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer",
                       duplicateStrategy === "skip"
-                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/60 dark:border-slate-700/60 font-bold"
-                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                        ? "bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 shadow-2xs font-bold"
+                        : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                     )}
                   >
                     Mevcutu Koru (Atla)
@@ -1086,166 +1198,15 @@ export function ExcelImportModal({
                     type="button"
                     onClick={() => setDuplicateStrategy("update")}
                     className={cn(
-                      "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer",
+                      "px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer",
                       duplicateStrategy === "update"
-                        ? "bg-amber-600 text-white shadow-sm font-bold"
-                        : "text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                        ? "bg-amber-500 text-white shadow-2xs font-bold"
+                        : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
                     )}
                   >
                     Bilgileri Güncelle
                   </button>
                 </div>
-              </div>
-
-              {/* CARD 1: ZORUNLU ALANLAR (TEMEL BİLGİLER - SADE & NET) */}
-              <div className="rounded-3xl border border-rose-200/80 dark:border-rose-900/40 overflow-hidden bg-rose-50/20 dark:bg-rose-950/10">
-                <div className="p-3.5 bg-rose-100/50 dark:bg-rose-900/30 border-b border-rose-200/60 dark:border-rose-900/40 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                    <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 uppercase tracking-wider">
-                      1. Zorunlu Temel Bilgiler
-                    </h4>
-                  </div>
-                  <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400">
-                    Aktarım için şarttır
-                  </span>
-                </div>
-
-                <div className="p-4 space-y-3">
-                  {/* Araç Plakası */}
-                  {renderFieldRow(
-                    "plate",
-                    "Araç Plakası",
-                    "Resmi araç plaka sütunu (Örn: 34 ABC 123)",
-                    true
-                  )}
-
-                  {/* Telefon Numarası */}
-                  {renderFieldRow(
-                    "phone",
-                    "Telefon Numarası",
-                    "Müşteri iletişim numarası (Örn: 0532 123 45 67)",
-                    true
-                  )}
-
-                  {/* Müşteri İsim Yapısı & Seçici */}
-                  <div className="px-4 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 space-y-2.5">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className="text-xs font-bold text-slate-900 dark:text-slate-100 cursor-help underline decoration-dotted decoration-slate-400/50 underline-offset-4"
-                          title="Excel dosyanızda ad ve soyad tek sütunda mı yoksa iki ayrı sütunda mı yer alıyor?"
-                        >
-                          Müşteri İsim Formatı
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNameMode("single")
-                            setMappings((prev) => {
-                              const copy = { ...prev }
-                              delete copy.firstName
-                              delete copy.lastName
-                              return copy
-                            })
-                          }}
-                          className={cn(
-                            "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                            nameMode === "single"
-                              ? "bg-sky-500 text-white shadow-xs"
-                              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                          )}
-                        >
-                          Tek Sütun (Ad Soyad)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNameMode("split")
-                            setMappings((prev) => {
-                              const copy = { ...prev }
-                              delete copy.fullName
-                              return copy
-                            })
-                          }}
-                          className={cn(
-                            "px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer",
-                            nameMode === "split"
-                              ? "bg-sky-500 text-white shadow-xs"
-                              : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                          )}
-                        >
-                          Ayrı Sütunlar (Ad + Soyad)
-                        </button>
-                      </div>
-                    </div>
-
-                    {nameMode === "single" ? (
-                      renderFieldRow(
-                        "fullName",
-                        "Müşteri Adı Soyadı",
-                        "Örn: Ahmet Yılmaz veya Fatma Zehra Kaya Yılmaz (Akıllı isim ayrıştırma uygulanır)",
-                        true
-                      )
-                    ) : (
-                      <div className="space-y-2 pt-1">
-                        {renderFieldRow("firstName", "Müşteri Adı", "Örn: Ahmet veya Fatma", true)}
-                        {renderFieldRow("lastName", "Müşteri Soyadı", "Örn: Yılmaz veya Kaya Yılmaz", true)}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* CARD 2: İSTEĞE BAĞLI ALANLAR (ACCORDION / AÇILIR-KAPANIR) */}
-              <div className="rounded-3xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-slate-50/50 dark:bg-slate-900/40">
-                <button
-                  type="button"
-                  onClick={() => setShowOptionalFields((prev) => !prev)}
-                  className="w-full p-3.5 flex items-center justify-between text-left hover:bg-slate-100/60 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <Car size={16} className="text-sky-500" />
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        2. İsteğe Bağlı Ek Bilgiler (Araç & Kurumsal Detaylar)
-                      </h4>
-                      <p className="text-[11px] text-slate-400">
-                        Marka, Model, Yıl, KM, Şasi, Yakıt, Vites, Vergi No, Notlar ({mappedOptionalCount} alan eşleşti)
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
-                    <span>{showOptionalFields ? "Gizle" : "Genişlet"}</span>
-                    <ChevronDown
-                      size={15}
-                      className={cn("transition-transform duration-200", showOptionalFields && "rotate-180")}
-                    />
-                  </div>
-                </button>
-
-                {showOptionalFields && (
-                  <div className="p-4 border-t border-slate-200/80 dark:border-slate-800/80 space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="grid grid-cols-1 gap-2.5">
-                      {renderFieldRow("brand", "Araç Markası", "Örn: Renault, Fiat, Volkswagen")}
-                      {renderFieldRow("model", "Araç Modeli", "Örn: Megane, Egea, Passat")}
-                      {renderFieldRow("year", "Model Yılı", "Örn: 2022, 2020")}
-                      {renderFieldRow("kilometer", "Güncel KM", "Örn: 85000")}
-                      {renderFieldRow("vin", "Şasi Numarası (VIN)", "17 haneli şasi no")}
-                      {renderFieldRow("fuelType", "Yakıt Tipi", "Benzin, Dizel, LPG, Hibrit, Elektrik")}
-                      {renderFieldRow("transmission", "Vites Türü", "Manuel, Otomatik")}
-                      {renderFieldRow("companyTitle", "Şirket / Firma Ünvanı", "Kurumsal müşteriler için")}
-                      {renderFieldRow("email", "E-Posta Adresi", "İletişim e-posta")}
-                      {renderFieldRow("taxNumber", "Vergi Kimlik No (VKN / TCKN)", "Vergi veya kimlik no")}
-                      {renderFieldRow("taxOffice", "Vergi Dairesi", "Vergi dairesi adı")}
-                      {renderFieldRow("notes", "Müşteri / Servis Notu", "Özel notlar ve açıklamalar")}
-                    </div>
-                  </div>
-                )}
               </div>
 
             </div>

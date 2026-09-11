@@ -32,13 +32,13 @@ import {
   Edit2,
   Loader2,
   Receipt,
-  FileText,
   Search,
   Package,
   Boxes,
   AlertTriangle,
   Check,
   ExternalLink,
+  Printer,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -46,7 +46,10 @@ import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-ord
 import { TechnicianNotes } from "@/features/work-orders/components/technician-notes"
 import { PhotoGallery } from "@/features/work-orders/components/photo-gallery"
 import { WorkOrder, WorkOrderStatus, WorkOrderNote, WorkOrderPhoto } from "@/features/work-orders/types"
-
+import { WorkOrderInvoiceModal } from "@/features/work-orders/components/work-order-invoice-modal"
+import { WorkOrderPrintModal } from "@/features/work-orders/components/work-order-print-modal"
+import { useCancelInvoice } from "@/features/billing/api/use-billing"
+import { toast } from "@/components/ui/sonner"
 
 export default function WorkOrderDetailPage() {
   const params = useParams()
@@ -95,7 +98,11 @@ export default function WorkOrderDetailPage() {
     setIsSearchOpen(false)
   }
 
-  const { data: apiOrder } = useWorkOrder(id)
+  const { data: apiOrder, refetch } = useWorkOrder(id)
+  const cancelInvoiceMutation = useCancelInvoice()
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = React.useState(false)
+  const [isPrintModalOpen, setIsPrintModalOpen] = React.useState(false)
+  const [isCancellingInvoice, setIsCancellingInvoice] = React.useState(false)
   const addItemMutation = useAddWorkOrderItem()
   const updateStatusMutation = useUpdateWorkOrderStatus()
   const removeItemMutation = useRemoveWorkOrderItem()
@@ -178,10 +185,13 @@ export default function WorkOrderDetailPage() {
           photoType: (p.photoType || p.type || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
           updatedAt: p.updatedAt || null,
         })),
+        subtotal: apiOrder.subtotal ? Number(apiOrder.subtotal) : (computedLaborTotal + computedPartsTotal),
+        kdvAmount: apiOrder.kdvAmount ? Number(apiOrder.kdvAmount) : (computedLaborTotal + computedPartsTotal) * 0.20,
         laborTotal: computedLaborTotal,
         partsTotal: computedPartsTotal,
         taxRate: 0.20,
         grandTotal: Number(apiOrder.grandTotal ?? (computedLaborTotal + computedPartsTotal) * 1.2),
+        invoice: apiOrder.invoice || null,
         estimatedCompletionTime: apiOrder.targetCompletionDate || '18:00',
         createdAt: apiOrder.createdAt,
         updatedAt: apiOrder.updatedAt,
@@ -201,8 +211,36 @@ export default function WorkOrderDetailPage() {
   }
 
   const isOrderLocked = order.status === "COMPLETED" || order.status === "CANCELLED"
+  const activeInvoice = order.invoice && order.invoice.status !== "CANCELLED" ? order.invoice : null
+
+  const handleCancelInvoiceAndReopen = async () => {
+    if (!activeInvoice) return
+    const confirmed = window.confirm(
+      `Faturayı (#${activeInvoice.invoiceNumber}) iptal edip iş emrini tekrar "Devam Eden İşlemler" statüsüne almak istediğinize emin misiniz?\n\nCari hesaptaki borç kaydı ve varsa tahsilat tutarı otomatik olarak dengelenecektir.`
+    )
+    if (!confirmed) return
+
+    setIsCancellingInvoice(true)
+    try {
+      await cancelInvoiceMutation.mutateAsync({
+        id: activeInvoice.id,
+        reason: "İş emrine ek işlem yapılması için fatura iptali ve yeniden açma",
+      })
+      await refetch()
+      toast.success("İş emri başarıyla yeniden açıldı! Artık yeni parça ve işçilik ekleyebilirsiniz.")
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Fatura iptal edilemedi."
+      toast.error(msg)
+    } finally {
+      setIsCancellingInvoice(false)
+    }
+  }
 
   const handleStatusUpdate = async (status: WorkOrderStatus) => {
+    if (status === "IN_PROGRESS" && activeInvoice) {
+      await handleCancelInvoiceAndReopen()
+      return
+    }
     try {
       await updateStatusMutation.mutateAsync({ id: order.id, status })
     } catch (e) {
@@ -435,6 +473,17 @@ export default function WorkOrderDetailPage() {
       caption,
       photoType,
     })
+    setOrder((prev) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        photos: (prev.photos || []).map((p) =>
+          p.id === photoId
+            ? { ...p, caption, photoType, type: photoType, updatedAt: new Date().toISOString() }
+            : p
+        ),
+      }
+    })
   }
 
   const handleDeletePhoto = async (photoId: string) => {
@@ -442,6 +491,13 @@ export default function WorkOrderDetailPage() {
     await deletePhotoMutation.mutateAsync({
       workOrderId: order.id,
       photoId,
+    })
+    setOrder((prev) => {
+      if (!prev) return null
+      return {
+        ...prev,
+        photos: (prev.photos || []).filter((p) => p.id !== photoId),
+      }
     })
   }
 
@@ -462,6 +518,17 @@ export default function WorkOrderDetailPage() {
             {order.workOrderNumber}
           </span>
           <WorkOrderStatusBadge status={order.status} />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsPrintModalOpen(true)}
+            className="h-8 px-2.5 text-xs font-semibold gap-1.5 cursor-pointer rounded-xl border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800"
+            title="İş emri ve servis teslim formunu yazdır / PDF kaydet"
+          >
+            <Printer size={13} />
+            <span>Servis Formu / PDF</span>
+          </Button>
         </div>
       </div>
 
@@ -535,20 +602,56 @@ export default function WorkOrderDetailPage() {
           )}
 
           {order.status === "COMPLETED" && (
-            <div className="flex items-center gap-2 flex-1 md:flex-initial">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleStatusUpdate("IN_PROGRESS")}
-                className="h-12 px-4 rounded-2xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
-                title="İşi tekrar lifte geri al"
-              >
-                <span>↩ Lifte Geri Al</span>
-              </Button>
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs flex items-center gap-2">
-                <CheckCircle2 size={16} />
-                <span>İşlem Tamamlandı • Faturaya Hazır</span>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 flex-1 md:flex-initial justify-end">
+              {activeInvoice ? (
+                <>
+                  <div className="p-2.5 px-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold text-xs flex items-center gap-2">
+                    <Receipt size={16} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>Fatura: #{activeInvoice.invoiceNumber}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-600 text-white font-medium">
+                      {activeInvoice.status === "PAID"
+                        ? "Tahsil Edildi"
+                        : activeInvoice.status === "PARTIALLY_PAID"
+                        ? "Kısmi Ödendi"
+                        : "Cari Hesap (Açık)"}
+                    </span>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={isCancellingInvoice}
+                    onClick={handleCancelInvoiceAndReopen}
+                    className="h-11 px-3.5 rounded-2xl text-xs font-bold text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-1.5 cursor-pointer shadow-xs"
+                    title="Faturayı iptal edip iş emrini lifte geri alır"
+                  >
+                    {isCancellingInvoice ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <span>🔄 İşi Yeniden Aç (Faturayı İptal Et)</span>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => handleStatusUpdate("IN_PROGRESS")}
+                    className="h-11 px-4 rounded-2xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 cursor-pointer"
+                    title="İşi tekrar lifte geri al"
+                  >
+                    <span>↩ Lifte Geri Al</span>
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={() => setIsInvoiceModalOpen(true)}
+                    className="h-11 px-4 rounded-2xl text-xs font-bold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md shadow-emerald-600/20 cursor-pointer"
+                  >
+                    <Receipt size={15} />
+                    <span>Fatura Kes & Tahsilat Al</span>
+                  </Button>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -1157,15 +1260,69 @@ export default function WorkOrderDetailPage() {
               </div>
             </div>
 
-            <div className="pt-2">
-              <Button
-                type="button"
-                className="w-full h-11 rounded-xl text-xs font-bold gap-2 cursor-pointer"
-                onClick={() => router.push("/invoices")}
-              >
-                <FileText size={15} />
-                <span>Fatura Oluştur (Tahsilat)</span>
-              </Button>
+            {/* Action buttons inside Cost Summary */}
+            <div className="pt-2 space-y-2">
+              {activeInvoice ? (
+                <div className="p-3.5 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-500/30 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                      <Receipt size={15} className="text-emerald-600 dark:text-emerald-400" />
+                      <span>Fatura #{activeInvoice.invoiceNumber}</span>
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
+                      {activeInvoice.status === "PAID"
+                        ? "Ödendi"
+                        : activeInvoice.status === "PARTIALLY_PAID"
+                        ? "Kısmi Ödendi"
+                        : "Açık (Cari)"}
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] font-mono text-slate-600 dark:text-slate-400 flex justify-between">
+                    <span>Açık Bakiye:</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                      {Number(activeInvoice.remainingAmount ?? activeInvoice.grandTotal).toLocaleString("tr-TR")} ₺
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-9 rounded-xl text-xs font-bold gap-1.5 cursor-pointer"
+                      onClick={() => router.push("/invoices")}
+                    >
+                      <ExternalLink size={13} />
+                      <span>Faturayı Gör</span>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={isCancellingInvoice}
+                      onClick={handleCancelInvoiceAndReopen}
+                      className="h-9 rounded-xl text-[11px] font-bold text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/40 gap-1 cursor-pointer"
+                    >
+                      {isCancellingInvoice ? (
+                        <Loader2 size={12} className="animate-spin" />
+                      ) : (
+                        <span>🔄 Yeniden Aç</span>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <Button
+                  type="button"
+                  className="w-full h-11 rounded-xl text-xs font-bold gap-2 bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer shadow-xs"
+                  onClick={() => setIsInvoiceModalOpen(true)}
+                >
+                  <Receipt size={16} />
+                  <span>Fatura Kes & Tahsilat Al</span>
+                </Button>
+              )}
             </div>
           </div>
 
@@ -1179,6 +1336,21 @@ export default function WorkOrderDetailPage() {
           />
         </div>
       </div>
+
+      {/* Invoice & Payment Modal */}
+      <WorkOrderInvoiceModal
+        isOpen={isInvoiceModalOpen}
+        onClose={() => setIsInvoiceModalOpen(false)}
+        order={order}
+        onSuccess={() => refetch()}
+      />
+
+      {/* Work Order & Service Delivery Form Print Modal */}
+      <WorkOrderPrintModal
+        isOpen={isPrintModalOpen}
+        order={order}
+        onClose={() => setIsPrintModalOpen(false)}
+      />
     </div>
   )
 }

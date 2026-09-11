@@ -163,7 +163,7 @@ export function TechnicianNotes({
                 >
                   {isMine ? (
                     <>
-                      <span className="font-bold">Siz ({user?.name || "Kullanıcı"})</span>
+                      <span className="font-bold">Siz</span>
                       <span>•</span>
                     </>
                   ) : (

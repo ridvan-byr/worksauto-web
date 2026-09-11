@@ -31,7 +31,7 @@ interface CustomerSearchSelectProps {
   selectedVehicleId: string
   onSelectCustomer: (customerId: string) => void
   onSelectVehicle: (vehicleId: string) => void
-  onSwitchToQuickLead: () => void
+  onSwitchToQuickLead?: () => void
   customerError?: string
   vehicleError?: string
 }
@@ -127,17 +127,19 @@ export function CustomerSearchSelect({
                   <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">
                     Eşleşen müşteri bulunamadı.
                   </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsDropdownOpen(false)
-                      onSwitchToQuickLead()
-                    }}
-                    className="inline-flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400 font-bold hover:underline cursor-pointer"
-                  >
-                    <Plus size={14} />
-                    Hızlı Potansiyel Müşteri Kaydı Aç
-                  </button>
+                  {onSwitchToQuickLead && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsDropdownOpen(false)
+                        onSwitchToQuickLead()
+                      }}
+                      className="inline-flex items-center gap-1.5 text-xs text-sky-600 dark:text-sky-400 font-bold hover:underline cursor-pointer"
+                    >
+                      <Plus size={14} />
+                      Hızlı Potansiyel Müşteri Kaydı Aç
+                    </button>
+                  )}
                 </div>
               ) : (
                 searchResults.map((c) => {
@@ -289,13 +291,15 @@ export function CustomerSearchSelect({
             <p className="text-xs text-amber-700 dark:text-amber-300">
               Bu müşteriye ait kayıtlı araç bulunamadı.
             </p>
-            <button
-              type="button"
-              onClick={onSwitchToQuickLead}
-              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
-            >
-              + Hızlı Kayıt ile Araç Ekle
-            </button>
+            {onSwitchToQuickLead && (
+              <button
+                type="button"
+                onClick={onSwitchToQuickLead}
+                className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline cursor-pointer"
+              >
+                + Hızlı Kayıt ile Araç Ekle
+              </button>
+            )}
           </div>
         ) : customerVehicles.length === 1 ? (
           /* CASE 1: 1 vehicle -> Card */

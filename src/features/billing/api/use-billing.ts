@@ -46,7 +46,11 @@ export interface InvoiceRecord {
 export interface CreateInvoiceInput {
   customerId: string;
   workOrderId?: string;
-  items: InvoiceItem[];
+  dueDate?: string;
+  subtotal?: number;
+  kdvAmount?: number;
+  grandTotal?: number;
+  items?: InvoiceItem[];
   taxRate?: number;
   notes?: string;
 }
@@ -129,9 +133,11 @@ export function useCreateInvoice() {
     mutationFn: (data: CreateInvoiceInput) => apiClient.post<InvoiceRecord>('/invoices', data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order'] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['current-accounts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
-      toast.success('Fatura taslağı başarıyla oluşturuldu.', {
+      toast.success('Fatura başarıyla oluşturuldu.', {
         description: data?.invoiceNumber ? `${data.invoiceNumber} cari hesaba işlendi.` : undefined,
       });
     },
@@ -149,9 +155,11 @@ export function useCancelInvoice() {
       apiClient.patch(`/invoices/${id}/cancel`, { reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['work-order'] });
+      queryClient.invalidateQueries({ queryKey: ['work-orders'] });
       queryClient.invalidateQueries({ queryKey: ['current-accounts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
-      toast.info('Fatura iptal edildi ve cari hesap bakiyesi dengelendi.');
+      toast.info('Fatura iptal edildi ve iş emri yeniden açıldı.');
     },
     onError: (err: unknown) => {
       const message = err instanceof Error ? err.message : 'Fatura iptal edilemedi.';

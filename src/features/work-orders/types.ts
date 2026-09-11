@@ -58,6 +58,27 @@ export interface WorkOrderItem {
   createdAt?: string
 }
 
+export interface WorkOrderInvoice {
+  id: string
+  invoiceNumber: string
+  issueDate?: string
+  dueDate?: string
+  subtotal: number
+  kdvAmount: number
+  grandTotal: number
+  paidAmount?: number
+  remainingAmount?: number
+  status: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "CANCELLED" | string
+  gibInvoiceNumber?: string
+  eInvoiceStatus?: string
+  payments?: Array<{
+    id: string
+    amount: number
+    paymentMethod: string
+    paymentDate: string
+  }>
+}
+
 export interface WorkOrder {
   id: string
   workOrderNumber: string // e.g. "WO-2026-088"
@@ -133,4 +154,5 @@ export interface WorkOrder {
   createdAt: string
   updatedAt: string
   completedAt?: string
+  invoice?: WorkOrderInvoice | null
 }

@@ -7,6 +7,8 @@ import {
   useRescheduleAppointment,
   useApproveAppointment,
 } from "@/features/appointments/api/use-appointments"
+import { useCreateWorkOrder } from "@/features/work-orders/api/use-work-orders"
+import { type CheckInFormData } from "@/features/appointments/components/appointment-detail-modal"
 
 import * as React from "react"
 import {
@@ -55,6 +57,7 @@ export default function AppointmentsPage() {
   const cancelAppointmentMutation = useCancelAppointment()
   const rescheduleAppointmentMutation = useRescheduleAppointment()
   const approveAppointmentMutation = useApproveAppointment()
+  const createWorkOrderMutation = useCreateWorkOrder()
 
   // Pure Live API sync (100% PostgreSQL) with deduplication
   React.useEffect(() => {
@@ -94,6 +97,8 @@ export default function AppointmentsPage() {
           status: (a.status as AppointmentStatus) || "CONFIRMED",
           customerNote: a.customerNotes,
           cancellationReason: a.cancellationReason,
+          workOrderId: a.workOrder?.id,
+          workOrderNumber: a.workOrder?.workOrderNumber,
           createdAt: a.createdAt,
           updatedAt: a.updatedAt,
         })
@@ -167,19 +172,71 @@ export default function AppointmentsPage() {
     setAppointments((prev) => [newApp, ...prev.filter((a) => a.id !== newApp.id)])
   }
 
-  const handleConvertToWorkOrder = async (id: string) => {
+  const handleConvertToWorkOrder = async (id: string, checkInData: CheckInFormData) => {
+    const targetApp = appointments.find((a) => a.id === id)
+    if (!targetApp) {
+      throw new Error("Randevu bulunamadı.")
+    }
+
+    const items =
+      targetApp.services && targetApp.services.length > 0
+        ? targetApp.services.map((s) => ({
+            itemType: "SERVICE" as const,
+            name: s.name,
+            quantity: 1,
+            unitPrice: Number(s.price || 0),
+            kdvRate: 20,
+          }))
+        : []
+
+    const createdOrder = await createWorkOrderMutation.mutateAsync({
+      appointmentId: id,
+      customerId: targetApp.customerId,
+      vehicleId: targetApp.vehicleId,
+      assignedMechanicId: checkInData.assignedMechanicId || undefined,
+      assignedLift: checkInData.assignedLift || undefined,
+      initialKm: Number(checkInData.initialKm) || 0,
+      fuelLevel: checkInData.fuelLevel || undefined,
+      items,
+    })
+
     try {
       await approveAppointmentMutation.mutateAsync(id)
     } catch (e) {
-      console.warn('API approve appointment error:', e)
+      console.warn("API approve appointment error:", e)
     }
+
     setAppointments((prev) =>
-      prev.map((a) => (a.id === id ? { ...a, status: "APPROVED" as const } : a))
+      prev.map((a) =>
+        a.id === id
+          ? {
+              ...a,
+              status: "CONFIRMED" as const,
+              workOrderId: createdOrder.id,
+              workOrderNumber: createdOrder.workOrderNumber,
+            }
+          : a
+      )
     )
+
     if (activeAppointment && activeAppointment.id === id) {
-      setActiveAppointment((prev) => (prev ? { ...prev, status: "APPROVED" as const } : null))
+      setActiveAppointment((prev) =>
+        prev
+          ? {
+              ...prev,
+              status: "CONFIRMED" as const,
+              workOrderId: createdOrder.id,
+              workOrderNumber: createdOrder.workOrderNumber,
+            }
+          : null
+      )
     }
-    return { success: true, workOrderNumber: `WO-${Math.floor(1000 + Math.random() * 9000)}` }
+
+    return {
+      success: true,
+      workOrderNumber: createdOrder.workOrderNumber,
+      workOrderId: createdOrder.id,
+    }
   }
 
   const handleReschedule = async (id: string, newDate: string, newTime: string) => {

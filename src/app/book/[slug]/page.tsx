@@ -281,7 +281,7 @@ export default function PublicBookingPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Örn: Rıdvan Emre Bayar"
+                  placeholder="Örn: Rıdvan Bayar"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"

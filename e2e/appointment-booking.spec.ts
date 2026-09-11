@@ -43,7 +43,7 @@ test.describe('Appointment Booking & Public Portal E2E', () => {
     await expect(page.getByText('Servis Randevusu Alın')).toBeVisible();
 
     // 5. Fill customer details
-    await page.getByPlaceholder(/Örn: Rıdvan Bayar/i).fill('Murat Demir');
+    await page.getByPlaceholder(/Örn: Rıdvan (Emre )?Bayar/i).fill('Murat Demir');
     await page.getByPlaceholder(/0 \(5XX\) XXX XX XX/i).fill('05339876543');
     await page.getByPlaceholder('34 ABC 123').fill('34XYZ789');
     await page.getByPlaceholder(/Örn: BMW 320i/i).fill('Renault Megane 2021');

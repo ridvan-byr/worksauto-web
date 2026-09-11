@@ -14,15 +14,16 @@ import {
   CheckCircle2,
   Calendar,
   User,
-  UploadCloud,
   Edit2,
   Trash2,
   Loader2,
   Check,
+  Image as ImageIcon,
 } from "lucide-react"
 import { WorkOrderPhoto } from "../types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
+import { useAuth } from "@/features/auth/auth-context"
 
 interface PhotoGalleryProps {
   photos: WorkOrderPhoto[]
@@ -33,6 +34,22 @@ interface PhotoGalleryProps {
 }
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1").replace(/\/$/, "")
+
+function formatUploaderName(
+  nameOrId?: string,
+  currentUserId?: string,
+  currentUserName?: string
+): string {
+  if (!nameOrId) return "Personel"
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(nameOrId)
+  if (isUuid) {
+    if (currentUserId && nameOrId.toLowerCase() === currentUserId.toLowerCase()) {
+      return currentUserName || "Siz"
+    }
+    return "Personel"
+  }
+  return nameOrId
+}
 
 function getDisplayUrl(url?: string): string {
   if (!url) return "/brand/worksauto-icon-white-tight.png"
@@ -54,13 +71,15 @@ export function PhotoGallery({
   onDeletePhoto,
   isLocked = false,
 }: PhotoGalleryProps) {
+  const { user } = useAuth()
   const [lightboxIndex, setLightboxIndex] = React.useState<number | null>(null)
   const [activeTab, setActiveTab] = React.useState<"ALL" | "CHECKIN" | "DAMAGE" | "COMPLETED">("ALL")
   const [isAdding, setIsAdding] = React.useState(false)
   const [mounted, setMounted] = React.useState(false)
 
   // Upload Form State
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null)
+  const cameraInputRef = React.useRef<HTMLInputElement | null>(null)
+  const galleryInputRef = React.useRef<HTMLInputElement | null>(null)
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null)
   const [previewUrl, setPreviewUrl] = React.useState<string | null>(null)
   const [captionInput, setCaptionInput] = React.useState("")
@@ -80,11 +99,19 @@ export function PhotoGallery({
     setMounted(true)
   }, [])
 
-  // Keyboard navigation for lightbox
+  // Keyboard navigation for lightbox & edit dialog
   React.useEffect(() => {
-    if (lightboxIndex === null) return
-
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (editingPhoto) {
+        if (e.key === "Escape") {
+          e.stopPropagation()
+          setEditingPhoto(null)
+        }
+        return
+      }
+
+      if (lightboxIndex === null) return
+
       if (e.key === "Escape") {
         setLightboxIndex(null)
       } else if (e.key === "ArrowLeft") {
@@ -94,13 +121,18 @@ export function PhotoGallery({
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown)
-    document.body.style.overflow = "hidden"
+    if (lightboxIndex !== null || editingPhoto !== null) {
+      window.addEventListener("keydown", handleKeyDown)
+      document.body.style.overflow = "hidden"
+    }
+
     return () => {
       window.removeEventListener("keydown", handleKeyDown)
-      document.body.style.overflow = "auto"
+      if (lightboxIndex === null && editingPhoto === null) {
+        document.body.style.overflow = "auto"
+      }
     }
-  }, [lightboxIndex, photos.length])
+  }, [lightboxIndex, editingPhoto, photos.length])
 
   // Filter photos by tab
   const filteredPhotos = React.useMemo(() => {
@@ -140,8 +172,11 @@ export function PhotoGallery({
       URL.revokeObjectURL(previewUrl)
       setPreviewUrl(null)
     }
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ""
+    if (cameraInputRef.current) {
+      cameraInputRef.current.value = ""
+    }
+    if (galleryInputRef.current) {
+      galleryInputRef.current.value = ""
     }
   }
 
@@ -292,32 +327,68 @@ export function PhotoGallery({
           onSubmit={handleUploadSubmit}
           className="p-4 rounded-2xl bg-sky-500/5 border border-sky-500/20 space-y-3.5 animate-in fade-in duration-200"
         >
-          {/* File selection / camera input */}
+          {/* Hidden inputs for Camera and Gallery */}
           <input
-            ref={fileInputRef}
+            ref={cameraInputRef}
             type="file"
             accept="image/*"
             capture="environment"
             onChange={handleFileChange}
             className="hidden"
           />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="hidden"
+          />
 
           {!previewUrl ? (
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-sky-400/40 hover:border-sky-500 rounded-2xl p-6 text-center cursor-pointer bg-white/60 dark:bg-slate-900/60 hover:bg-sky-50/50 dark:hover:bg-sky-950/20 transition-all flex flex-col items-center justify-center gap-2"
-            >
-              <div className="w-11 h-11 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-                <UploadCloud size={22} />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-200">
-                  Fotoğraf çekmek veya yüklemek için tıklayın
-                </p>
-                <p className="text-[10px] text-slate-400">
-                  Kamera ile çekebilir veya galeriden seçebilirsiniz (JPG, PNG, WEBP)
-                </p>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* Option 1: Live Photo Capture */}
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="group p-4 sm:p-5 rounded-2xl border-2 border-dashed border-sky-400/50 hover:border-sky-500 bg-white/80 dark:bg-slate-900/80 hover:bg-sky-50/70 dark:hover:bg-sky-950/30 transition-all flex flex-col items-center justify-center text-center gap-2.5 cursor-pointer shadow-xs hover:shadow-md"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 group-hover:scale-110 group-hover:bg-sky-500 group-hover:text-white transition-all flex items-center justify-center shadow-xs">
+                  <Camera size={24} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                    Fotoğraf Çek
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Kamerayı doğrudan açarak anlık çekin
+                  </p>
+                </div>
+                <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300">
+                  Mobil / Canlı Kamera
+                </span>
+              </button>
+
+              {/* Option 2: Gallery or File Picker */}
+              <button
+                type="button"
+                onClick={() => galleryInputRef.current?.click()}
+                className="group p-4 sm:p-5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 bg-white/80 dark:bg-slate-900/80 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/30 transition-all flex flex-col items-center justify-center text-center gap-2.5 cursor-pointer shadow-xs hover:shadow-md"
+              >
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all flex items-center justify-center shadow-xs">
+                  <ImageIcon size={24} />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    Galeriden / Dosyadan Seç
+                  </p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Cihazınızdaki fotoğraf albümünden seçin
+                  </p>
+                </div>
+                <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">
+                  Galeri / Dosya
+                </span>
+              </button>
             </div>
           ) : (
             <div className="flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
@@ -505,7 +576,7 @@ export function PhotoGallery({
                     {photo.caption}
                   </p>
                   <p className="text-[9px] text-slate-300 drop-shadow-xs flex items-center gap-1 mt-0.5">
-                    <span>{photo.uploaderName || photo.uploadedBy || "Personel"}</span>
+                    <span>{formatUploaderName(photo.uploaderName || photo.uploadedBy, user?.id, user?.name)}</span>
                   </p>
                 </div>
 
@@ -521,93 +592,100 @@ export function PhotoGallery({
         )}
       </div>
 
-      {/* Edit Photo Dialog */}
-      {editingPhoto && (
-        <div
-          className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-in fade-in duration-200"
-          onClick={() => setEditingPhoto(null)}
-        >
+      {/* Edit Photo Dialog - Portaled to document.body with z-[160] to stay above lightbox & screen-centered */}
+      {mounted &&
+        editingPhoto &&
+        createPortal(
           <div
-            className="w-full max-w-md p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[160] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+            onClick={() => setEditingPhoto(null)}
           >
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/70 dark:border-slate-800/70">
-              <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Edit2 size={15} className="text-sky-500" />
-                <span>Fotoğraf Bilgilerini Düzenle</span>
-              </h4>
-              <button
-                type="button"
-                onClick={() => setEditingPhoto(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <div className="flex justify-center">
-                <img
-                  src={getDisplayUrl(editingPhoto.url)}
-                  alt="Fotoğraf"
-                  className="h-32 w-auto object-cover rounded-xl border border-slate-200 dark:border-slate-800"
-                />
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                  Fotoğraf Türü
-                </label>
-                <select
-                  value={editType}
-                  onChange={(e) => setEditType(e.target.value as "CHECKIN" | "DAMAGE" | "COMPLETED")}
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
+            <div
+              className="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-slate-200/70 dark:border-slate-800/70">
+                <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <Edit2 size={15} className="text-sky-500" />
+                  <span>Fotoğraf Bilgilerini Düzenle</span>
+                </h4>
+                <button
+                  type="button"
+                  onClick={() => setEditingPhoto(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  title="Kapat"
                 >
-                  <option value="CHECKIN">Araç Kabul (KM / Ön-Arka)</option>
-                  <option value="DAMAGE">Mevcut Hasar / Kaporta Çiziği</option>
-                  <option value="COMPLETED">İşlem Tamamlandı / Hazır</option>
-                </select>
+                  <X size={16} />
+                </button>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
-                  Açıklama / Not
-                </label>
-                <input
-                  type="text"
-                  value={editCaption}
-                  onChange={(e) => setEditCaption(e.target.value)}
-                  placeholder="Fotoğraf açıklaması..."
-                  className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
+              <div className="space-y-4">
+                <div className="flex justify-center p-2 rounded-2xl bg-slate-50 dark:bg-black/40 border border-slate-200/80 dark:border-slate-800/80">
+                  <img
+                    src={getDisplayUrl(editingPhoto.url)}
+                    alt="Fotoğraf"
+                    className="max-h-36 w-auto object-contain rounded-xl shadow-xs"
+                    onError={(e) => {
+                      ;(e.target as HTMLImageElement).src = "/brand/worksauto-icon-white-tight.png"
+                    }}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                    Fotoğraf Türü
+                  </label>
+                  <select
+                    value={editType}
+                    onChange={(e) => setEditType(e.target.value as "CHECKIN" | "DAMAGE" | "COMPLETED")}
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors"
+                  >
+                    <option value="CHECKIN">Araç Kabul (KM / Ön-Arka)</option>
+                    <option value="DAMAGE">Mevcut Hasar / Kaporta Çiziği</option>
+                    <option value="COMPLETED">İşlem Tamamlandı / Hazır</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                    Açıklama / Not
+                  </label>
+                  <input
+                    type="text"
+                    value={editCaption}
+                    onChange={(e) => setEditCaption(e.target.value)}
+                    placeholder="Fotoğraf açıklaması girin..."
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500 transition-colors placeholder:text-slate-400"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2.5 pt-3 border-t border-slate-200/70 dark:border-slate-800/70">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setEditingPhoto(null)}
+                  disabled={isUpdating}
+                  className="h-9 px-4 text-xs cursor-pointer text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white"
+                >
+                  Vazgeç
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleSaveEdit}
+                  disabled={isUpdating || !editCaption.trim()}
+                  className="h-9 px-5 text-xs font-bold gap-1.5 cursor-pointer bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-600/20"
+                >
+                  {isUpdating ? <Loader2 size={13} className="animate-spin mr-1" /> : <Check size={13} className="mr-1" />}
+                  <span>Kaydet</span>
+                </Button>
               </div>
             </div>
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200/70 dark:border-slate-800/70">
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setEditingPhoto(null)}
-                disabled={isUpdating}
-                className="h-8 text-xs cursor-pointer"
-              >
-                Vazgeç
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleSaveEdit}
-                disabled={isUpdating || !editCaption.trim()}
-                className="h-8 px-4 text-xs font-bold gap-1 cursor-pointer bg-sky-600 hover:bg-sky-700 text-white"
-              >
-                {isUpdating ? <Loader2 size={13} className="animate-spin mr-1" /> : <Check size={13} className="mr-1" />}
-                <span>Kaydet</span>
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
       {/* Cinematic Fullscreen Lightbox Modal */}
       {mounted &&
@@ -649,7 +727,7 @@ export function PhotoGallery({
                   <div className="flex items-center gap-3 text-[11px] text-slate-400">
                     <span className="flex items-center gap-1">
                       <User size={12} />
-                      <span>{activeLightboxPhoto.uploaderName || activeLightboxPhoto.uploadedBy || "Personel"}</span>
+                      <span>{formatUploaderName(activeLightboxPhoto.uploaderName || activeLightboxPhoto.uploadedBy, user?.id, user?.name)}</span>
                     </span>
                     <span>•</span>
                     <span className="flex items-center gap-1">

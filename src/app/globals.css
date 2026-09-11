@@ -90,11 +90,13 @@ body {
   background: rgba(148, 163, 184, 0.4);
 }
 
-/* View Transition API - Bidirectional Circular Reveal Theme Animation */
+/* View Transition API - Hardware-Accelerated Bidirectional Circular Reveal Theme Animation */
 ::view-transition-old(root),
 ::view-transition-new(root) {
   animation: none;
   mix-blend-mode: normal;
+  backface-visibility: hidden;
+  transform: translateZ(0);
 }
 
 ::view-transition-old(root) {
@@ -103,6 +105,8 @@ body {
 
 ::view-transition-new(root) {
   z-index: 99999;
+  will-change: clip-path;
+  contain: paint;
 }
 
 /* Metallic Shimmer on Logo */
@@ -163,9 +167,9 @@ body {
     color-scheme: light !important;
     background: #ffffff !important;
     background-color: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
     --background: #ffffff !important;
-    --foreground: #000000 !important;
+    --foreground: #0f172a !important;
     min-height: 0 !important;
     height: auto !important;
     margin: 0 !important;
@@ -174,10 +178,20 @@ body {
     border: none !important;
   }
 
+  /* Neutralize all dark mode classes on printed documents */
+  .dark .corporate-print-document,
+  .dark #invoice-card-container,
+  .dark #cari-card-container,
+  .corporate-print-document {
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    border-color: #e2e8f0 !important;
+  }
+
   body {
     background: #ffffff !important;
     background-color: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
     margin: 0 !important;
@@ -189,18 +203,19 @@ body {
   }
 
   /* Hide the entire AppShell and everything except portaled print roots */
-  body > *:not(#invoice-modal-root):not(#cari-modal-root):not(#reports-print-root),
+  body > *:not(#invoice-modal-root):not(#cari-modal-root):not(#reports-print-root):not(.corporate-print-root),
   body.printing-reports > *:not(#reports-print-root) {
     display: none !important;
   }
 
   #invoice-modal-root,
   #cari-modal-root,
-  #reports-print-root {
+  #reports-print-root,
+  .corporate-print-root {
     position: static !important;
     background: #ffffff !important;
     background-color: #ffffff !important;
-    color: #000000 !important;
+    color: #0f172a !important;
     padding: 0 !important;
     margin: 0 !important;
     display: block !important;
@@ -214,6 +229,8 @@ body {
     border: none !important;
     box-shadow: none !important;
     outline: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   #invoice-card-container,
@@ -223,6 +240,8 @@ body {
     max-height: none !important;
     width: 100% !important;
     margin: 0 !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
   }
 }
 

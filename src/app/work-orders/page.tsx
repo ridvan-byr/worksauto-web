@@ -22,6 +22,75 @@ import { WorkOrderListView } from "@/features/work-orders/components/work-order-
 import { CreateWorkOrderModal } from "@/features/work-orders/components/create-work-order-modal"
 import { cn } from "@/lib/utils"
 
+function mapApiWorkOrderToWorkOrder(w: any): WorkOrder {
+  const items = (w.items || []) as Array<Record<string, unknown>>
+  const mechanicFullName = (w.assignedMechanic as { user?: { name: string; surname?: string } } | undefined)?.user
+    ? `${(w.assignedMechanic as { user: { name: string; surname?: string } }).user.name} ${(w.assignedMechanic as { user: { name: string; surname?: string } }).user.surname || ""}`.trim()
+    : (w.assignedMechanicName || 'Atanmamış')
+
+  return {
+    id: w.id,
+    tenantId: w.tenantId || '',
+    workOrderNumber: w.workOrderNumber || `WO-${w.id?.slice(0, 8) || ''}`,
+    customerId: w.customerId,
+    customerName: w.customer
+      ? `${w.customer.firstName || w.customer.name || ""} ${w.customer.lastName || w.customer.surname || ""}`.trim()
+      : (w.customerName || 'Müşteri'),
+    customerPhone: w.customer?.phone || w.customerPhone || '',
+    vehicleId: w.vehicleId,
+    plate: w.vehicle?.plate || w.plate || '',
+    brand: w.vehicle?.brand || w.brand || '',
+    model: w.vehicle?.model || w.model || '',
+    year: w.vehicle?.year || w.year || new Date().getFullYear(),
+    kilometer: w.vehicle?.currentKm ?? w.vehicle?.mileage ?? w.kilometer ?? w.initialKm ?? 0,
+    status: ((w.status as string) === 'QUEUE' ? 'PENDING' : w.status) as WorkOrderStatus,
+    priority: w.priority || 'NORMAL',
+    assignedLift: w.assignedLift || 'Lift Belirtilmemiş',
+    assignedMechanicName: mechanicFullName,
+    services: items
+      .filter((i) => i.itemType === 'SERVICE' || !i.itemType)
+      .map((i) => ({
+        id: String(i.id || Math.random().toString()),
+        name: String(i.name || 'İşçilik'),
+        durationMinutes: 60,
+        laborPrice: Number(i.unitPrice || 0),
+        completed: true,
+      })),
+    parts: items
+      .filter((i) => i.itemType === 'PART')
+      .map((i) => ({
+        id: String(i.id || Math.random().toString()),
+        name: String(i.name || 'Yedek Parça'),
+        partNumber: String(i.itemId || i.partNumber || ''),
+        quantity: Number(i.quantity || 1),
+        unitPrice: Number(i.unitPrice || 0),
+        totalPrice: Number(i.totalPrice || 0),
+      })),
+    notes: (w.notes || []).map((n: WorkOrderNote) => ({
+      id: n.id,
+      authorName: n.authorName || 'Yetkili',
+      text: n.text || n.note || '',
+      createdAt: n.createdAt,
+      isInternal: n.isInternal ?? false,
+    })),
+    photos: (w.photos || []).map((p: WorkOrderPhoto) => ({
+      id: p.id,
+      url: p.url,
+      caption: p.caption || '',
+      uploaderName: p.uploaderName || p.uploadedBy || 'Personel',
+      uploadedAt: p.uploadedAt || p.createdAt || new Date().toISOString(),
+      type: (p.type || p.photoType || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
+    })),
+    laborTotal: Number(w.subtotal || 0),
+    partsTotal: 0,
+    taxRate: 0.20,
+    grandTotal: Number(w.grandTotal || 0),
+    estimatedCompletionTime: w.targetCompletionDate || '18:00',
+    createdAt: w.createdAt || new Date().toISOString(),
+    updatedAt: w.updatedAt || new Date().toISOString(),
+  }
+}
+
 export default function WorkOrdersPage() {
   const [orders, setOrders] = React.useState<WorkOrder[]>([])
   const [viewMode, setViewMode] = React.useState<"kanban" | "list">("kanban")
@@ -37,74 +106,7 @@ export default function WorkOrdersPage() {
   // Live API sync
   React.useEffect(() => {
     if (apiOrders) {
-      const mapped: WorkOrder[] = (apiOrders as Array<WorkOrder & Record<string, unknown>>).map((w) => {
-        const items = (w.items || []) as Array<Record<string, unknown>>
-        const mechanicFullName = (w.assignedMechanic as { user?: { name: string; surname?: string } } | undefined)?.user
-          ? `${(w.assignedMechanic as { user: { name: string; surname?: string } }).user.name} ${(w.assignedMechanic as { user: { name: string; surname?: string } }).user.surname || ""}`.trim()
-          : (w.assignedMechanicName || 'Atanmamış')
-
-        return {
-          id: w.id,
-          tenantId: w.tenantId || '',
-          workOrderNumber: w.workOrderNumber,
-          customerId: w.customerId,
-          customerName: w.customer
-            ? `${w.customer.firstName || w.customer.name || ""} ${w.customer.lastName || w.customer.surname || ""}`.trim()
-            : 'Müşteri',
-          customerPhone: w.customer?.phone || '',
-          vehicleId: w.vehicleId,
-          plate: w.vehicle?.plate || w.plate || '',
-          brand: w.vehicle?.brand || w.brand || '',
-          model: w.vehicle?.model || w.model || '',
-          year: w.vehicle?.year || w.year || new Date().getFullYear(),
-          kilometer: w.vehicle?.currentKm ?? w.vehicle?.mileage ?? w.kilometer ?? w.initialKm ?? 0,
-          status: ((w.status as string) === 'QUEUE' ? 'PENDING' : w.status) as WorkOrderStatus,
-          priority: w.priority || 'NORMAL',
-          assignedLift: w.assignedLift || 'Lift Belirtilmemiş',
-          assignedMechanicName: mechanicFullName,
-          services: items
-            .filter((i) => i.itemType === 'SERVICE')
-            .map((i) => ({
-              id: String(i.id || ''),
-              name: String(i.name || 'İşçilik'),
-              durationMinutes: 60,
-              laborPrice: Number(i.unitPrice || 0),
-              completed: true,
-            })),
-          parts: items
-            .filter((i) => i.itemType === 'PART')
-            .map((i) => ({
-              id: String(i.id || ''),
-              name: String(i.name || 'Yedek Parça'),
-              partNumber: String(i.itemId || i.partNumber || ''),
-              quantity: Number(i.quantity || 1),
-              unitPrice: Number(i.unitPrice || 0),
-              totalPrice: Number(i.totalPrice || 0),
-            })),
-          notes: (w.notes || []).map((n: WorkOrderNote) => ({
-            id: n.id,
-            authorName: n.authorName || 'Yetkili',
-            text: n.text || n.note || '',
-            createdAt: n.createdAt,
-            isInternal: n.isInternal ?? false,
-          })),
-          photos: (w.photos || []).map((p: WorkOrderPhoto) => ({
-            id: p.id,
-            url: p.url,
-            caption: p.caption || '',
-            uploaderName: p.uploaderName || p.uploadedBy || 'Personel',
-            uploadedAt: p.uploadedAt || p.createdAt || new Date().toISOString(),
-            type: (p.type || p.photoType || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
-          })),
-          laborTotal: Number(w.subtotal || 0),
-          partsTotal: 0,
-          taxRate: 0.20,
-          grandTotal: Number(w.grandTotal || 0),
-          estimatedCompletionTime: w.targetCompletionDate || '18:00',
-          createdAt: w.createdAt,
-          updatedAt: w.updatedAt,
-        }
-      })
+      const mapped = (apiOrders as Array<any>).map(mapApiWorkOrderToWorkOrder)
       setOrders(mapped)
     }
   }, [apiOrders])
@@ -132,8 +134,9 @@ export default function WorkOrdersPage() {
     }
   }
 
-  const handleCreatedOrder = (newOrder: WorkOrder) => {
-    setOrders((prev) => [newOrder, ...prev])
+  const handleCreatedOrder = (newOrder: any) => {
+    const mapped = mapApiWorkOrderToWorkOrder(newOrder)
+    setOrders((prev) => [mapped, ...prev.filter((o) => o.id !== mapped.id)])
   }
 
   // Dynamic distinct technician list for filtering (excludes administrative roles without mechanic profile)

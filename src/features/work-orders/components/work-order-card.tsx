@@ -64,16 +64,19 @@ export function WorkOrderCard({ order, onStatusChange }: WorkOrderCardProps) {
 
       {/* Services List Preview */}
       <div className="space-y-1 py-1 border-y border-slate-100 dark:border-slate-800/60">
-        {order.services.slice(0, 2).map((s) => (
+        {(order.services || []).slice(0, 2).map((s) => (
           <div key={s.id} className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400">
             <span className="truncate pr-2">• {s.name}</span>
             <span className="font-mono font-medium shrink-0">{s.laborPrice} ₺</span>
           </div>
         ))}
-        {order.services.length > 2 && (
+        {(order.services || []).length > 2 && (
           <p className="text-[10px] text-slate-400 font-medium italic">
-            +{order.services.length - 2} ek işlem daha...
+            +{(order.services || []).length - 2} ek işlem daha...
           </p>
+        )}
+        {(!order.services || order.services.length === 0) && (
+          <p className="text-[10px] text-slate-400 italic">Genel kontrol ve arıza tespiti</p>
         )}
       </div>
 

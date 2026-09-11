@@ -11,9 +11,16 @@ import { useQuickLeadCustomer, type QuickLeadResponse } from "@/features/custome
 interface QuickLeadSubFormProps {
   onSuccess: (customer: QuickLeadResponse["customer"], vehicle: QuickLeadResponse["vehicle"]) => void
   onCancel: () => void
+  submitLabel?: string
+  description?: string
 }
 
-export function QuickLeadSubForm({ onSuccess, onCancel }: QuickLeadSubFormProps) {
+export function QuickLeadSubForm({
+  onSuccess,
+  onCancel,
+  submitLabel = "Kaydet ve Seç",
+  description = "Ad soyad, telefon ve plaka girerek tek adımda müşteri ve araç kaydı oluşturun.",
+}: QuickLeadSubFormProps) {
   const quickLeadMutation = useQuickLeadCustomer()
 
   const {
@@ -58,10 +65,10 @@ export function QuickLeadSubForm({ onSuccess, onCancel }: QuickLeadSubFormProps)
           <UserPlus size={16} className="text-amber-500 shrink-0" />
           <div>
             <p className="text-xs font-bold text-amber-900 dark:text-amber-300">
-              1 Adımda Hızlı Potansiyel Müşteri & Araç Kaydı
+              1 Adımda Hızlı Müşteri & Araç Kaydı
             </p>
             <p className="text-[11px] text-amber-700/80 dark:text-amber-400/80">
-              İlk telefon veya servis temasında ad soyad, telefon ve plaka alarak anında randevu oluşturun.
+              {description}
             </p>
           </div>
         </div>
@@ -133,7 +140,7 @@ export function QuickLeadSubForm({ onSuccess, onCancel }: QuickLeadSubFormProps)
             className="h-9 px-4 rounded-xl text-xs font-bold gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 cursor-pointer shadow-md shadow-amber-500/20"
           >
             <UserPlus size={13} />
-            <span>{quickLeadMutation.isPending ? "Kaydediliyor..." : "Kaydet ve Randevuya Seç"}</span>
+            <span>{quickLeadMutation.isPending ? "Kaydediliyor..." : submitLabel}</span>
           </Button>
         </div>
       </form>

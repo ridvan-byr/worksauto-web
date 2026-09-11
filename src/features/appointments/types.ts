@@ -91,6 +91,10 @@ export interface AppointmentRecord {
   status: AppointmentStatus | string;
   customerNotes?: string;
   cancellationReason?: CancellationReason;
+  workOrder?: {
+    id: string;
+    workOrderNumber: string;
+  };
   createdAt: string;
   updatedAt: string;
 }
