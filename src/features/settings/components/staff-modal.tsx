@@ -11,6 +11,10 @@ import {
   formatTurkishGsmDisplay,
   getTurkishGsmError,
 } from "@/lib/phone-utils"
+import {
+  filterPersonNameInput,
+  validatePersonName,
+} from "@/lib/name-utils"
 
 interface StaffModalProps {
   isOpen: boolean
@@ -40,6 +44,7 @@ export function StaffModal({
 
   const [name, setName] = React.useState("")
   const [surname, setSurname] = React.useState("")
+  const [nameError, setNameError] = React.useState<string | null>(null)
   const [phone, setPhone] = React.useState("")
   const [phoneError, setPhoneError] = React.useState<string | null>(null)
   const [email, setEmail] = React.useState("")
@@ -65,6 +70,7 @@ export function StaffModal({
   }, [baysData])
 
   React.useEffect(() => {
+    setNameError(null)
     setPhoneError(null)
     if (editingStaff) {
       const u = editingStaff.user || editingStaff
@@ -93,7 +99,22 @@ export function StaffModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name.trim()) return
+
+    const nameValidation = validatePersonName(name, "Personel adı")
+    if (!nameValidation.isValid) {
+      setNameError(nameValidation.error)
+      return
+    }
+
+    let formattedSurname: string | undefined = undefined
+    if (surname.trim()) {
+      const surnameValidation = validatePersonName(surname, "Personel soyadı")
+      if (!surnameValidation.isValid) {
+        setNameError(surnameValidation.error)
+        return
+      }
+      formattedSurname = surnameValidation.formatted
+    }
 
     const err = getTurkishGsmError(phone)
     if (err) {
@@ -101,10 +122,11 @@ export function StaffModal({
       return
     }
 
+    setNameError(null)
     setPhoneError(null)
     onSubmit({
-      name: name.trim(),
-      surname: surname.trim() || undefined,
+      name: nameValidation.formatted,
+      surname: formattedSurname,
       phone: formatTurkishGsmDisplay(phone),
       email: email.trim() || undefined,
       role,
@@ -143,7 +165,10 @@ export function StaffModal({
                 type="text"
                 required
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  setName(filterPersonNameInput(e.target.value))
+                  if (nameError) setNameError(null)
+                }}
                 className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                 placeholder="Ahmet"
               />
@@ -154,12 +179,18 @@ export function StaffModal({
               <input
                 type="text"
                 value={surname}
-                onChange={(e) => setSurname(e.target.value)}
+                onChange={(e) => {
+                  setSurname(filterPersonNameInput(e.target.value))
+                  if (nameError) setNameError(null)
+                }}
                 className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
                 placeholder="Yılmaz"
               />
             </div>
           </div>
+          {nameError && (
+            <p className="text-[11px] text-rose-500">{nameError}</p>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">

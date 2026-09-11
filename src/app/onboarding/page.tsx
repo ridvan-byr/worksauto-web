@@ -15,6 +15,7 @@ import { StepWorkshopSettings } from "@/features/onboarding/components/step-work
 import { OnboardingSuccessModal } from "@/features/onboarding/components/onboarding-success-modal"
 import { useTenantSettings } from "@/features/settings/api/use-settings"
 import { isValidTurkishGsm } from "@/lib/phone-utils"
+import { validatePersonName } from "@/lib/name-utils"
 
 const ONBOARDING_STORAGE_KEY = "worksauto_onboarding_draft"
 
@@ -127,11 +128,20 @@ export default function OnboardingPage() {
       if (!formData.staff || formData.staff.length === 0) {
         errs.staff = "En az 1 adet usta / teknisyen personeli tanımlamalısınız."
       } else {
-        const invalidStaff = formData.staff.find(
-          (s) => !isValidTurkishGsm(s.phone)
+        const invalidNameStaff = formData.staff.find(
+          (s) =>
+            !validatePersonName(s.name, "Usta adı").isValid ||
+            (s.surname && !validatePersonName(s.surname, "Usta soyadı").isValid)
         )
-        if (invalidStaff) {
-          errs.staff = `"${invalidStaff.name} ${invalidStaff.surname}" personeli için geçerli bir cep telefonu numarası (05XX XXX XX XX) zorunludur. Usta sisteme cep telefonu numarasıyla giriş yapacaktır.`
+        if (invalidNameStaff) {
+          errs.staff = `"${invalidNameStaff.name} ${invalidNameStaff.surname}" personelinin adı ve soyadı yalnızca harflerden oluşmalıdır (rakam veya özel simge kabul edilmez).`
+        } else {
+          const invalidStaff = formData.staff.find(
+            (s) => !isValidTurkishGsm(s.phone)
+          )
+          if (invalidStaff) {
+            errs.staff = `"${invalidStaff.name} ${invalidStaff.surname}" personeli için geçerli bir cep telefonu numarası (05XX XXX XX XX) zorunludur. Usta sisteme cep telefonu numarasıyla giriş yapacaktır.`
+          }
         }
       }
     }

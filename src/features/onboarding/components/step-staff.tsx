@@ -9,6 +9,10 @@ import {
   formatTurkishGsmDisplay,
   getTurkishGsmError,
 } from "@/lib/phone-utils"
+import {
+  filterPersonNameInput,
+  validatePersonName,
+} from "@/lib/name-utils"
 
 interface StepStaffProps {
   staff: StaffMember[]
@@ -32,11 +36,15 @@ export function StepStaff({
   const [inputError, setInputError] = React.useState<string | null>(null)
 
   const handleAdd = () => {
-    const cleanName = newStaff.name.trim()
-    const cleanSurname = newStaff.surname.trim()
+    const nameValidation = validatePersonName(newStaff.name, "Usta adı")
+    if (!nameValidation.isValid) {
+      setInputError(nameValidation.error)
+      return
+    }
 
-    if (!cleanName || !cleanSurname) {
-      setInputError("Lütfen ustanın adını ve soyadını eksiksiz giriniz.")
+    const surnameValidation = validatePersonName(newStaff.surname, "Usta soyadı")
+    if (!surnameValidation.isValid) {
+      setInputError(surnameValidation.error)
       return
     }
 
@@ -48,8 +56,8 @@ export function StepStaff({
 
     setInputError(null)
     onAddStaff({
-      name: cleanName,
-      surname: cleanSurname,
+      name: nameValidation.formatted,
+      surname: surnameValidation.formatted,
       phone: formatTurkishGsmDisplay(newStaff.phone),
       expertise: newStaff.expertise,
     })
@@ -77,7 +85,8 @@ export function StepStaff({
             placeholder="Adı (Örn: Mehmet) *"
             value={newStaff.name}
             onChange={(e) => {
-              setNewStaff({ ...newStaff, name: e.target.value })
+              const filtered = filterPersonNameInput(e.target.value)
+              setNewStaff({ ...newStaff, name: filtered })
               if (inputError) setInputError(null)
             }}
             className="h-11 sm:h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-400 dark:focus:border-slate-600"
@@ -87,7 +96,8 @@ export function StepStaff({
             placeholder="Soyadı (Örn: Usta) *"
             value={newStaff.surname}
             onChange={(e) => {
-              setNewStaff({ ...newStaff, surname: e.target.value })
+              const filtered = filterPersonNameInput(e.target.value)
+              setNewStaff({ ...newStaff, surname: filtered })
               if (inputError) setInputError(null)
             }}
             className="h-11 sm:h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-400 dark:focus:border-slate-600"
