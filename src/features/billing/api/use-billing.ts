@@ -28,13 +28,25 @@ export interface InvoiceRecord {
   };
   workOrderId?: string;
   workOrder?: {
+    orderNumber?: string;
     items?: InvoiceItem[];
+    vehicle?: {
+      plate?: string;
+      brand?: string;
+      model?: string;
+      year?: number;
+      vin?: string;
+      chassisNo?: string;
+      currentKm?: number;
+    };
   };
   payments?: PaymentRecord[];
   subtotal: number;
-  taxRate: number;
-  taxAmount: number;
-  totalAmount: number;
+  taxRate?: number;
+  taxAmount?: number;
+  kdvAmount?: number;
+  totalAmount?: number;
+  grandTotal?: number;
   paidAmount: number;
   remainingAmount: number;
   status: 'DRAFT' | 'ISSUED' | 'PAID' | 'PARTIALLY_PAID' | 'CANCELLED';

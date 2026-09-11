@@ -44,55 +44,70 @@ export default function InvoicesPage() {
   // Live API sync with mock fallback
   React.useEffect(() => {
     if (apiInvoices && apiInvoices.length > 0) {
-      const mapped: Invoice[] = apiInvoices.map((inv: InvoiceRecord) => ({
-        id: inv.id,
-        tenantId: 'ten_1',
-        invoiceNumber: inv.invoiceNumber,
-        workOrderId: inv.workOrderId || 'wo_genel',
-        workOrderNumber: 'WO-GENEL',
-        customerId: inv.customerId,
-        customerName: inv.customer ? `${inv.customer.firstName || inv.customer.name || ""} ${inv.customer.lastName || inv.customer.surname || ""}`.trim() : 'Müşteri',
-        customerPhone: inv.customer?.phone || '',
-        customerType: 'individual',
-        companyTitle: inv.customer?.companyTitle,
-        taxOffice: '',
-        taxNumber: inv.customer?.taxNumber,
-        vehiclePlate: '34XX000',
-        vehicleBrand: 'Araç',
-        vehicleModel: 'Model',
-        vehicleYear: 2024,
-        vehicleKm: 0,
-        issueDate: new Date(inv.issueDate).toISOString().split('T')[0],
-        dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : new Date(inv.issueDate).toISOString().split('T')[0],
-        subtotal: Number(inv.subtotal),
-        taxAmount: Number(inv.taxAmount),
-        grandTotal: Number(inv.totalAmount),
-        paidAmount: Number(inv.paidAmount),
-        remainingAmount: Number(inv.remainingAmount),
-        status: (inv.status === 'PAID' ? 'PAID' : inv.status === 'PARTIALLY_PAID' ? 'PARTIALLY_PAID' : 'UNPAID') as InvoiceStatus,
-        payments: (inv.payments || []).map((p: PaymentRecord) => ({
-          id: p.id,
+      const mapped: Invoice[] = apiInvoices.map((inv: InvoiceRecord) => {
+        const vehicle = inv.workOrder?.vehicle
+        const subtotal = Number(inv.subtotal ?? 0)
+        const taxAmount = Number(inv.kdvAmount ?? inv.taxAmount ?? 0)
+        const rawGrand = inv.grandTotal ?? inv.totalAmount
+        const grandTotal = Number(rawGrand !== undefined && rawGrand !== null ? rawGrand : subtotal + taxAmount)
+        const paidAmount = Number(inv.paidAmount ?? 0)
+        const remainingAmount = Number(
+          inv.remainingAmount !== undefined && inv.remainingAmount !== null
+            ? inv.remainingAmount
+            : Math.max(0, grandTotal - paidAmount)
+        )
+
+        return {
+          id: inv.id,
+          tenantId: 'ten_1',
+          invoiceNumber: inv.invoiceNumber,
+          workOrderId: inv.workOrderId || 'wo_genel',
+          workOrderNumber: inv.workOrder?.orderNumber || (inv.workOrderId ? `WO-${inv.workOrderId.slice(0, 5)}` : 'WO-GENEL'),
           customerId: inv.customerId,
-          invoiceId: inv.id,
-          date: p.createdAt,
-          amount: Number(p.amount),
-          method: (p.paymentMethod === 'CREDIT_CARD' ? 'POS' : p.paymentMethod === 'BANK_TRANSFER' ? 'BANK_TRANSFER' : 'CASH') as PaymentMethod,
-          performedByName: p.customer?.name || 'Sistem',
-          createdAt: p.createdAt,
-        })),
-        items: inv.items ? inv.items.map((i, idx) => ({
-          id: i.id || `item_${idx}`,
-          type: (i.type === 'PART' ? 'PART' : 'SERVICE') as "SERVICE" | "PART",
-          name: i.name || i.description || 'Hizmet / Kalem',
-          quantity: i.quantity,
-          unitPrice: Number(i.unitPrice),
-          totalPrice: Number(i.totalPrice ?? (i.quantity * i.unitPrice)),
-        })) : [
-          { id: 'item_1', type: 'SERVICE' as const, name: 'Genel Servis & Bakım Bedeli', quantity: 1, unitPrice: Number(inv.subtotal), totalPrice: Number(inv.subtotal) }
-        ],
-        createdAt: inv.issueDate,
-        updatedAt: inv.issueDate,
-      }))
+          customerName: inv.customer ? `${inv.customer.firstName || inv.customer.name || ""} ${inv.customer.lastName || inv.customer.surname || ""}`.trim() : 'Müşteri',
+          customerPhone: inv.customer?.phone || '',
+          customerType: 'individual',
+          companyTitle: inv.customer?.companyTitle,
+          taxOffice: '',
+          taxNumber: inv.customer?.taxNumber,
+          vehiclePlate: vehicle?.plate || '34XX000',
+          vehicleBrand: vehicle?.brand || 'Araç',
+          vehicleModel: vehicle?.model || 'Model',
+          vehicleYear: vehicle?.year || 2024,
+          vehicleKm: vehicle?.currentKm || 0,
+          vehicleVin: vehicle?.vin || vehicle?.chassisNo,
+          issueDate: new Date(inv.issueDate).toISOString().split('T')[0],
+          dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : new Date(inv.issueDate).toISOString().split('T')[0],
+          subtotal,
+          taxAmount,
+          grandTotal,
+          paidAmount,
+          remainingAmount,
+          status: (inv.status === 'PAID' ? 'PAID' : inv.status === 'PARTIALLY_PAID' ? 'PARTIALLY_PAID' : 'UNPAID') as InvoiceStatus,
+          payments: (inv.payments || []).map((p: PaymentRecord) => ({
+            id: p.id,
+            customerId: inv.customerId,
+            invoiceId: inv.id,
+            date: p.createdAt,
+            amount: Number(p.amount),
+            method: (p.paymentMethod === 'CREDIT_CARD' ? 'POS' : p.paymentMethod === 'BANK_TRANSFER' ? 'BANK_TRANSFER' : 'CASH') as PaymentMethod,
+            performedByName: p.customer?.name || 'Sistem',
+            createdAt: p.createdAt,
+          })),
+          items: inv.items ? inv.items.map((i, idx) => ({
+            id: i.id || `item_${idx}`,
+            type: (i.type === 'PART' ? 'PART' : 'SERVICE') as "SERVICE" | "PART",
+            name: i.name || i.description || 'Hizmet / Kalem',
+            quantity: i.quantity,
+            unitPrice: Number(i.unitPrice),
+            totalPrice: Number(i.totalPrice ?? (i.quantity * i.unitPrice)),
+          })) : [
+            { id: 'item_1', type: 'SERVICE' as const, name: 'Genel Servis & Bakım Bedeli', quantity: 1, unitPrice: subtotal, totalPrice: subtotal }
+          ],
+          createdAt: inv.issueDate,
+          updatedAt: inv.issueDate,
+        }
+      })
       setInvoices(mapped)
     }
   }, [apiInvoices])
@@ -377,13 +392,13 @@ export default function InvoicesPage() {
 
                     {/* Grand Total */}
                     <td className="py-4 px-4 font-mono font-bold text-slate-900 dark:text-slate-100 text-xs">
-                      {inv.grandTotal.toLocaleString("tr-TR")} ₺
+                      {(inv.grandTotal ?? 0).toLocaleString("tr-TR")} ₺
                     </td>
 
                     {/* Remaining */}
                     <td className="py-4 px-4 font-mono text-xs">
-                      <span className={inv.remainingAmount > 0 ? "font-bold text-rose-600 dark:text-rose-400" : "text-slate-400"}>
-                        {inv.remainingAmount.toLocaleString("tr-TR")} ₺
+                      <span className={(inv.remainingAmount ?? 0) > 0 ? "font-bold text-rose-600 dark:text-rose-400" : "text-slate-400"}>
+                        {(inv.remainingAmount ?? 0).toLocaleString("tr-TR")} ₺
                       </span>
                     </td>
 
