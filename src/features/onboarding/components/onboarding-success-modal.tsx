@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { CheckCircle2, Sparkles, ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
@@ -15,21 +16,35 @@ export function OnboardingSuccessModal({
   companyName,
   onFinish,
 }: OnboardingSuccessModalProps) {
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Lock body scroll when modal is open to ensure perfect viewport centering
   React.useEffect(() => {
     if (isOpen) {
+      const originalOverflow = document.body.style.overflow
       document.body.style.overflow = "hidden"
       return () => {
-        document.body.style.overflow = "auto"
+        document.body.style.overflow = originalOverflow
       }
     }
   }, [isOpen])
 
-  if (!isOpen) return null
+  if (!isOpen || !mounted) return null
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="w-full max-w-md my-auto mx-auto rounded-3xl bg-white dark:bg-[#0c1322] border border-slate-200 dark:border-slate-800 p-6 sm:p-8 text-center space-y-5 shadow-2xl animate-in zoom-in-95 duration-200">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+      style={{ minHeight: "100vh", minWidth: "100vw" }}
+    >
+      {/* Dark Backdrop directly attached to body */}
+      <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-300" />
+
+      {/* Centered Modal Card */}
+      <div className="relative z-10 w-full max-w-md max-h-[90vh] overflow-y-auto rounded-3xl bg-white dark:bg-[#0c1322] border border-slate-200 dark:border-slate-800 p-6 sm:p-8 text-center space-y-5 shadow-2xl animate-in zoom-in-95 duration-200">
         {/* Success Icon */}
         <div className="w-16 h-16 rounded-3xl bg-emerald-500/10 text-emerald-500 mx-auto flex items-center justify-center border border-emerald-500/20">
           <CheckCircle2 size={32} />
@@ -59,6 +74,7 @@ export function OnboardingSuccessModal({
           <ArrowRight size={16} />
         </Button>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
