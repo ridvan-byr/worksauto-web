@@ -14,6 +14,7 @@ import { StepStaff } from "@/features/onboarding/components/step-staff"
 import { StepWorkshopSettings } from "@/features/onboarding/components/step-workshop-settings"
 import { OnboardingSuccessModal } from "@/features/onboarding/components/onboarding-success-modal"
 import { useTenantSettings } from "@/features/settings/api/use-settings"
+import { isValidTurkishGsm } from "@/lib/phone-utils"
 
 const ONBOARDING_STORAGE_KEY = "worksauto_onboarding_draft"
 
@@ -126,10 +127,10 @@ export default function OnboardingPage() {
         errs.staff = "En az 1 adet usta / teknisyen personeli tanımlamalısınız."
       } else {
         const invalidStaff = formData.staff.find(
-          (s) => !s.phone || s.phone.replace(/\D/g, "").length < 10
+          (s) => !isValidTurkishGsm(s.phone)
         )
         if (invalidStaff) {
-          errs.staff = `"${invalidStaff.name} ${invalidStaff.surname}" personeli için geçerli bir cep telefonu numarası (05xx...) zorunludur. Personel panele telefon numarasıyla giriş yapmaktadır.`
+          errs.staff = `"${invalidStaff.name} ${invalidStaff.surname}" personeli için geçerli bir cep telefonu numarası (05XX XXX XX XX) zorunludur. Usta sisteme cep telefonu numarasıyla giriş yapacaktır.`
         }
       }
     }

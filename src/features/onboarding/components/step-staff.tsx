@@ -4,6 +4,11 @@ import * as React from "react"
 import { Users, Plus, Trash2, Phone, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { StaffMember } from "@/features/auth/types"
+import {
+  formatTurkishGsmInput,
+  formatTurkishGsmDisplay,
+  getTurkishGsmError,
+} from "@/lib/phone-utils"
 
 interface StepStaffProps {
   staff: StaffMember[]
@@ -29,17 +34,15 @@ export function StepStaff({
   const handleAdd = () => {
     const cleanName = newStaff.name.trim()
     const cleanSurname = newStaff.surname.trim()
-    const cleanPhone = newStaff.phone.trim().replace(/\D/g, "")
 
     if (!cleanName || !cleanSurname) {
       setInputError("Lütfen ustanın adını ve soyadını eksiksiz giriniz.")
       return
     }
 
-    if (!newStaff.phone.trim() || cleanPhone.length < 10) {
-      setInputError(
-        "Ustanın sisteme giriş yapabilmesi için geçerli bir cep telefonu numarası (en az 10 hane, örn: 0532...) zorunludur."
-      )
+    const phoneError = getTurkishGsmError(newStaff.phone)
+    if (phoneError) {
+      setInputError(phoneError)
       return
     }
 
@@ -47,7 +50,7 @@ export function StepStaff({
     onAddStaff({
       name: cleanName,
       surname: cleanSurname,
-      phone: newStaff.phone.trim(),
+      phone: formatTurkishGsmDisplay(newStaff.phone),
       expertise: newStaff.expertise,
     })
     setNewStaff({ name: "", surname: "", phone: "", expertise: "Motor & Mekanik" })
@@ -91,13 +94,14 @@ export function StepStaff({
           />
           <input
             type="tel"
-            placeholder="Telefon (05XX... Zorunlu) *"
+            placeholder="05XX XXX XX XX *"
             value={newStaff.phone}
             onChange={(e) => {
-              setNewStaff({ ...newStaff, phone: e.target.value })
+              const formatted = formatTurkishGsmInput(e.target.value)
+              setNewStaff({ ...newStaff, phone: formatted })
               if (inputError) setInputError(null)
             }}
-            className="h-11 sm:h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-400 dark:focus:border-slate-600"
+            className="h-11 sm:h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 font-mono"
           />
           <select
             value={newStaff.expertise}

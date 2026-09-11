@@ -6,6 +6,11 @@ import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DEFAULT_LIFTS } from "@/lib/workshop-constants"
 import { StaffRecord, useWorkshopBays } from "@/features/settings/api/use-settings"
+import {
+  formatTurkishGsmInput,
+  formatTurkishGsmDisplay,
+  getTurkishGsmError,
+} from "@/lib/phone-utils"
 
 interface StaffModalProps {
   isOpen: boolean
@@ -36,6 +41,7 @@ export function StaffModal({
   const [name, setName] = React.useState("")
   const [surname, setSurname] = React.useState("")
   const [phone, setPhone] = React.useState("")
+  const [phoneError, setPhoneError] = React.useState<string | null>(null)
   const [email, setEmail] = React.useState("")
   const [role, setRole] = React.useState("TECHNICIAN")
   const [lift, setLift] = React.useState("Lift 1")
@@ -59,12 +65,13 @@ export function StaffModal({
   }, [baysData])
 
   React.useEffect(() => {
+    setPhoneError(null)
     if (editingStaff) {
       const u = editingStaff.user || editingStaff
       const mechanic = editingStaff.mechanic || u.mechanic
       setName(u.name || "")
       setSurname(u.surname || "")
-      setPhone(u.phone || "")
+      setPhone(formatTurkishGsmDisplay(u.phone || ""))
       setEmail(u.email || "")
       setRole(u.role || "TECHNICIAN")
       setLift(mechanic?.assignedLift || editingStaff.assignedLift || "Lift 1")
@@ -86,12 +93,20 @@ export function StaffModal({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (!name || !phone) return
+    if (!name.trim()) return
+
+    const err = getTurkishGsmError(phone)
+    if (err) {
+      setPhoneError(err)
+      return
+    }
+
+    setPhoneError(null)
     onSubmit({
-      name,
-      surname: surname || undefined,
-      phone,
-      email: email || undefined,
+      name: name.trim(),
+      surname: surname.trim() || undefined,
+      phone: formatTurkishGsmDisplay(phone),
+      email: email.trim() || undefined,
       role,
       assignedLift: role === "TECHNICIAN" ? lift : null,
       specialty: specialty || (role === "TECHNICIAN" ? "Genel Mekanik" : "Ofis / Yönetim"),
@@ -150,13 +165,19 @@ export function StaffModal({
             <div className="space-y-1">
               <label className="text-xs font-medium">Cep Telefonu *</label>
               <input
-                type="text"
+                type="tel"
                 required
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                placeholder="05551234567"
+                onChange={(e) => {
+                  setPhone(formatTurkishGsmInput(e.target.value))
+                  if (phoneError) setPhoneError(null)
+                }}
+                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono"
+                placeholder="05XX XXX XX XX"
               />
+              {phoneError && (
+                <p className="text-[11px] text-rose-500">{phoneError}</p>
+              )}
             </div>
 
             <div className="space-y-1">
