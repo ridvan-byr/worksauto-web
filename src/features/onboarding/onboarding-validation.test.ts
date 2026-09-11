@@ -95,14 +95,44 @@ describe("Onboarding Formats & Validation Rules", () => {
     })
   })
 
-  describe("Step 5: Workshop Capacity Clamping", () => {
-    const clampStock = (val: number) => Math.max(1, Math.min(100, val || 1))
+  describe("Step 5: Workshop Capacity Clamping & Custom Settings", () => {
+    const clampStockOnBlur = (val: string) => {
+      const parsed = parseInt(val)
+      return isNaN(parsed) || parsed < 1 ? 5 : Math.min(100, parsed)
+    }
 
-    it("should clamp critical stock threshold between 1 and 100", () => {
-      expect(clampStock(5)).toBe(5)
-      expect(clampStock(0)).toBe(1)
-      expect(clampStock(-10)).toBe(1)
-      expect(clampStock(250)).toBe(100)
+    const clampLiftOnBlur = (val: string) => {
+      const parsed = parseInt(val)
+      return isNaN(parsed) || parsed < 5 ? 5 : Math.min(50, parsed)
+    }
+
+    const clampSlotOnBlur = (val: string) => {
+      const parsed = parseInt(val)
+      return isNaN(parsed) || parsed < 15 ? 45 : Math.min(240, parsed)
+    }
+
+    it("should never allow critical stock threshold to remain empty or 0", () => {
+      expect(clampStockOnBlur("")).toBe(5) // Empty auto-defaults to 5
+      expect(clampStockOnBlur("0")).toBe(5) // 0 auto-defaults to 5
+      expect(clampStockOnBlur("-3")).toBe(5)
+      expect(clampStockOnBlur("12")).toBe(12)
+      expect(clampStockOnBlur("150")).toBe(100) // Max 100
+    })
+
+    it("should allow 5+ custom lift count and clamp between 5 and 50", () => {
+      expect(clampLiftOnBlur("5")).toBe(5)
+      expect(clampLiftOnBlur("8")).toBe(8)
+      expect(clampLiftOnBlur("24")).toBe(24)
+      expect(clampLiftOnBlur("60")).toBe(50) // Max 50
+      expect(clampLiftOnBlur("")).toBe(5) // Empty fallback
+    })
+
+    it("should support expanded presets and custom slot durations up to 240 min", () => {
+      expect(clampSlotOnBlur("15")).toBe(15)
+      expect(clampSlotOnBlur("75")).toBe(75)
+      expect(clampSlotOnBlur("120")).toBe(120)
+      expect(clampSlotOnBlur("300")).toBe(240) // Max 240
+      expect(clampSlotOnBlur("")).toBe(45) // Empty fallback
     })
   })
 })

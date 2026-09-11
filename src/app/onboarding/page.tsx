@@ -181,8 +181,16 @@ export default function OnboardingPage() {
     if (currentStep === 5) {
       if (!formData.activeLiftCount || formData.activeLiftCount < 1) {
         errs.workshop = "En az 1 adet aktif lift kapasitesi seçilmelidir."
+      } else if (formData.activeLiftCount > 50) {
+        errs.workshop = "Maksimum 50 adet lift kapasitesi tanımlanabilir."
       } else if (!formData.criticalStockThreshold || formData.criticalStockThreshold < 1) {
-        errs.workshop = "Kritik stok eşiği en az 1 adet olmalıdır."
+        errs.workshop = "Kritik parça stok uyarı eşiği boş bırakılamaz (en az 1 adet)."
+      } else if (formData.criticalStockThreshold > 100) {
+        errs.workshop = "Kritik parça stok uyarı eşiği en fazla 100 adet olabilir."
+      } else if (!formData.appointmentSlotDuration || formData.appointmentSlotDuration < 15) {
+        errs.workshop = "Randevu slot periyodu en az 15 dakika olmalıdır."
+      } else if (formData.appointmentSlotDuration > 240) {
+        errs.workshop = "Randevu slot periyodu en fazla 240 dakika olabilir."
       }
     }
 

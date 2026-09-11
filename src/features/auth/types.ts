@@ -58,7 +58,7 @@ export interface Tenant {
   services?: ServiceItem[]
   staff?: StaffMember[]
   // Operational Settings
-  appointmentSlotDuration?: 30 | 45 | 60
+  appointmentSlotDuration?: number
   activeLiftCount?: number
   autoWorkOrder?: boolean
   notifyAppointmentReminder?: boolean
