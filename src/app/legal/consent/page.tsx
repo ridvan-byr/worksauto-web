@@ -4,7 +4,7 @@ import * as React from "react"
 import Image from "next/image"
 import { useAuth } from "@/features/auth/auth-context"
 import { apiClient } from "@/lib/api-client"
-import { FileText, CheckCircle2, Lock, ArrowRight, LogOut, ShieldAlert, Building2 } from "lucide-react"
+import { FileText, CheckCircle2, Lock, ArrowRight, LogOut, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "@/components/ui/sonner"
@@ -164,52 +164,9 @@ export default function LegalConsentPage() {
               <h2 className="text-sm font-bold text-white tracking-tight">Sisteme Giriş Öncesi Zorunlu Onay</h2>
             </div>
             
-            <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              WorksAuto platformunu ve oto servis yönetim modüllerini kullanabilmeniz için işletmeniz adına yasal B2B lisans sözleşmesi ve KVKK veri işleme protokolünü onaylamanız gerekmektedir.
+            <p className="text-xs text-slate-400 leading-relaxed mb-6">
+              WorksAuto platformunu ve oto servis yönetim modüllerini kullanabilmeniz için işletmeniz adına yasal kurumsal hizmet sözleşmesi, KVKK veri işleme taahhüdü ve ilgili onayları tamamlamanız gerekmektedir.
             </p>
-
-            {/* Yasal Taraf & Kimlik Doğrulama Parametreleri */}
-            <div className="mb-5 rounded-xl border border-slate-800/90 bg-slate-950/70 p-3.5 text-xs space-y-2">
-              <div className="flex items-center justify-between text-[11px] text-slate-400 font-medium pb-2 border-b border-slate-800/60">
-                <span className="flex items-center gap-1.5 text-slate-300 font-semibold">
-                  <Building2 className="h-3.5 w-3.5 text-slate-400" />
-                  Sözleşme Tarafı & Doğrulanan Kimlik
-                </span>
-                <span className="text-emerald-400 flex items-center gap-1 font-mono text-[10px]">
-                  <CheckCircle2 className="h-3 w-3" /> Doğrulandı
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-                <div>
-                  <span className="text-slate-500 block text-[10px]">İşletme / Servis:</span>
-                  <span className="text-slate-200 font-medium truncate block" title={tenant?.legalName || tenant?.title || tenant?.name}>
-                    {tenant?.legalName || tenant?.title || tenant?.name || "Kayıtlı İşletme"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">Vergi / Sicil No:</span>
-                  <span className="text-slate-200 font-medium truncate block">
-                    {tenant?.taxNumber ? `${tenant.taxOffice ? tenant.taxOffice + " - " : ""}${tenant.taxNumber}` : "B2B Kurumsal Kayıt"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">İmza Yetkilisi:</span>
-                  <span className="text-slate-200 font-medium truncate block">
-                    {user?.name} {user?.surname} ({user?.role || "OWNER"})
-                  </span>
-                </div>
-                <div>
-                  <span className="text-slate-500 block text-[10px]">Tebligat Hattı:</span>
-                  <span className="text-slate-200 font-medium truncate block">
-                    {user?.phone || tenant?.phone || "Kayıtlı GSM"}
-                  </span>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-slate-800/50 flex items-center justify-between text-[10px] text-slate-400">
-                <span>Hukuki Rol: <strong className="text-slate-300">Veri Sorumlusu</strong></span>
-                <span>Platform: <strong className="text-slate-300">Veri İşleyen (RLS)</strong></span>
-              </div>
-            </div>
 
             <form onSubmit={handleSubmit} className="space-y-3.5">
               {/* Checkbox 1: SaaS Terms */}
