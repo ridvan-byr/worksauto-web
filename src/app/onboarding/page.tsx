@@ -124,6 +124,13 @@ export default function OnboardingPage() {
     if (currentStep === 4) {
       if (!formData.staff || formData.staff.length === 0) {
         errs.staff = "En az 1 adet usta / teknisyen personeli tanımlamalısınız."
+      } else {
+        const invalidStaff = formData.staff.find(
+          (s) => !s.phone || s.phone.replace(/\D/g, "").length < 10
+        )
+        if (invalidStaff) {
+          errs.staff = `"${invalidStaff.name} ${invalidStaff.surname}" personeli için geçerli bir cep telefonu numarası (05xx...) zorunludur. Personel panele telefon numarasıyla giriş yapmaktadır.`
+        }
       }
     }
 
@@ -214,7 +221,7 @@ export default function OnboardingPage() {
         <div className="flex items-center gap-2.5 sm:gap-3">
           <BrandLogo collapsed={true} className="sm:hidden" />
           <BrandLogo collapsed={false} className="hidden sm:flex" />
-          <span className="px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[11px] sm:text-xs font-semibold border border-sky-500/20 whitespace-nowrap">
+          <span className="px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[11px] sm:text-xs font-semibold border border-slate-200 dark:border-slate-700 whitespace-nowrap">
             Kurulum
           </span>
         </div>
@@ -223,20 +230,20 @@ export default function OnboardingPage() {
           <span className="font-medium">Adım <strong>{currentStep}</strong>/5</span>
           <div className="w-16 sm:w-32 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
             <div
-              className="h-full bg-sky-500 transition-all duration-300 rounded-full"
+              className="h-full bg-slate-900 dark:bg-slate-100 transition-all duration-300 rounded-full"
               style={{ width: `${progressPercent}%` }}
             />
           </div>
-          <span className="font-bold text-sky-500 text-xs">%{progressPercent}</span>
+          <span className="font-bold text-slate-900 dark:text-slate-100 text-xs">%{progressPercent}</span>
         </div>
       </header>
 
       {/* Main Container */}
       <main className="flex-1 max-w-4xl w-full mx-auto p-3.5 sm:p-6 lg:p-8 space-y-5 sm:space-y-7 animate-in fade-in duration-300">
-        {/* Welcome Super Admin Pre-fill Banner */}
-        <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-500/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        {/* Welcome Account Info Banner */}
+        <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-sky-500/20 text-sky-500 flex items-center justify-center font-bold shrink-0">
+            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 flex items-center justify-center font-bold shrink-0">
               <ShieldCheck size={20} />
             </div>
             <div>
@@ -248,9 +255,6 @@ export default function OnboardingPage() {
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 self-start sm:self-auto">
-            Super Admin Onaylı
-          </span>
         </div>
 
         {/* Stepper Navigation */}
@@ -297,7 +301,7 @@ export default function OnboardingPage() {
               variant="outline"
               onClick={handlePrev}
               disabled={currentStep === 1}
-              className="h-11 px-3.5 sm:px-4 gap-1.5 text-xs font-semibold cursor-pointer"
+              className="h-11 px-3.5 sm:px-4 gap-1.5 text-xs font-semibold cursor-pointer border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800"
             >
               <ArrowLeft size={14} />
               <span>Geri</span>
@@ -306,7 +310,7 @@ export default function OnboardingPage() {
             <Button
               type="button"
               onClick={handleNext}
-              className="h-11 px-5 sm:px-6 gap-1.5 text-xs font-semibold cursor-pointer shadow-sm flex-1 sm:flex-none justify-center"
+              className="h-11 px-5 sm:px-6 gap-1.5 text-xs font-semibold cursor-pointer shadow-sm flex-1 sm:flex-none justify-center bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-950"
             >
               {currentStep === 5 ? (
                 <>

@@ -31,8 +31,8 @@ export function StepWorkshopSettings({
     <div className="space-y-6 animate-in fade-in duration-200">
       <div>
         <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Settings2 className="text-sky-500 shrink-0" size={20} />
-          <span>Adım 6: Randevu, Atölye Kapasitesi & Bildirim Ayarları</span>
+          <Settings2 className="text-slate-600 dark:text-slate-400 shrink-0" size={20} />
+          <span>Adım 5: Randevu, Atölye Kapasitesi & Bildirim Ayarları</span>
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
           Servisinizin eşzamanlı lift kapasitesini, randevu aralıklarını ve müşteri otomatik bildirim kurallarını yapılandırın.
@@ -52,14 +52,14 @@ export function StepWorkshopSettings({
               type="button"
               onClick={() => onChange({ activeLiftCount: count })}
               className={cn(
-                "p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1",
+                "p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 select-none",
                 data.activeLiftCount === count
-                  ? "bg-sky-500 text-white border-sky-500 shadow-sm"
-                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                  ? "bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white shadow-sm"
+                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80"
               )}
             >
               <span className="text-base font-bold">{count} {count === 5 ? "+" : ""} Lift</span>
-              <span className="text-[10px] opacity-80">
+              <span className="text-[10px] opacity-75">
                 {count === 1 ? "Butik Atölye" : count <= 3 ? "Orta Ölçek" : "Büyük Servis"}
               </span>
             </button>
@@ -79,14 +79,14 @@ export function StepWorkshopSettings({
               type="button"
               onClick={() => onChange({ appointmentSlotDuration: mins as 30 | 45 | 60 })}
               className={cn(
-                "p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1",
+                "p-3 rounded-2xl border text-center transition-all cursor-pointer flex flex-col items-center gap-1 select-none",
                 data.appointmentSlotDuration === mins
-                  ? "bg-sky-500 text-white border-sky-500 shadow-sm"
-                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100"
+                  ? "bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white shadow-sm"
+                  : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80"
               )}
             >
               <span className="text-base font-bold">{mins} Dk</span>
-              <span className="text-[10px] opacity-80 leading-tight">
+              <span className="text-[10px] opacity-75 leading-tight">
                 {mins === 30 ? "Hızlı Kabul" : mins === 45 ? "Dengeli (Önerilen)" : "Kapsamlı Bakım"}
               </span>
             </button>

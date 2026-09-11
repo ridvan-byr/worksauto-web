@@ -41,9 +41,9 @@ export function OnboardingStepper({
               className={cn(
                 "h-1.5 flex-1 rounded-full transition-all duration-300",
                 s.id === currentStep
-                  ? "bg-sky-500"
+                  ? "bg-slate-900 dark:bg-white"
                   : s.id < currentStep
-                  ? "bg-emerald-500"
+                  ? "bg-slate-500 dark:bg-slate-400"
                   : "bg-slate-200 dark:bg-slate-800"
               )}
             />
@@ -52,7 +52,7 @@ export function OnboardingStepper({
 
         <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className="w-7 h-7 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 font-bold text-xs">
+            <div className="w-7 h-7 rounded-lg bg-slate-200 dark:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center justify-center shrink-0 font-bold text-xs">
               {currentStep}
             </div>
             <div className="overflow-hidden">
@@ -64,14 +64,14 @@ export function OnboardingStepper({
               </p>
             </div>
           </div>
-          <span className="text-[11px] font-bold text-sky-500 shrink-0">
-            {currentStep} / 6
+          <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 shrink-0">
+            {currentStep} / 5
           </span>
         </div>
       </div>
 
-      {/* Desktop Stepper Grid (>= md) */}
-      <div className="hidden md:grid md:grid-cols-6 gap-2 text-center">
+      {/* Desktop Stepper Grid (5 Columns) */}
+      <div className="hidden md:grid md:grid-cols-5 gap-2 text-center">
         {STEPS.map((s) => {
           const Icon = s.icon
           const isCompleted = s.id < currentStep
@@ -88,20 +88,20 @@ export function OnboardingStepper({
               }}
               disabled={s.id > currentStep}
               className={cn(
-                "p-2.5 rounded-2xl border transition-all text-left flex flex-col items-start gap-1",
+                "p-3 rounded-2xl border transition-all text-left flex flex-col items-start gap-1 select-none",
                 isCurrent
-                  ? "bg-sky-500 text-white border-sky-500 shadow-md shadow-sky-500/20"
+                  ? "bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white shadow-sm"
                   : isCompleted
-                  ? "bg-white dark:bg-slate-900 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 cursor-pointer hover:border-emerald-500"
-                  : "bg-slate-100/60 dark:bg-slate-900/40 border-slate-200/60 dark:border-slate-800/60 text-slate-400 opacity-60 cursor-not-allowed"
+                  ? "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 cursor-pointer hover:border-slate-400 dark:hover:border-slate-700"
+                  : "bg-slate-50/50 dark:bg-slate-950/30 border-slate-200/50 dark:border-slate-800/50 text-slate-400 dark:text-slate-600 opacity-60 cursor-not-allowed"
               )}
             >
               <div className="flex items-center justify-between w-full">
-                <Icon size={16} />
-                {isCompleted && <CheckCircle2 size={13} className="text-emerald-500 shrink-0" />}
+                <Icon size={16} className={isCurrent ? "text-white dark:text-slate-950" : "text-slate-600 dark:text-slate-400"} />
+                {isCompleted && <CheckCircle2 size={14} className="text-slate-600 dark:text-slate-400 shrink-0" />}
               </div>
               <p className="text-xs font-bold leading-tight mt-1 truncate w-full">{s.title}</p>
-              <p className={cn("text-[10px] truncate w-full", isCurrent ? "text-sky-100" : "text-slate-400")}>
+              <p className={cn("text-[10px] truncate w-full", isCurrent ? "text-slate-300 dark:text-slate-600" : "text-slate-500 dark:text-slate-500")}>
                 {s.desc}
               </p>
             </button>

@@ -27,7 +27,7 @@ export function StepCompanyInfo({
     <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200">
       <div>
         <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Building2 className="text-sky-500 shrink-0" size={20} />
+          <Building2 className="text-slate-600 dark:text-slate-400 shrink-0" size={20} />
           <span>Adım 1: Servis & Fatura Kimliği</span>
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
@@ -47,7 +47,7 @@ export function StepCompanyInfo({
             onChange={(e) => onChange({ name: e.target.value })}
             placeholder="Örn: Ege Motorlu Araçlar Özel Servisi"
             className={cn(
-              "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all",
+              "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all",
               errors.name ? "border-rose-500" : "border-slate-200 dark:border-slate-800"
             )}
           />

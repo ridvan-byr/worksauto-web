@@ -25,8 +25,8 @@ export function StepWorkingHours({
     <div className="space-y-5 sm:space-y-6 animate-in fade-in duration-200">
       <div>
         <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Clock className="text-sky-500 shrink-0" size={20} />
-          <span>Adım 3: Çalışma Günleri & Mesai Saatleri</span>
+          <Clock className="text-slate-600 dark:text-slate-400 shrink-0" size={20} />
+          <span>Adım 2: Çalışma Günleri & Mesai Saatleri</span>
         </h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
           Randevu takviminizde araç kabul yapılacak günleri ve mesai saatlerini belirleyin.
@@ -52,14 +52,14 @@ export function StepWorkingHours({
                   onChange({ workingDays: next })
                 }}
                 className={cn(
-                  "p-2.5 sm:p-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer",
+                  "p-2.5 sm:p-3 rounded-xl border text-xs font-semibold flex items-center justify-between transition-all cursor-pointer select-none",
                   isSelected
-                    ? "bg-sky-500 text-white border-sky-500 shadow-sm"
-                    : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-500 hover:bg-slate-100"
+                    ? "bg-slate-900 dark:bg-white text-white dark:text-slate-950 border-slate-900 dark:border-white shadow-sm"
+                    : "bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80"
                 )}
               >
                 <span>{day}</span>
-                {isSelected && <CheckCircle2 size={14} />}
+                {isSelected && <CheckCircle2 size={14} className="shrink-0" />}
               </button>
             )
           })}
@@ -77,7 +77,7 @@ export function StepWorkingHours({
             type="time"
             value={data.workStartTime}
             onChange={(e) => onChange({ workStartTime: e.target.value })}
-            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all"
           />
         </div>
 
@@ -89,7 +89,7 @@ export function StepWorkingHours({
             type="time"
             value={data.workEndTime}
             onChange={(e) => onChange({ workEndTime: e.target.value })}
-            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all"
           />
         </div>
 
@@ -101,7 +101,7 @@ export function StepWorkingHours({
             type="time"
             value={data.breakStartTime}
             onChange={(e) => onChange({ breakStartTime: e.target.value })}
-            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all"
           />
         </div>
 
@@ -113,7 +113,7 @@ export function StepWorkingHours({
             type="time"
             value={data.breakEndTime}
             onChange={(e) => onChange({ breakEndTime: e.target.value })}
-            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
+            className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all"
           />
         </div>
       </div>
