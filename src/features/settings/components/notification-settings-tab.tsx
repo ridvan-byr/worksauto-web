@@ -20,8 +20,21 @@ export interface NotificationSettingsData {
   whatsappConnected: boolean
 }
 
+const DEFAULT_SETTINGS: NotificationSettingsData = {
+  id: "default",
+  tenantId: "",
+  strategy: "FALLBACK",
+  channelPriority: ["WHATSAPP", "EMAIL", "SMS"],
+  singleChannel: "WHATSAPP",
+  whatsappEnabled: true,
+  emailEnabled: true,
+  smsEnabled: false,
+  whatsappDeviceId: null,
+  whatsappConnected: false,
+}
+
 export function NotificationSettingsTab() {
-  const [settings, setSettings] = React.useState<NotificationSettingsData | null>(null)
+  const [settings, setSettings] = React.useState<NotificationSettingsData>(DEFAULT_SETTINGS)
   const [isLoading, setIsLoading] = React.useState(true)
   const [isSaving, setIsSaving] = React.useState(false)
   const [showQrModal, setShowQrModal] = React.useState(false)
@@ -31,9 +44,11 @@ export function NotificationSettingsTab() {
     async function loadSettings() {
       try {
         const res = await apiClient.get<NotificationSettingsData>("/tenants/notification-settings")
-        setSettings(res)
+        if (res && res.channelPriority) {
+          setSettings(res)
+        }
       } catch {
-        toast.error("Bildirim ayarları yüklenemedi.")
+        // Fallback gracefully to default settings
       } finally {
         setIsLoading(false)
       }
@@ -79,8 +94,6 @@ export function NotificationSettingsTab() {
   if (isLoading) {
     return <div className="text-center py-12 text-sm text-slate-500">Bildirim ayarları yükleniyor...</div>
   }
-
-  if (!settings) return null
 
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
