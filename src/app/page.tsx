@@ -82,21 +82,22 @@ export default function DashboardPage() {
 
   // Dynamic Live KPIs (Directly from PostgreSQL summary API)
   const activeWOCount = summary?.activeWorkOrdersCount ?? 0
+  const inProgressCount = summary?.inProgressWorkOrdersCount ?? 0
+  const queueCount = summary?.queueWorkOrdersCount ?? 0
   const todayAppCount = summary?.todayAppointmentsCount ?? 0
   const criticalStock = summary?.criticalStockCount ?? 0
   const openInvoicesCount = summary?.unpaidInvoicesCount ?? 0
   const totalReceivables = summary?.unpaidTotal ?? 0
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300 pb-12">
-      {/* Welcome Banner */}
-      <div className="relative overflow-hidden rounded-3xl p-6 sm:p-8 border transition-all duration-300 bg-gradient-to-r from-sky-50 via-indigo-50/50 to-slate-100/80 border-sky-100 shadow-sm dark:from-slate-900 dark:via-[#0d1627] dark:to-slate-900 dark:border-slate-800/80 dark:shadow-xl">
-        <div className="absolute right-0 top-0 -mt-10 -mr-10 w-80 h-80 bg-sky-400/15 dark:bg-sky-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
-                Hoş Geldiniz, {userName} 👋
+    <div className="space-y-6 pb-12">
+      {/* Premium Hero Banner */}
+      <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/50 backdrop-blur-md p-6 sm:p-8 shadow-xs">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+                Hoş Geldiniz, {userName}
               </h1>
               <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
                 isTechnician
@@ -107,9 +108,25 @@ export default function DashboardPage() {
               </span>
             </div>
             <p className="text-slate-600 dark:text-slate-400 text-sm max-w-xl">
-              {isTechnician
-                ? `Atölyede şu an lifte ${activeWOCount} araç işlem görüyor. ${todayAppCount} kayıtlı randevu planlandı.`
-                : `Atölyede şu an lifte ${activeWOCount} araç işlem görüyor. ${criticalStock} adet kritik stok uyarısı ve ${todayAppCount} kayıtlı randevu bulunuyor.`}
+              {(() => {
+                const parts: string[] = [];
+                if (inProgressCount > 0 && queueCount > 0) {
+                  parts.push(`Atölyede şu an liftte ${inProgressCount} araç işlem görüyor, ${queueCount} araç sırada bekliyor.`);
+                } else if (inProgressCount > 0) {
+                  parts.push(`Atölyede şu an liftte ${inProgressCount} araç işlem görüyor.`);
+                } else if (queueCount > 0) {
+                  parts.push(`Atölyede şu an sırada bekleyen ${queueCount} araç bulunuyor.`);
+                } else {
+                  parts.push(`Atölyede şu an bekleyen veya işlem gören araç bulunmuyor.`);
+                }
+
+                if (!isTechnician && criticalStock > 0) {
+                  parts.push(`${criticalStock} adet kritik stok uyarısı ve ${todayAppCount} kayıtlı randevu bulunuyor.`);
+                } else {
+                  parts.push(`${todayAppCount} kayıtlı randevu planlandı.`);
+                }
+                return parts.join(" ");
+              })()}
             </p>
           </div>
 
@@ -160,12 +177,12 @@ export default function DashboardPage() {
           <Card className="hover:border-amber-500/40 transition-all cursor-pointer h-full">
             <CardContent className="p-5 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Atölye (Lifte Araçlar)</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Atölye (Aktif Araçlar)</p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
                   {activeWOCount} İş Emri
                 </p>
                 <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
-                  <Clock size={12} /> {recentOrders.filter((w) => w.status === "COMPLETED").length} araç teslime hazır
+                  <Clock size={12} /> {inProgressCount} liftte, {queueCount} sırada
                 </p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-105 transition-transform">
@@ -244,7 +261,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">
-                Lifte Olan ve İşlem Gören Araçlar
+                Liftte Olan ve İşlem Gören Araçlar
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Atölyedeki anlık teknisyen atamaları ve işlemler
@@ -330,7 +347,7 @@ export default function DashboardPage() {
               },
               {
                 title: "Atölye & İş Emirleri Panosu",
-                desc: "Lifte araçlar, usta notları ve fotoğraflar",
+                desc: "Liftte araçlar, usta notları ve fotoğraflar",
                 href: "/work-orders",
                 icon: Wrench,
                 color: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",

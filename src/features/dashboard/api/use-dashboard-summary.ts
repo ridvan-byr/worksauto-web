@@ -3,6 +3,8 @@ import { apiClient } from '@/lib/api-client';
 
 export interface DashboardSummary {
   activeWorkOrdersCount: number;
+  inProgressWorkOrdersCount?: number;
+  queueWorkOrdersCount?: number;
   todayAppointmentsCount: number;
   criticalStockCount: number;
   totalCustomersCount?: number;

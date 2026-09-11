@@ -48,7 +48,7 @@ export function WorkOrderListView({ orders }: WorkOrderListViewProps) {
           {[
             { id: "all", label: "Tümü" },
             { id: "PENDING", label: "Bekleyenler" },
-            { id: "IN_PROGRESS", label: "Lifte / İşlemde" },
+            { id: "IN_PROGRESS", label: "Liftte / İşlemde" },
             { id: "COMPLETED", label: "Tamamlanan" },
             { id: "CANCELLED", label: "İptal Edilenler" },
           ].map((st) => (

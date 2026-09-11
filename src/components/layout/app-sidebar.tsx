@@ -150,10 +150,17 @@ export function AppSidebar({
         title: "İş Emirleri (Atölye)",
         href: "/work-orders",
         icon: Wrench,
-        badge:
-          summary?.activeWorkOrdersCount && summary.activeWorkOrdersCount > 0
-            ? `${summary.activeWorkOrdersCount} Lifte`
-            : undefined,
+        badge: (() => {
+          const inProgress = summary?.inProgressWorkOrdersCount ?? 0;
+          const inQueue = summary?.queueWorkOrdersCount ?? 0;
+          if (inProgress > 0 && inQueue > 0) return `${inProgress} Liftte • ${inQueue} Sırada`;
+          if (inProgress > 0) return `${inProgress} Liftte`;
+          if (inQueue > 0) return `${inQueue} Sırada`;
+          if (summary?.activeWorkOrdersCount && summary.activeWorkOrdersCount > 0) {
+            return `${summary.activeWorkOrdersCount} Aktif`;
+          }
+          return undefined;
+        })(),
         badgeVariant: "warning",
       },
       {

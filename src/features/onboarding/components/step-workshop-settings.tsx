@@ -328,7 +328,7 @@ export function StepWorkshopSettings({
               Araç Hazır / Teslim Bildirimi
             </p>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Usta iş emrini tamamlayıp liften indirdiğinde müşteriye "Aracınız Hazır" mesajı gönderilsin.
+              Usta iş emrini tamamlayıp liftten indirdiğinde müşteriye "Aracınız Hazır" mesajı gönderilsin.
             </p>
           </div>
           <button

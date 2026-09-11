@@ -270,7 +270,7 @@ export default function WorkOrdersPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Lifte / İşlemde</p>
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Liftte / İşlemde</p>
             <p className="text-2xl font-bold text-sky-600 dark:text-sky-400">{inProgressCount} Araç</p>
           </div>
           <div className="w-11 h-11 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">

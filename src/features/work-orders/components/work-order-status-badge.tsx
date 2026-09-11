@@ -25,7 +25,7 @@ export function WorkOrderStatusBadge({ status, className }: { status: WorkOrderS
           )}
         >
           <span className="w-1.5 h-1.5 rounded-full bg-sky-500" />
-          <span>Lifte / İşlemde</span>
+          <span>Liftte / İşlemde</span>
         </span>
       )
     case "COMPLETED":

@@ -45,6 +45,11 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     isMutedRef.current = isMuted;
   }, [isMuted]);
 
+  const userRef = React.useRef(user);
+  React.useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
   // Load sound mute preference
   React.useEffect(() => {
     if (typeof window !== "undefined") {
@@ -108,6 +113,16 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
 
     // 1. In-App Notification Broadcast
     newSocket.on("notification:new", (notification: NotificationItem) => {
+      // Actor Isolation: İşlemi bizzat yapan kullanıcıya ses veya toast çalma
+      const currentUserId = userRef.current?.id;
+      if (
+        notification.metadata?.actorUserId &&
+        currentUserId &&
+        notification.metadata.actorUserId === currentUserId
+      ) {
+        return;
+      }
+
       // Play workshop sound chime using fresh ref
       playNotificationChime(isMutedRef.current);
 

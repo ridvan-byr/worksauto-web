@@ -154,7 +154,7 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-sky-900 dark:text-sky-200">
-                2. Lifte / İşlemde
+                2. Liftte / İşlemde
               </h3>
             </div>
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-600 dark:text-sky-400 shadow-2xs">
@@ -172,7 +172,7 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
             {inProgressOrders.length === 0 ? (
               <div className="h-40 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-sky-200 dark:border-sky-900/50 rounded-2xl text-slate-400 text-xs">
                 <Wrench size={20} className="mb-1 text-sky-400/50" />
-                <span>Şu an lifte olan araç yok</span>
+                <span>Şu an liftte olan araç yok</span>
               </div>
             ) : (
               inProgressOrders.map((order) => (
