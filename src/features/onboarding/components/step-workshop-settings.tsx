@@ -29,6 +29,13 @@ export function StepWorkshopSettings({
   onChange,
   errors = {},
 }: StepWorkshopSettingsProps) {
+  const [stockInput, setStockInput] = React.useState<string>(
+    String(data.criticalStockThreshold ?? 5)
+  )
+
+  React.useEffect(() => {
+    setStockInput(String(data.criticalStockThreshold ?? 5))
+  }, [data.criticalStockThreshold])
   return (
     <div className="space-y-6 animate-in fade-in duration-200">
       <div>
@@ -206,10 +213,22 @@ export function StepWorkshopSettings({
             type="number"
             min={1}
             max={100}
-            value={data.criticalStockThreshold}
+            value={stockInput}
             onChange={(e) => {
-              const val = parseInt(e.target.value) || 1
-              onChange({ criticalStockThreshold: Math.max(1, Math.min(100, val)) })
+              const val = e.target.value
+              setStockInput(val)
+              if (val !== "") {
+                const parsed = parseInt(val)
+                if (!isNaN(parsed)) {
+                  onChange({ criticalStockThreshold: Math.max(1, Math.min(100, parsed)) })
+                }
+              }
+            }}
+            onBlur={() => {
+              const parsed = parseInt(stockInput)
+              const clamped = isNaN(parsed) ? 5 : Math.max(1, Math.min(100, parsed))
+              setStockInput(String(clamped))
+              onChange({ criticalStockThreshold: clamped })
             }}
             className="w-28 h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 transition-all font-semibold text-center"
           />

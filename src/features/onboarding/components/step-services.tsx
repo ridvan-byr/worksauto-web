@@ -35,8 +35,8 @@ export function StepServices({
   const [customService, setCustomService] = React.useState({
     name: "",
     category: "Motor & Mekanik",
-    durationMinutes: 45,
-    laborPrice: 800,
+    durationMinutes: "45",
+    laborPrice: "800",
   })
   const [customError, setCustomError] = React.useState<string | null>(null)
 
@@ -47,8 +47,8 @@ export function StepServices({
       return
     }
 
-    const duration = Math.max(5, Math.min(1440, Number(customService.durationMinutes) || 45))
-    const price = Math.max(0, Math.min(1000000, Number(customService.laborPrice) || 0))
+    const duration = Math.max(5, Math.min(1440, parseInt(customService.durationMinutes) || 45))
+    const price = Math.max(0, Math.min(1000000, parseInt(customService.laborPrice) || 0))
 
     setCustomError(null)
     onAddCustomService({
@@ -57,7 +57,7 @@ export function StepServices({
       durationMinutes: duration,
       laborPrice: price,
     })
-    setCustomService({ name: "", category: "Motor & Mekanik", durationMinutes: 45, laborPrice: 800 })
+    setCustomService({ name: "", category: "Motor & Mekanik", durationMinutes: "45", laborPrice: "800" })
   }
 
   return (
@@ -159,8 +159,14 @@ export function StepServices({
               title="Tahmini Süre (dakika)"
               value={customService.durationMinutes}
               onChange={(e) => {
-                const val = parseInt(e.target.value) || 0
-                setCustomService({ ...customService, durationMinutes: Math.max(5, Math.min(1440, val)) })
+                setCustomService({ ...customService, durationMinutes: e.target.value })
+              }}
+              onBlur={() => {
+                const p = parseInt(customService.durationMinutes)
+                setCustomService((prev) => ({
+                  ...prev,
+                  durationMinutes: String(isNaN(p) ? 45 : Math.max(5, Math.min(1440, p))),
+                }))
               }}
               className="w-1/2 h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 text-center"
             />
@@ -172,8 +178,14 @@ export function StepServices({
               title="İşçilik Fiyatı (TL)"
               value={customService.laborPrice}
               onChange={(e) => {
-                const val = parseInt(e.target.value) || 0
-                setCustomService({ ...customService, laborPrice: Math.max(0, Math.min(1000000, val)) })
+                setCustomService({ ...customService, laborPrice: e.target.value })
+              }}
+              onBlur={() => {
+                const p = parseInt(customService.laborPrice)
+                setCustomService((prev) => ({
+                  ...prev,
+                  laborPrice: String(isNaN(p) ? 0 : Math.max(0, Math.min(1000000, p))),
+                }))
               }}
               className="w-1/2 h-10 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:border-slate-400 dark:focus:border-slate-600 text-center font-bold"
             />
@@ -243,10 +255,15 @@ export function StepServices({
                       min={5}
                       max={1440}
                       step={5}
-                      value={srv.durationMinutes}
+                      value={srv.durationMinutes || ""}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value) || 5
-                        onUpdateServiceItem(srv.id, { durationMinutes: Math.max(5, Math.min(1440, val)) })
+                        const val = e.target.value === "" ? 0 : parseInt(e.target.value) || 0
+                        onUpdateServiceItem(srv.id, { durationMinutes: val })
+                      }}
+                      onBlur={() => {
+                        onUpdateServiceItem(srv.id, {
+                          durationMinutes: Math.max(5, Math.min(1440, srv.durationMinutes || 5)),
+                        })
                       }}
                       className="w-16 h-7 text-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                     />
@@ -260,10 +277,15 @@ export function StepServices({
                       min={0}
                       max={1000000}
                       step={50}
-                      value={srv.laborPrice}
+                      value={srv.laborPrice === 0 ? "0" : (srv.laborPrice || "")}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value) || 0
-                        onUpdateServiceItem(srv.id, { laborPrice: Math.max(0, Math.min(1000000, val)) })
+                        const val = e.target.value === "" ? 0 : parseInt(e.target.value) || 0
+                        onUpdateServiceItem(srv.id, { laborPrice: val })
+                      }}
+                      onBlur={() => {
+                        onUpdateServiceItem(srv.id, {
+                          laborPrice: Math.max(0, Math.min(1000000, srv.laborPrice || 0)),
+                        })
                       }}
                       className="w-20 h-7 text-center rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-1 focus:ring-slate-900 dark:focus:ring-slate-300"
                     />
