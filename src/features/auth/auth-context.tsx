@@ -275,7 +275,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setAccessToken(data.accessToken)
         setSessionCookie(true)
 
-        let dbTenant: any = null
+        let dbTenant: Partial<Tenant> | null = null
         try {
           const tenantRes = await fetch(`${API_BASE_URL}/tenants/current`, {
             headers: { Authorization: `Bearer ${data.accessToken}` },
@@ -385,7 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [router, queryClient])
 
-  const completeOnboarding = React.useCallback(async (data: any) => {
+  const completeOnboarding = React.useCallback(async (data: Partial<Tenant>) => {
     try {
       await apiClient.post("/tenants/onboarding", data)
       toast.success("Atölye kurulumu başarıyla tamamlandı!")

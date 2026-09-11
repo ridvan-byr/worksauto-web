@@ -252,6 +252,7 @@ export function useDeleteStaff() {
 export interface TenantSettings {
   id: string;
   title: string;
+  name?: string;
   legalName?: string;
   phone?: string;
   email?: string;

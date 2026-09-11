@@ -36,6 +36,7 @@ export interface StaffMember {
 export interface Tenant {
   id: string
   name: string
+  title?: string
   legalName?: string
   taxOffice?: string
   taxNumber?: string
