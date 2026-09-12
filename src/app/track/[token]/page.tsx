@@ -17,9 +17,11 @@ import {
   Sparkles,
   X,
   ExternalLink,
-  Clock,
   Check,
   Car,
+  MapPin,
+  MessageCircle,
+  RotateCw,
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -82,7 +84,7 @@ const STATUS_STEPS = [
     key: "QUEUE",
     title: "Servise Kabul Edildi",
     shortTitle: "Kabul Edildi",
-    desc: "Aracınızın giriş kontrolleri ve iş emri kaydı tamamlandı, atölye sırasına alındı.",
+    desc: "Aracınızın giriş kontrolleri ve servis kaydı tamamlandı, atölye sırasına alındı.",
   },
   {
     key: "IN_PROGRESS",
@@ -110,24 +112,63 @@ export default function PublicVehicleTrackPage() {
 
   const [data, setData] = React.useState<TrackingData | null>(null)
   const [loading, setLoading] = React.useState(true)
+  const [isRefreshing, setIsRefreshing] = React.useState(false)
+  const [lastSyncTime, setLastSyncTime] = React.useState<Date | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = React.useState<string | null>(null)
 
-  React.useEffect(() => {
-    if (!token) return
-    setLoading(true)
-    apiClient
-      .get<TrackingData>(`/work-orders/public/track/${token}`)
-      .then((res) => {
+  // Fetch logic with silent background sync support
+  const fetchTrackingData = React.useCallback(
+    async (showLoading = false) => {
+      if (!token) return
+      if (showLoading) setLoading(true)
+      else setIsRefreshing(true)
+
+      try {
+        const res = await apiClient.get<TrackingData>(`/work-orders/public/track/${token}`)
         setData(res)
         setError(null)
-      })
-      .catch((err) => {
+        setLastSyncTime(new Date())
+      } catch (err: any) {
         console.warn("Public track API error:", err)
-        setError("İş emri bulunamadı veya bağlantı süresi dolmuş.")
-      })
-      .finally(() => setLoading(false))
-  }, [token])
+        if (showLoading) {
+          setError("İş emri bulunamadı veya bağlantı süresi dolmuş.")
+        }
+      } finally {
+        if (showLoading) setLoading(false)
+        else setIsRefreshing(false)
+      }
+    },
+    [token]
+  )
+
+  // Initial fetch
+  React.useEffect(() => {
+    fetchTrackingData(true)
+  }, [fetchTrackingData])
+
+  // Realtime Live Synchronization: Poll every 10 seconds while tab is active
+  React.useEffect(() => {
+    if (!token) return
+
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        fetchTrackingData(false)
+      }
+    }, 10000)
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchTrackingData(false)
+      }
+    }
+
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+    return () => {
+      clearInterval(interval)
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
+    }
+  }, [token, fetchTrackingData])
 
   if (loading) {
     return (
@@ -153,7 +194,7 @@ export default function PublicVehicleTrackPage() {
           </p>
           <div className="pt-2 border-t border-white/[0.06]">
             <p className="text-[11px] text-slate-500 leading-relaxed">
-              Lütfen size iletilen SMS veya e-posta bildirimindeki bağlantıyı kontrol ediniz ya da doğrudan servis danışmanınız ile iletişime geçiniz.
+              Lütfen size iletilen güncel SMS veya e-posta bildirimindeki bağlantıyı kontrol ediniz ya da doğrudan servis danışmanınız ile iletişime geçiniz.
             </p>
           </div>
         </div>
@@ -168,15 +209,16 @@ export default function PublicVehicleTrackPage() {
   else if (data.status === "COMPLETED") currentStepIndex = 3
 
   const currentStepInfo = STATUS_STEPS[currentStepIndex] || STATUS_STEPS[0]
+  const cleanPhone = data.tenant?.phone ? data.tenant.phone.replace(/\D/g, "") : ""
 
   return (
-    <div className="min-h-screen bg-[#070b12] text-slate-100 selection:bg-sky-500 selection:text-white relative">
-      {/* Top Subtle Ambient Glow */}
+    <div className="min-h-screen bg-[#070b12] text-slate-100 selection:bg-sky-500 selection:text-white relative flex flex-col justify-between">
+      {/* Top Subtle Ambient Cyan Glow */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-72 bg-radial from-sky-500/10 via-transparent to-transparent pointer-events-none -z-0" />
 
-      {/* Top Header / Brand Bar */}
-      <header className="sticky top-0 z-30 bg-[#070b12]/80 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 py-3">
-        <div className="max-w-3xl mx-auto flex items-center justify-between gap-4">
+      {/* Top Sticky Header */}
+      <header className="sticky top-0 z-30 bg-[#070b12]/85 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 py-3">
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           {/* Brand Identity: WorksAuto Logo + Tenant Info */}
           <div className="flex items-center gap-3 min-w-0">
             <BrandLogo clickable={false} className="w-28 sm:w-32 h-7 shrink-0" />
@@ -185,30 +227,48 @@ export default function PublicVehicleTrackPage() {
               <h2 className="text-xs font-semibold text-slate-200 truncate">
                 {data.tenant?.title || "WorksAuto Servis"}
               </h2>
-              <span className="text-[10px] text-emerald-400 font-medium flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Canlı Araç Takip
-              </span>
+              <div className="flex items-center gap-2 text-[10px]">
+                <span className="text-emerald-400 font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  Canlı Senkron
+                </span>
+                {lastSyncTime && (
+                  <span className="text-slate-500 font-mono hidden sm:inline">
+                    • {lastSyncTime.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
-          {/* Action: Call Service */}
+          {/* Quick Actions: Manual Sync & Fast Call */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => fetchTrackingData(false)}
+              disabled={isRefreshing}
+              title="Verileri Yenile"
+              className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white border border-white/[0.08] flex items-center justify-center transition-all cursor-pointer active:scale-95 disabled:opacity-50"
+            >
+              <RotateCw size={13} className={cn("transition-transform", isRefreshing && "animate-spin text-sky-400")} />
+            </button>
+
             {data.tenant?.phone && (
               <a
                 href={`tel:${data.tenant.phone}`}
                 className="h-8 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-xs font-semibold flex items-center gap-1.5 border border-sky-500/20 transition-all active:scale-95"
               >
                 <Phone size={13} />
-                <span className="hidden sm:inline">Servisi Ara</span>
+                <span className="hidden sm:inline">Ara</span>
               </a>
             )}
           </div>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 space-y-4 relative z-10">
-        {/* Vehicle Identity Card */}
+      {/* Main Content Area */}
+      <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-6 space-y-4 relative z-10">
+        {/* Vehicle & Customer Identity Card */}
         <div className="p-5 sm:p-6 rounded-2xl bg-[#0b101b]/90 border border-white/[0.08] backdrop-blur-md shadow-xl">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3.5">
@@ -225,12 +285,12 @@ export default function PublicVehicleTrackPage() {
                 <p className="text-xs text-slate-400 mt-0.5">
                   {data.vehicle.year ? `${data.vehicle.year} Model • ` : ""}
                   {data.vehicle.color ? `${data.vehicle.color} • ` : ""}
-                  Müşteri: <span className="text-slate-300 font-medium">{data.customer.name}</span>
+                  Müşteri: <span className="text-white font-semibold">{data.customer.name}</span>
                 </p>
               </div>
             </div>
 
-            {/* Quick Status Pill */}
+            {/* Current Status Pill */}
             <div className="sm:text-right shrink-0">
               <span
                 className={cn(
@@ -261,7 +321,7 @@ export default function PublicVehicleTrackPage() {
             </div>
           </div>
 
-          {/* Metadata Chips */}
+          {/* Technical Metadata Chips */}
           <div className="flex flex-wrap items-center gap-2 pt-4 mt-4 border-t border-white/[0.06] text-[11px] text-slate-400">
             <span className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] px-2.5 py-1 rounded-lg">
               <Gauge size={12} className="text-sky-400" />
@@ -286,7 +346,7 @@ export default function PublicVehicleTrackPage() {
           </div>
         </div>
 
-        {/* Minimalist Live Progress Timeline */}
+        {/* Minimalist Live Stepper Timeline */}
         <div className="p-5 sm:p-6 rounded-2xl bg-[#0b101b]/90 border border-white/[0.08] backdrop-blur-md shadow-xl space-y-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -301,15 +361,15 @@ export default function PublicVehicleTrackPage() {
           </div>
 
           {/* Stepper Progress Bar (Horizontal on all devices) */}
-          <div className="relative pt-1 pb-2">
+          <div className="relative pt-1 pb-1">
             <div className="grid grid-cols-4 gap-2 relative z-10">
               {STATUS_STEPS.map((step, idx) => {
                 const isPast = idx < currentStepIndex
                 const isCurrent = idx === currentStepIndex
 
                 return (
-                  <div key={step.key} className="flex flex-col items-center text-center group">
-                    {/* Bar Pill Indicator */}
+                  <div key={step.key} className="flex flex-col items-center text-center">
+                    {/* Bar Indicator */}
                     <div
                       className={cn(
                         "h-1.5 w-full rounded-full transition-all duration-300 mb-2.5",
@@ -338,7 +398,7 @@ export default function PublicVehicleTrackPage() {
             </div>
           </div>
 
-          {/* Current Active Step Highlight Card */}
+          {/* Active Step Description Card */}
           <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-start gap-3">
             <div
               className={cn(
@@ -354,6 +414,66 @@ export default function PublicVehicleTrackPage() {
               <h4 className="text-xs font-bold text-white">{currentStepInfo.title}</h4>
               <p className="text-xs text-slate-400 leading-relaxed">{currentStepInfo.desc}</p>
             </div>
+          </div>
+        </div>
+
+        {/* Multi-Channel Customer Contact Hub */}
+        <div className="p-5 rounded-2xl bg-[#0b101b]/90 border border-white/[0.08] backdrop-blur-md shadow-xl space-y-3.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Phone size={14} className="text-sky-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                Servis İletişim & Konum
+              </h3>
+            </div>
+            {data.tenant?.city && (
+              <span className="text-[11px] text-slate-400">
+                {data.tenant.district ? `${data.tenant.district}, ` : ""}{data.tenant.city}
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+            {/* 1. WhatsApp Direct Chat */}
+            {cleanPhone ? (
+              <a
+                href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(
+                  `Merhaba, ${data.vehicle.plate} plakalı (${data.workOrderNumber}) aracımın servis durumu hakkında bilgi alabilir miyim?`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-all active:scale-98"
+              >
+                <MessageCircle size={15} />
+                <span>WhatsApp'tan Yaz</span>
+              </a>
+            ) : null}
+
+            {/* 2. Direct Phone Call */}
+            {data.tenant?.phone ? (
+              <a
+                href={`tel:${data.tenant.phone}`}
+                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-xs font-semibold transition-all active:scale-98"
+              >
+                <Phone size={14} />
+                <span>Servisi Ara</span>
+              </a>
+            ) : null}
+
+            {/* 3. Google Maps Navigation */}
+            {data.tenant?.address ? (
+              <a
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  `${data.tenant.title} ${data.tenant.address || ""} ${data.tenant.city || ""}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] text-slate-300 border border-white/[0.08] text-xs font-semibold transition-all active:scale-98"
+              >
+                <MapPin size={14} className="text-rose-400" />
+                <span>Yol Tarifi Al</span>
+              </a>
+            ) : null}
           </div>
         </div>
 
@@ -518,18 +638,36 @@ export default function PublicVehicleTrackPage() {
             </div>
           </div>
         )}
-
-        {/* Reassuring Minimalist Corporate Footer */}
-        <footer className="pt-6 pb-4 text-center space-y-2 border-t border-white/[0.06]">
-          <div className="flex items-center justify-center gap-1.5 text-slate-400 text-xs font-medium">
-            <span>Canlı takip altyapısı</span>
-            <BrandLogo clickable={false} className="w-20 h-5 inline-block opacity-80" />
-          </div>
-          <p className="text-[11px] text-slate-500">
-            © {new Date().getFullYear()} {data.tenant?.title || "WorksAuto Servis"} • Tüm hakları saklıdır.
-          </p>
-        </footer>
       </main>
+
+      {/* Modern, Bottom-Pinned Corporate Footer */}
+      <footer className="mt-auto w-full border-t border-white/[0.08] bg-[#070b12]/90 backdrop-blur-xl py-6 relative z-10">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-slate-200">
+              {data.tenant?.title || "WorksAuto Servis"}
+            </p>
+            <p className="text-[11px] text-slate-500">
+              © {new Date().getFullYear()} Tüm hakları saklıdır • Güvenli Araç Takip Portalı
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] text-slate-400 text-xs">
+              <span className="text-[11px] text-slate-400">Altyapı:</span>
+              <img
+                src="/brand/worksauto-logo-white.png"
+                alt="WorksAuto"
+                className="h-4 w-auto object-contain opacity-80"
+              />
+            </div>
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold border border-emerald-500/20">
+              <ShieldCheck size={12} />
+              <span>256-Bit SSL</span>
+            </div>
+          </div>
+        </div>
+      </footer>
 
       {/* Photo Lightbox Modal */}
       {selectedPhoto && (
