@@ -294,13 +294,13 @@ export default function WorkOrderDetailPage() {
     setIsReopenModalOpen(true)
   }
 
-  const handleConfirmReopen = async () => {
+  const handleConfirmReopen = async (customReason?: string) => {
     if (!activeInvoice) return
     setIsCancellingInvoice(true)
     try {
       await cancelInvoiceMutation.mutateAsync({
         id: activeInvoice.id,
-        reason: "İş emrine ek işlem yapılması için fatura iptali ve yeniden açma",
+        reason: customReason || "İş emrine ek işlem yapılması için fatura iptali ve yeniden açma",
       })
       await refetch()
       setIsReopenModalOpen(false)
@@ -1520,6 +1520,7 @@ export default function WorkOrderDetailPage() {
           invoiceNumber={activeInvoice.invoiceNumber}
           plate={order.plate}
           grandTotal={activeInvoice.grandTotal}
+          paidAmount={Number(activeInvoice.paidAmount || 0)}
         />
       )}
 

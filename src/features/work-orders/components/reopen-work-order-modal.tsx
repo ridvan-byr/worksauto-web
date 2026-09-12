@@ -2,18 +2,19 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, RotateCcw, AlertTriangle, FileText, ArrowRight, Wrench, CreditCard } from "lucide-react"
+import { X, RotateCcw, AlertTriangle, Wallet } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface ReopenWorkOrderModalProps {
   isOpen: boolean
   onClose: () => void
-  onConfirm: () => Promise<void> | void
+  onConfirm: (reason: string) => Promise<void> | void
   isLoading?: boolean
   workOrderNumber: string
   invoiceNumber: string
   plate?: string
   grandTotal?: number
+  paidAmount?: number
 }
 
 export function ReopenWorkOrderModal({
@@ -25,8 +26,10 @@ export function ReopenWorkOrderModal({
   invoiceNumber,
   plate,
   grandTotal,
+  paidAmount = 0,
 }: ReopenWorkOrderModalProps) {
   const [mounted, setMounted] = React.useState(false)
+  const [reason, setReason] = React.useState("İlave parça ve işçilik eklenmesi için iş emrinin yeniden açılması")
 
   React.useEffect(() => {
     setMounted(true)
@@ -43,6 +46,15 @@ export function ReopenWorkOrderModal({
 
   if (!isOpen || !mounted) return null
 
+  const isReasonValid = reason.trim().length >= 5
+  const hasPaidAmount = Number(paidAmount) > 0
+
+  const handleConfirmSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!isReasonValid || isLoading) return
+    onConfirm(reason.trim())
+  }
+
   const modalContent = (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
@@ -51,12 +63,12 @@ export function ReopenWorkOrderModal({
       }}
     >
       <div
-        className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+        className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh]"
         role="dialog"
         aria-modal="true"
       >
         {/* Header */}
-        <div className="px-6 py-5 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-amber-50/50 dark:bg-amber-950/20">
+        <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-amber-50/60 dark:bg-amber-950/20">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold shrink-0">
               <RotateCcw size={20} />
@@ -65,7 +77,7 @@ export function ReopenWorkOrderModal({
               <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <span>İş Emrini Yeniden Aç</span>
                 <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300">
-                  Fatura İptali Gerekir
+                  Fatura İptali & Avans
                 </span>
               </h2>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
@@ -84,89 +96,123 @@ export function ReopenWorkOrderModal({
         </div>
 
         {/* Body Content */}
-        <div className="p-6 space-y-4">
-          {/* Target Record Badges */}
-          <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 text-xs">
-            <div className="space-y-0.5">
-              <span className="text-[10px] uppercase font-bold text-slate-400">İş Emri & Araç</span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono font-bold text-slate-900 dark:text-slate-100">#{workOrderNumber}</span>
-                {plate && (
-                  <span className="font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[11px] font-semibold">
-                    {plate}
-                  </span>
-                )}
+        <form onSubmit={handleConfirmSubmit} className="flex flex-col overflow-y-auto">
+          <div className="p-6 space-y-4">
+            {/* Target Record Badges */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-950 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400">İş Emri & Araç</span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono font-bold text-slate-900 dark:text-slate-100">#{workOrderNumber}</span>
+                  {plate && (
+                    <span className="font-mono px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 text-[11px] font-semibold">
+                      {plate}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="text-right space-y-0.5">
+                <span className="text-[10px] uppercase font-bold text-slate-400">Bağlı Fatura</span>
+                <p className="font-mono font-bold text-rose-600 dark:text-rose-400">#{invoiceNumber}</p>
               </div>
             </div>
-            <div className="text-right space-y-0.5">
-              <span className="text-[10px] uppercase font-bold text-slate-400">Bağlı Fatura</span>
-              <p className="font-mono font-bold text-rose-600 dark:text-rose-400">#{invoiceNumber}</p>
+
+            {/* Paid Advance Notice */}
+            {hasPaidAmount ? (
+              <div className="rounded-2xl border border-blue-500/30 bg-blue-50/50 dark:bg-blue-950/20 p-4 space-y-2 text-xs text-blue-950 dark:text-blue-200">
+                <div className="flex items-center justify-between gap-2 font-bold text-blue-900 dark:text-blue-300">
+                  <div className="flex items-center gap-2">
+                    <Wallet size={16} className="text-blue-600 dark:text-blue-400 shrink-0" />
+                    <span>Tahsil Edilmiş Tutar Korunur</span>
+                  </div>
+                  <span className="font-mono text-sm px-2 py-0.5 rounded bg-blue-500/20 text-blue-800 dark:text-blue-300">
+                    {Number(paidAmount).toLocaleString("tr-TR")} ₺
+                  </span>
+                </div>
+                <p className="text-[11.5px] leading-relaxed text-blue-900/90 dark:text-blue-200/90">
+                  Bu fatura için yapılmış tahsilat tutarı <strong>silinmez ve kasadan para çıkışı yapılmaz</strong>. Tutar, müşterinizin cari hesabına <strong>Avans / Alacak Bakiyesi</strong> olarak aktarılır. İş emri revize edilip yeni fatura kesildiğinde bu tutar doğrudan yeni faturaya mahsup edilir.
+                </p>
+              </div>
+            ) : null}
+
+            {/* Explanation Box */}
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 p-4 space-y-2 text-xs text-amber-950 dark:text-amber-200">
+              <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-300">
+                <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                <span>Uygulanacak Güvenli Süreç:</span>
+              </div>
+
+              <ul className="space-y-1.5 text-[11.5px] leading-relaxed text-amber-900/90 dark:text-amber-200/90 pl-1">
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
+                  <span>
+                    <strong>Fatura İptal Edilir:</strong> <span className="font-mono">#{invoiceNumber}</span> numaralı fatura iptal edilir ve cari borcu düşürülür.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
+                  <span>
+                    <strong>İş Emri Lifte Döner:</strong> İş emri statüsü tekrar <strong>"İşlemde (Onarımda)"</strong> durumuna döner; ilave parça ve işçilik ekleyebilirsiniz.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
+                  <span>
+                    <strong>Denetim İzi (Audit Log):</strong> İşlem yönetici kimliğiyle sistem denetim günlüğüne işlenir.
+                  </span>
+                </li>
+              </ul>
+            </div>
+
+            {/* Mandatory Reason Input */}
+            <div className="space-y-1.5">
+              <label htmlFor="reopen-reason" className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                İptal & Geri Açma Gerekçesi <span className="text-rose-500">*</span>
+              </label>
+              <textarea
+                id="reopen-reason"
+                rows={2}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Örn: Müşteri ilave balata değişimi talep etti, faturaya eklenecek."
+                disabled={isLoading}
+                className="w-full text-xs p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all text-slate-900 dark:text-slate-100 disabled:opacity-50 resize-none"
+              />
+              {!isReasonValid && (
+                <p className="text-[11px] text-rose-500">
+                  Lütfen en az 5 karakterlik geçerli bir gerekçe giriniz.
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Explanation Box */}
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 p-4 space-y-2.5 text-xs text-amber-950 dark:text-amber-200">
-            <div className="flex items-center gap-2 font-bold text-amber-900 dark:text-amber-300">
-              <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
-              <span>Bu işlem gerçekleştirildiğinde şu adımlar uygulanır:</span>
-            </div>
-
-            <ul className="space-y-2 text-[11.5px] leading-relaxed text-amber-900/90 dark:text-amber-200/90 pl-1">
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
-                <span>
-                  <strong>Fatura İptal Edilir:</strong> <span className="font-mono">#{invoiceNumber}</span> numaralı fatura resmi olarak iptal statüsüne alınır.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
-                <span>
-                  <strong>Cari Hesap Dengelenir:</strong> Müşteri carisine işlenen fatura borcu ve varsa tahsilat tutarları otomatik olarak mahsup edilir/dengelenir.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
-                <span>
-                  <strong>İş Emri Lifte Döner:</strong> İş emri statüsü tekrar <strong>"İşlemde (Onarımda)"</strong> durumuna getirilir; böylece ilave yedek parça ve işçilik kalemleri ekleyebilirsiniz.
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-amber-600 dark:text-amber-400 font-bold">•</span>
-                <span>
-                  <strong>Yeniden Faturalandırma:</strong> Ek onarımlar bittiğinde güncel liste üzerinden tek tıkla yeni ve eksiksiz bir fatura kesebilirsiniz.
-                </span>
-              </li>
-            </ul>
+          {/* Footer Actions */}
+          <div className="px-6 py-4 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-end gap-2.5 bg-slate-50/50 dark:bg-slate-900/50">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isLoading}
+              className="h-10 px-4 text-xs font-semibold cursor-pointer"
+            >
+              Vazgeç
+            </Button>
+            <Button
+              type="submit"
+              disabled={isLoading || !isReasonValid}
+              className="h-10 px-5 text-xs font-bold gap-2 bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-lg shadow-amber-600/20 disabled:opacity-50"
+            >
+              {isLoading ? (
+                <span>İşlem Yapılıyor...</span>
+              ) : (
+                <>
+                  <RotateCcw size={14} />
+                  <span>Faturayı İptal Et ve İşi Yeniden Aç</span>
+                </>
+              )}
+            </Button>
           </div>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="px-6 py-4 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-end gap-2.5 bg-slate-50/50 dark:bg-slate-900/50">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onClose}
-            disabled={isLoading}
-            className="h-10 px-4 text-xs font-semibold cursor-pointer"
-          >
-            Vazgeç
-          </Button>
-          <Button
-            type="button"
-            onClick={onConfirm}
-            disabled={isLoading}
-            className="h-10 px-5 text-xs font-bold gap-2 bg-amber-600 hover:bg-amber-700 text-white cursor-pointer shadow-lg shadow-amber-600/20 disabled:opacity-50"
-          >
-            {isLoading ? (
-              <span>İşlem Yapılıyor...</span>
-            ) : (
-              <>
-                <RotateCcw size={14} />
-                <span>Faturayı İptal Et ve İşi Yeniden Aç</span>
-              </>
-            )}
-          </Button>
-        </div>
+        </form>
       </div>
     </div>
   )
