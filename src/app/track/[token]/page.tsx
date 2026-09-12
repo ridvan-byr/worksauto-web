@@ -21,7 +21,6 @@ import {
   Car,
   MapPin,
   MessageCircle,
-  RotateCw,
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -112,8 +111,6 @@ export default function PublicVehicleTrackPage() {
 
   const [data, setData] = React.useState<TrackingData | null>(null)
   const [loading, setLoading] = React.useState(true)
-  const [isRefreshing, setIsRefreshing] = React.useState(false)
-  const [lastSyncTime, setLastSyncTime] = React.useState<Date | null>(null)
   const [error, setError] = React.useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = React.useState<string | null>(null)
 
@@ -122,13 +119,11 @@ export default function PublicVehicleTrackPage() {
     async (showLoading = false) => {
       if (!token) return
       if (showLoading) setLoading(true)
-      else setIsRefreshing(true)
 
       try {
         const res = await apiClient.get<TrackingData>(`/work-orders/public/track/${token}`)
         setData(res)
         setError(null)
-        setLastSyncTime(new Date())
       } catch (err: any) {
         console.warn("Public track API error:", err)
         if (showLoading) {
@@ -136,7 +131,6 @@ export default function PublicVehicleTrackPage() {
         }
       } finally {
         if (showLoading) setLoading(false)
-        else setIsRefreshing(false)
       }
     },
     [token]
@@ -172,9 +166,9 @@ export default function PublicVehicleTrackPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#070b12] flex flex-col items-center justify-center p-4 text-white">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] flex flex-col items-center justify-center p-4 text-slate-800 dark:text-white transition-colors">
         <div className="w-9 h-9 rounded-full border-2 border-sky-500 border-t-transparent animate-spin mb-3" />
-        <p className="text-xs font-medium text-slate-400 tracking-wide">
+        <p className="text-xs font-medium text-slate-500 dark:text-slate-400 tracking-wide">
           Canlı araç takip verileri yükleniyor...
         </p>
       </div>
@@ -183,16 +177,16 @@ export default function PublicVehicleTrackPage() {
 
   if (error || !data) {
     return (
-      <div className="min-h-screen bg-[#070b12] flex flex-col items-center justify-center p-4 text-white selection:bg-sky-500 selection:text-white">
-        <div className="w-full max-w-md p-8 rounded-2xl bg-[#0b101b] border border-white/[0.08] shadow-2xl text-center space-y-4">
-          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+      <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] flex flex-col items-center justify-center p-4 text-slate-800 dark:text-white selection:bg-sky-500 selection:text-white transition-colors">
+        <div className="w-full max-w-md p-8 rounded-2xl bg-white dark:bg-[#0b101b] border border-slate-200/80 dark:border-white/[0.08] shadow-sm dark:shadow-2xl text-center space-y-4">
+          <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 dark:text-rose-400 flex items-center justify-center mx-auto">
             <AlertCircle size={24} />
           </div>
-          <h1 className="text-lg font-bold text-white tracking-tight">Takip Kaydı Bulunamadı</h1>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <h1 className="text-lg font-bold text-slate-900 dark:text-white tracking-tight">Takip Kaydı Bulunamadı</h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
             {error || "Belirtilen takip koduyla eşleşen aktif bir servis iş emri bulunamadı."}
           </p>
-          <div className="pt-2 border-t border-white/[0.06]">
+          <div className="pt-2 border-t border-slate-100 dark:border-white/[0.06]">
             <p className="text-[11px] text-slate-500 leading-relaxed">
               Lütfen size iletilen güncel SMS veya e-posta bildirimindeki bağlantıyı kontrol ediniz ya da doğrudan servis danışmanınız ile iletişime geçiniz.
             </p>
@@ -212,56 +206,20 @@ export default function PublicVehicleTrackPage() {
   const cleanPhone = data.tenant?.phone ? data.tenant.phone.replace(/\D/g, "") : ""
 
   return (
-    <div className="min-h-screen bg-[#070b12] text-slate-100 selection:bg-sky-500 selection:text-white relative flex flex-col justify-between">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100 selection:bg-sky-500 selection:text-white relative flex flex-col justify-between transition-colors duration-200">
       {/* Top Subtle Ambient Cyan Glow */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-72 bg-radial from-sky-500/10 via-transparent to-transparent pointer-events-none -z-0" />
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-72 bg-radial from-sky-500/5 dark:from-sky-500/10 via-transparent to-transparent pointer-events-none -z-0" />
 
-      {/* Top Sticky Header */}
-      <header className="sticky top-0 z-30 bg-[#070b12]/85 backdrop-blur-xl border-b border-white/[0.08] px-4 sm:px-6 py-3">
+      {/* Top Sticky Header (Minimal Brand Identity) */}
+      <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#070b12]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/[0.08] px-4 sm:px-6 py-3 transition-colors">
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           {/* Brand Identity: WorksAuto Logo + Tenant Info */}
           <div className="flex items-center gap-3 min-w-0">
             <BrandLogo clickable={false} className="w-28 sm:w-32 h-7 shrink-0" />
-            <div className="h-4 w-px bg-white/10 shrink-0 hidden xs:block" />
-            <div className="min-w-0">
-              <h2 className="text-xs font-semibold text-slate-200 truncate">
-                {data.tenant?.title || "WorksAuto Servis"}
-              </h2>
-              <div className="flex items-center gap-2 text-[10px]">
-                <span className="text-emerald-400 font-medium flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Canlı Senkron
-                </span>
-                {lastSyncTime && (
-                  <span className="text-slate-500 font-mono hidden sm:inline">
-                    • {lastSyncTime.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
-                  </span>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Actions: Manual Sync & Fast Call */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => fetchTrackingData(false)}
-              disabled={isRefreshing}
-              title="Verileri Yenile"
-              className="w-8 h-8 rounded-xl bg-white/[0.04] hover:bg-white/[0.08] text-slate-400 hover:text-white border border-white/[0.08] flex items-center justify-center transition-all cursor-pointer active:scale-95 disabled:opacity-50"
-            >
-              <RotateCw size={13} className={cn("transition-transform", isRefreshing && "animate-spin text-sky-400")} />
-            </button>
-
-            {data.tenant?.phone && (
-              <a
-                href={`tel:${data.tenant.phone}`}
-                className="h-8 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 text-xs font-semibold flex items-center gap-1.5 border border-sky-500/20 transition-all active:scale-95"
-              >
-                <Phone size={13} />
-                <span className="hidden sm:inline">Ara</span>
-              </a>
-            )}
+            <div className="h-4 w-px bg-slate-200 dark:bg-white/10 shrink-0 hidden xs:block" />
+            <h2 className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+              {data.tenant?.title || "WorksAuto Servis"}
+            </h2>
           </div>
         </div>
       </header>
@@ -269,23 +227,23 @@ export default function PublicVehicleTrackPage() {
       {/* Main Content Area */}
       <main className="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-6 space-y-4 relative z-10">
         {/* Vehicle & Customer Identity Card */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-[#0b101b]/90 border border-white/[0.08] backdrop-blur-md shadow-xl">
+        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl transition-colors">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-start sm:items-center gap-3.5">
               <PlateBadge plate={data.vehicle.plate} size="lg" />
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                  <h1 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                     {data.vehicle.brand} {data.vehicle.model}
                   </h1>
-                  <span className="font-mono text-[11px] font-semibold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-md">
+                  <span className="font-mono text-[11px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/20 px-2 py-0.5 rounded-md">
                     {data.workOrderNumber}
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                   {data.vehicle.year ? `${data.vehicle.year} Model • ` : ""}
                   {data.vehicle.color ? `${data.vehicle.color} • ` : ""}
-                  Müşteri: <span className="text-white font-semibold">{data.customer.name}</span>
+                  Müşteri: <span className="text-slate-800 dark:text-white font-semibold">{data.customer.name}</span>
                 </p>
               </div>
             </div>
@@ -296,20 +254,20 @@ export default function PublicVehicleTrackPage() {
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border",
                   data.status === "COMPLETED"
-                    ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+                    ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30"
                     : data.status === "IN_PROGRESS"
-                    ? "bg-sky-500/10 text-sky-400 border-sky-500/30"
-                    : "bg-amber-500/10 text-amber-400 border-amber-500/30"
+                    ? "bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-500/30"
+                    : "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30"
                 )}
               >
                 <span
                   className={cn(
                     "w-1.5 h-1.5 rounded-full",
                     data.status === "COMPLETED"
-                      ? "bg-emerald-400"
+                      ? "bg-emerald-500 dark:bg-emerald-400"
                       : data.status === "IN_PROGRESS"
-                      ? "bg-sky-400 animate-pulse"
-                      : "bg-amber-400"
+                      ? "bg-sky-500 dark:bg-sky-400 animate-pulse"
+                      : "bg-amber-500 dark:bg-amber-400"
                   )}
                 />
                 {data.status === "COMPLETED"
@@ -322,36 +280,36 @@ export default function PublicVehicleTrackPage() {
           </div>
 
           {/* Technical Metadata Chips */}
-          <div className="flex flex-wrap items-center gap-2 pt-4 mt-4 border-t border-white/[0.06] text-[11px] text-slate-400">
-            <span className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] px-2.5 py-1 rounded-lg">
-              <Gauge size={12} className="text-sky-400" />
+          <div className="flex flex-wrap items-center gap-2 pt-4 mt-4 border-t border-slate-100 dark:border-white/[0.06] text-[11px] text-slate-600 dark:text-slate-400">
+            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] px-2.5 py-1 rounded-lg">
+              <Gauge size={12} className="text-sky-500 dark:text-sky-400" />
               <span>{data.vehicle.kilometer > 0 ? `${data.vehicle.kilometer.toLocaleString("tr-TR")} KM` : "Giriş KM Belirtilmedi"}</span>
             </span>
             {data.fuelLevel && (
-              <span className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] px-2.5 py-1 rounded-lg">
-                <Fuel size={12} className="text-amber-400" />
+              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] px-2.5 py-1 rounded-lg">
+                <Fuel size={12} className="text-amber-500 dark:text-amber-400" />
                 <span>Yakıt: {data.fuelLevel}</span>
               </span>
             )}
             {data.assignedLift && (
-              <span className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] px-2.5 py-1 rounded-lg">
-                <Wrench size={12} className="text-sky-400" />
+              <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] px-2.5 py-1 rounded-lg">
+                <Wrench size={12} className="text-sky-500 dark:text-sky-400" />
                 <span>{data.assignedLift}</span>
               </span>
             )}
-            <span className="flex items-center gap-1.5 bg-white/[0.03] border border-white/[0.06] px-2.5 py-1 rounded-lg ml-auto">
+            <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] px-2.5 py-1 rounded-lg ml-auto">
               <span className="text-slate-500">Teknisyen:</span>
-              <span className="text-slate-200 font-medium">{data.mechanicName || "Atölye Sorumlusu"}</span>
+              <span className="text-slate-800 dark:text-slate-200 font-medium">{data.mechanicName || "Atölye Sorumlusu"}</span>
             </span>
           </div>
         </div>
 
         {/* Minimalist Live Stepper Timeline */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-[#0b101b]/90 border border-white/[0.08] backdrop-blur-md shadow-xl space-y-5">
+        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-5 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Sparkles size={14} className="text-sky-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <Sparkles size={14} className="text-sky-500 dark:text-sky-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
                 Canlı Servis Aşamaları
               </h3>
             </div>
@@ -377,17 +335,17 @@ export default function PublicVehicleTrackPage() {
                           ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
                           : isCurrent
                           ? "bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.5)] animate-pulse"
-                          : "bg-white/[0.08]"
+                          : "bg-slate-200 dark:bg-white/[0.08]"
                       )}
                     />
                     <span
                       className={cn(
                         "text-[10px] sm:text-xs font-semibold tracking-tight transition-colors line-clamp-1",
                         isPast
-                          ? "text-emerald-400"
+                          ? "text-emerald-600 dark:text-emerald-400"
                           : isCurrent
-                          ? "text-white font-bold"
-                          : "text-slate-500"
+                          ? "text-slate-900 dark:text-white font-bold"
+                          : "text-slate-400 dark:text-slate-500"
                       )}
                     >
                       {step.shortTitle}
@@ -399,35 +357,35 @@ export default function PublicVehicleTrackPage() {
           </div>
 
           {/* Active Step Description Card */}
-          <div className="p-4 rounded-xl bg-white/[0.02] border border-white/[0.06] flex items-start gap-3">
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.06] flex items-start gap-3">
             <div
               className={cn(
                 "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold",
                 data.status === "COMPLETED"
-                  ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                  : "bg-sky-500/10 text-sky-400 border border-sky-500/20"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  : "bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20"
               )}
             >
               {data.status === "COMPLETED" ? <Check size={16} /> : currentStepIndex + 1}
             </div>
             <div className="space-y-0.5 min-w-0">
-              <h4 className="text-xs font-bold text-white">{currentStepInfo.title}</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">{currentStepInfo.desc}</p>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-white">{currentStepInfo.title}</h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{currentStepInfo.desc}</p>
             </div>
           </div>
         </div>
 
         {/* Multi-Channel Customer Contact Hub */}
-        <div className="p-5 rounded-2xl bg-[#0b101b]/90 border border-white/[0.08] backdrop-blur-md shadow-xl space-y-3.5">
+        <div className="p-5 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-3.5 transition-colors">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Phone size={14} className="text-sky-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              <Phone size={14} className="text-sky-500 dark:text-sky-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
                 Servis İletişim & Konum
               </h3>
             </div>
             {data.tenant?.city && (
-              <span className="text-[11px] text-slate-400">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400">
                 {data.tenant.district ? `${data.tenant.district}, ` : ""}{data.tenant.city}
               </span>
             )}
@@ -442,7 +400,7 @@ export default function PublicVehicleTrackPage() {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-all active:scale-98"
+                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 text-xs font-semibold transition-all active:scale-98"
               >
                 <MessageCircle size={15} />
                 <span>WhatsApp'tan Yaz</span>
@@ -453,7 +411,7 @@ export default function PublicVehicleTrackPage() {
             {data.tenant?.phone ? (
               <a
                 href={`tel:${data.tenant.phone}`}
-                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-400 border border-sky-500/20 text-xs font-semibold transition-all active:scale-98"
+                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-sky-50 dark:bg-sky-500/10 hover:bg-sky-100 dark:hover:bg-sky-500/20 text-sky-700 dark:text-sky-400 border border-sky-200 dark:border-sky-500/20 text-xs font-semibold transition-all active:scale-98"
               >
                 <Phone size={14} />
                 <span>Servisi Ara</span>
@@ -468,9 +426,9 @@ export default function PublicVehicleTrackPage() {
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-white/[0.03] hover:bg-white/[0.06] text-slate-300 border border-white/[0.08] text-xs font-semibold transition-all active:scale-98"
+                className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] hover:bg-slate-200 dark:hover:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08] text-xs font-semibold transition-all active:scale-98"
               >
-                <MapPin size={14} className="text-rose-400" />
+                <MapPin size={14} className="text-rose-500 dark:text-rose-400" />
                 <span>Yol Tarifi Al</span>
               </a>
             ) : null}
@@ -481,31 +439,31 @@ export default function PublicVehicleTrackPage() {
         {data.invoice && (
           <div
             className={cn(
-              "p-5 rounded-2xl border shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all",
+              "p-5 rounded-2xl border shadow-xs dark:shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-all",
               data.invoice.isPaid
-                ? "bg-emerald-950/20 border-emerald-800/40 text-emerald-200"
-                : "bg-[#0b101b]/90 border-sky-500/30 text-slate-200"
+                ? "bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/40 text-emerald-800 dark:text-emerald-200"
+                : "bg-white dark:bg-[#0b101b]/90 border-sky-200 dark:border-sky-500/30 text-slate-800 dark:text-slate-200"
             )}
           >
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <CreditCard size={16} className={data.invoice.isPaid ? "text-emerald-400" : "text-sky-400"} />
-                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+                <CreditCard size={16} className={data.invoice.isPaid ? "text-emerald-600 dark:text-emerald-400" : "text-sky-600 dark:text-sky-400"} />
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">
                   {data.invoice.isPaid ? "Fatura Ödendi" : "Servis Faturası"}
                 </h4>
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold font-mono text-white tracking-tight">
+                <span className="text-2xl font-bold font-mono text-slate-900 dark:text-white tracking-tight">
                   {data.invoice.grandTotal.toLocaleString("tr-TR")} ₺
                 </span>
                 {!data.invoice.isPaid && data.invoice.remainingAmount > 0 && (
-                  <span className="text-xs text-rose-400 font-semibold font-mono">
+                  <span className="text-xs text-rose-500 dark:text-rose-400 font-semibold font-mono">
                     (Kalan: {data.invoice.remainingAmount.toLocaleString("tr-TR")} ₺)
                   </span>
                 )}
               </div>
               <p className="text-[10px] text-slate-500">
-                Fatura No: <span className="font-mono text-slate-400">{data.invoice.invoiceNumber}</span>
+                Fatura No: <span className="font-mono text-slate-700 dark:text-slate-400">{data.invoice.invoiceNumber}</span>
               </p>
             </div>
 
@@ -518,7 +476,7 @@ export default function PublicVehicleTrackPage() {
                 </Button>
               </Link>
             ) : (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
                 <ShieldCheck size={16} />
                 <span>Ödeme Başarıyla Alındı</span>
               </div>
@@ -529,13 +487,13 @@ export default function PublicVehicleTrackPage() {
         {/* Bento Grid: Services & Parts */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Services Box */}
-          <div className="p-5 rounded-2xl bg-[#0b101b]/90 border border-white/[0.08] backdrop-blur-md shadow-xl space-y-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-3 transition-colors">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <Wrench size={13} className="text-sky-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+                <Wrench size={13} className="text-sky-500 dark:text-sky-400" />
                 <span>Yapılan İşlemler</span>
               </h3>
-              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-white/[0.04] text-slate-400 border border-white/[0.06]">
+              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06]">
                 {data.services.length}
               </span>
             </div>
@@ -545,10 +503,10 @@ export default function PublicVehicleTrackPage() {
                 {data.services.map((s) => (
                   <li
                     key={s.id}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] text-slate-200"
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04] text-slate-800 dark:text-slate-200"
                   >
                     <span className="truncate pr-2 font-medium">{s.name}</span>
-                    <span className="shrink-0 flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
+                    <span className="shrink-0 flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
                       <CheckCircle2 size={12} />
                       <span>Tamamlandı</span>
                     </span>
@@ -556,20 +514,20 @@ export default function PublicVehicleTrackPage() {
                 ))}
               </ul>
             ) : (
-              <div className="py-6 text-center text-xs text-slate-500">
+              <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
                 Henüz planlanan işlem eklenmedi.
               </div>
             )}
           </div>
 
           {/* Parts Box */}
-          <div className="p-5 rounded-2xl bg-[#0b101b]/90 border border-white/[0.08] backdrop-blur-md shadow-xl space-y-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-3 transition-colors">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <Car size={13} className="text-sky-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+                <Car size={13} className="text-sky-500 dark:text-sky-400" />
                 <span>Değişen Parçalar</span>
               </h3>
-              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-white/[0.04] text-slate-400 border border-white/[0.06]">
+              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06]">
                 {data.parts.length}
               </span>
             </div>
@@ -579,17 +537,17 @@ export default function PublicVehicleTrackPage() {
                 {data.parts.map((p) => (
                   <li
                     key={p.id}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border border-white/[0.04] text-slate-200"
+                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04] text-slate-800 dark:text-slate-200"
                   >
                     <span className="truncate pr-2 font-medium">{p.name}</span>
-                    <span className="shrink-0 text-[11px] font-mono text-slate-400 px-2 py-0.5 rounded bg-white/[0.04]">
+                    <span className="shrink-0 text-[11px] font-mono text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded bg-slate-100 dark:bg-white/[0.04]">
                       {p.quantity} Adet
                     </span>
                   </li>
                 ))}
               </ul>
             ) : (
-              <div className="py-6 text-center text-xs text-slate-500">
+              <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
                 Parça sarfiyatı bulunmuyor.
               </div>
             )}
@@ -598,13 +556,13 @@ export default function PublicVehicleTrackPage() {
 
         {/* Photos Section (If photos exist) */}
         {data.photos && data.photos.length > 0 && (
-          <div className="p-5 rounded-2xl bg-[#0b101b]/90 border border-white/[0.08] backdrop-blur-md shadow-xl space-y-3">
+          <div className="p-5 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-3 transition-colors">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
-                <Camera size={13} className="text-emerald-400" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+                <Camera size={13} className="text-emerald-600 dark:text-emerald-400" />
                 <span>Araç Kabul & Durum Fotoğrafları</span>
               </h3>
-              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-white/[0.04] text-slate-400 border border-white/[0.06]">
+              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06]">
                 {data.photos.length}
               </span>
             </div>
@@ -622,14 +580,14 @@ export default function PublicVehicleTrackPage() {
                     key={photo.id}
                     type="button"
                     onClick={() => setSelectedPhoto(fullImgUrl)}
-                    className="aspect-video rounded-xl overflow-hidden border border-white/[0.08] bg-slate-900 relative group cursor-pointer"
+                    className="aspect-video rounded-xl overflow-hidden border border-slate-200 dark:border-white/[0.08] bg-slate-100 dark:bg-slate-900 relative group cursor-pointer"
                   >
                     <img
                       src={fullImgUrl}
                       alt={photo.caption || "Araç Fotoğrafı"}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
-                    <div className="absolute inset-0 bg-[#070b12]/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <ExternalLink size={16} className="text-white" />
                     </div>
                   </button>
@@ -640,25 +598,30 @@ export default function PublicVehicleTrackPage() {
         )}
       </main>
 
-      {/* Modern, Bottom-Pinned Corporate Footer (Centered Brand Layout) */}
-      <footer className="mt-auto w-full border-t border-white/[0.08] bg-[#070b12]/90 backdrop-blur-xl py-8 px-4 relative z-10 text-center">
+      {/* Modern, Responsive Corporate Footer (Centered Brand Layout) */}
+      <footer className="mt-auto w-full border-t border-slate-200/80 dark:border-white/[0.08] bg-white/80 dark:bg-[#070b12]/90 backdrop-blur-xl py-8 px-4 relative z-10 text-center transition-colors">
         <div className="max-w-xl mx-auto space-y-3">
-          {/* Centered Brand Logo */}
+          {/* Centered Brand Logo (Light / Dark Adaptive) */}
           <div className="flex items-center justify-center">
+            <img
+              src="/brand/worksauto-logo-dark.png"
+              alt="WorksAuto"
+              className="h-6 sm:h-7 w-auto object-contain block dark:hidden"
+            />
             <img
               src="/brand/worksauto-logo-white.png"
               alt="WorksAuto"
-              className="h-6 sm:h-7 w-auto object-contain opacity-90"
+              className="h-6 sm:h-7 w-auto object-contain hidden dark:block opacity-90"
             />
           </div>
 
           {/* Explanation Text */}
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Bu canlı takip sayfası <strong className="text-slate-200">{data.tenant?.title || "WorksAuto Servis"}</strong> adına <strong className="text-slate-200">WorksAuto</strong> canlı araç takip altyapısı tarafından sağlanmaktadır.
+          <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Bu canlı takip sayfası <strong className="text-slate-900 dark:text-slate-200">{data.tenant?.title || "WorksAuto Servis"}</strong> adına <strong className="text-slate-900 dark:text-slate-200">WorksAuto</strong> canlı araç takip altyapısı tarafından sağlanmaktadır.
           </p>
 
           {/* Copyright */}
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-slate-400 dark:text-slate-500">
             © {new Date().getFullYear()} WorksAuto. Tüm hakları saklıdır.
           </p>
         </div>
@@ -667,10 +630,10 @@ export default function PublicVehicleTrackPage() {
       {/* Photo Lightbox Modal */}
       {selectedPhoto && (
         <div
-          className="fixed inset-0 z-50 bg-[#070b12]/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-200"
+          className="fixed inset-0 z-50 bg-black/80 dark:bg-[#070b12]/90 backdrop-blur-xl flex items-center justify-center p-4 animate-in fade-in duration-200"
           onClick={() => setSelectedPhoto(null)}
         >
-          <div className="relative max-w-3xl max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl border border-white/[0.1] bg-[#0b101b]">
+          <div className="relative max-w-3xl max-h-[90vh] rounded-2xl overflow-hidden shadow-2xl border border-slate-700 dark:border-white/[0.1] bg-white dark:bg-[#0b101b]">
             <button
               type="button"
               onClick={() => setSelectedPhoto(null)}

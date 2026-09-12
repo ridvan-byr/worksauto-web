@@ -49,7 +49,7 @@ export default async function RootLayout({
       <body className={`${jakarta.variable} font-sans antialiased selection:bg-sky-500 selection:text-white`}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="system"
           enableSystem
           disableTransitionOnChange={false}
         >
