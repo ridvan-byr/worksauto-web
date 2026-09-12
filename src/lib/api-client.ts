@@ -28,6 +28,12 @@ export function getAccessToken(endpoint?: string): string | null {
       localStorage.removeItem(ACCESS_TOKEN_KEY);
       return legacy;
     }
+    // Read from worksauto_access_token cookie for immediate media & API auth
+    const match = document.cookie.match(/(^|;)\s*worksauto_access_token=([^;]+)/);
+    if (match && match[2]) {
+      inMemoryTenantToken = decodeURIComponent(match[2]);
+      return inMemoryTenantToken;
+    }
   }
   return null;
 }
@@ -37,6 +43,12 @@ export function setAccessToken(token: string | null): void {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     setSessionCookie(Boolean(token));
+    const isProd = process.env.NODE_ENV === 'production';
+    if (token) {
+      document.cookie = `worksauto_access_token=${encodeURIComponent(token)}; path=/; SameSite=Lax${isProd ? '; Secure' : ''}; max-age=${30 * 24 * 60 * 60}`;
+    } else {
+      document.cookie = 'worksauto_access_token=; path=/; SameSite=Lax; max-age=0';
+    }
   }
 }
 

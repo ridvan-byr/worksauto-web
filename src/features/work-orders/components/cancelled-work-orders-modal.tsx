@@ -3,7 +3,7 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
-import { X, XCircle, ArrowUpRight, PlusCircle, FileText, User, CheckCircle2 } from "lucide-react"
+import { X, XCircle, ArrowUpRight, PlusCircle, FileText, User, CheckCircle2, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { WorkOrder, WorkOrderStatus } from "../types"
@@ -25,7 +25,19 @@ export function CancelledWorkOrdersModal({
   onSwitchToList,
 }: CancelledWorkOrdersModalProps) {
   const [mounted, setMounted] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState("")
   const router = useRouter()
+
+  const filteredOrders = React.useMemo(() => {
+    if (!searchQuery.trim()) return orders
+    const q = searchQuery.toLowerCase().trim()
+    return orders.filter(
+      (o) =>
+        o.plate?.toLowerCase().includes(q) ||
+        o.customerName?.toLowerCase().includes(q) ||
+        o.workOrderNumber?.toLowerCase().includes(q)
+    )
+  }, [orders, searchQuery])
 
   React.useEffect(() => {
     setMounted(true)
@@ -84,6 +96,32 @@ export function CancelledWorkOrdersModal({
           </button>
         </div>
 
+        {/* Search Bar */}
+        {orders.length > 0 && (
+          <div className="px-6 pt-4 pb-2 border-b border-slate-100 dark:border-slate-800/60 bg-slate-50/30 dark:bg-slate-900/30">
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Plaka, müşteri adı veya iş emri numarası ile filtrele..."
+                className="w-full h-10 pl-10 pr-10 text-xs rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all shadow-xs"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1"
+                  title="Aramayı Temizle"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Orders Content Area */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {orders.length === 0 ? (
@@ -100,9 +138,32 @@ export function CancelledWorkOrdersModal({
                 </p>
               </div>
             </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="py-12 flex flex-col items-center justify-center text-center space-y-3">
+              <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 flex items-center justify-center">
+                <Search size={22} />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                  Sonuç Bulunamadı
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  &ldquo;{searchQuery}&rdquo; aramasına uygun iptal edilmiş iş emri bulunamadı.
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setSearchQuery("")}
+                className="text-xs rounded-xl h-8"
+              >
+                Aramayı Temizle
+              </Button>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {orders.map((order) => (
+              {filteredOrders.map((order) => (
                 <div
                   key={order.id}
                   className="rounded-2xl border border-slate-200/90 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 p-4 space-y-3 hover:border-slate-300 dark:hover:border-slate-700 transition-all shadow-xs"

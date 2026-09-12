@@ -24,6 +24,7 @@ import { WorkOrderPhoto } from "../types"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/features/auth/auth-context"
+import { getAccessToken } from "@/lib/api-client"
 
 interface PhotoGalleryProps {
   photos: WorkOrderPhoto[]
@@ -58,10 +59,12 @@ function getDisplayUrl(url?: string): string {
   }
   const clean = url.startsWith("/") ? url.slice(1) : url
   const key = clean.replace(/^api\/v1\/media\/files\//, "")
+  const token = typeof window !== "undefined" ? getAccessToken() : null
+  const query = token ? `?token=${encodeURIComponent(token)}` : ""
   if (typeof window !== "undefined") {
-    return `/api/v1/media/files/${key}`
+    return `/api/v1/media/files/${key}${query}`
   }
-  return `${API_BASE_URL}/media/files/${key}`
+  return `${API_BASE_URL}/media/files/${key}${query}`
 }
 
 export function PhotoGallery({
