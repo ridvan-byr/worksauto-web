@@ -306,8 +306,7 @@ export default function WorkOrderDetailPage() {
       setIsReopenModalOpen(false)
       toast.success("İş emri başarıyla yeniden açıldı! Artık yeni parça ve işçilik ekleyebilirsiniz.")
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Fatura iptal edilemedi."
-      toast.error(msg)
+      console.warn("Fatura iptal hatası:", err)
     } finally {
       setIsCancellingInvoice(false)
     }
