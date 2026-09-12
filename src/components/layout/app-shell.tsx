@@ -40,22 +40,20 @@ export function AppShell({ children, defaultCollapsed = false }: AppShellProps) 
   const { user, tenant, isLoading } = useAuth()
   const currentPath = pathname || (typeof window !== "undefined" ? window.location.pathname : "")
 
-  // Immersive Fullscreen Routes: Login, Onboarding, Legal, Customer Public & Admin do NOT render the tenant dashboard shell
+  // Immersive Fullscreen Routes: Login, Onboarding, Legal, Customer Public (Track, Pay, Booking, Consent) & Admin do NOT render the tenant dashboard shell
   const isImmersiveRoute =
     currentPath === "/sign-in" ||
     currentPath === "/login" ||
     currentPath === "/onboarding" ||
     currentPath.startsWith("/legal") ||
     currentPath.startsWith("/book") ||
+    currentPath.startsWith("/track") ||
+    currentPath.startsWith("/pay") ||
     currentPath.startsWith("/c/") ||
     currentPath.startsWith("/admin")
 
   if (isImmersiveRoute) {
-    return (
-      <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100">
-        {children}
-      </div>
-    )
+    return <>{children}</>
   }
 
   // If loading auth state, show a clean loading indicator
