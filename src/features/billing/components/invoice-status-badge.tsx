@@ -1,5 +1,5 @@
 import * as React from "react"
-import { CheckCircle2, Clock, XCircle } from "lucide-react"
+import { CheckCircle2, Clock, XCircle, Ban } from "lucide-react"
 import { InvoiceStatus } from "../types"
 import { cn } from "@/lib/utils"
 
@@ -9,6 +9,20 @@ interface InvoiceStatusBadgeProps {
 }
 
 export function InvoiceStatusBadge({ status, className }: InvoiceStatusBadgeProps) {
+  if (status === "CANCELLED") {
+    return (
+      <span
+        className={cn(
+          "inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20",
+          className
+        )}
+      >
+        <Ban size={12} />
+        <span>İptal Edildi</span>
+      </span>
+    )
+  }
+
   if (status === "PAID") {
     return (
       <span

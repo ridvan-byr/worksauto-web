@@ -71,6 +71,8 @@ export interface WorkOrderInvoice {
   status: "UNPAID" | "PARTIALLY_PAID" | "PAID" | "CANCELLED" | string
   gibInvoiceNumber?: string
   eInvoiceStatus?: string
+  createdAt?: string
+  updatedAt?: string
   payments?: Array<{
     id: string
     amount: number

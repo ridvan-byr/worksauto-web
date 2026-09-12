@@ -82,8 +82,14 @@ export default function InvoicesPage() {
           taxAmount,
           grandTotal,
           paidAmount,
-          remainingAmount,
-          status: (inv.status === 'PAID' ? 'PAID' : inv.status === 'PARTIALLY_PAID' ? 'PARTIALLY_PAID' : 'UNPAID') as InvoiceStatus,
+          remainingAmount: inv.status === 'CANCELLED' ? 0 : remainingAmount,
+          status: (inv.status === 'CANCELLED'
+            ? 'CANCELLED'
+            : inv.status === 'PAID'
+            ? 'PAID'
+            : inv.status === 'PARTIALLY_PAID'
+            ? 'PARTIALLY_PAID'
+            : 'UNPAID') as InvoiceStatus,
           payments: (inv.payments || []).map((p: PaymentRecord) => ({
             id: p.id,
             customerId: inv.customerId,
@@ -130,7 +136,9 @@ export default function InvoicesPage() {
   }, [invoices])
 
   // KPIs
-  const totalReceivables = invoices.reduce((sum, i) => sum + i.remainingAmount, 0)
+  const totalReceivables = invoices
+    .filter((i) => i.status !== "CANCELLED")
+    .reduce((sum, i) => sum + i.remainingAmount, 0)
   const totalPaid = invoices.reduce((sum, i) => sum + i.paidAmount, 0)
   const unpaidCount = invoices.filter((i) => i.status === "UNPAID").length
   const partialCount = invoices.filter((i) => i.status === "PARTIALLY_PAID").length
@@ -313,6 +321,7 @@ export default function InvoicesPage() {
             { id: "UNPAID", label: "Ödenmemişler" },
             { id: "PARTIALLY_PAID", label: "Kısmi Ödenenler" },
             { id: "PAID", label: "Ödenenler" },
+            { id: "CANCELLED", label: "İptal Edilenler" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -410,7 +419,7 @@ export default function InvoicesPage() {
                     {/* Actions */}
                     <td className="py-4 px-4 sm:px-6 text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="inline-flex items-center gap-1.5">
-                        {inv.status !== "PAID" && (
+                        {inv.status !== "PAID" && inv.status !== "CANCELLED" && (
                           <button
                             type="button"
                             onClick={() => setPaymentModalState({ isOpen: true, invoice: inv })}

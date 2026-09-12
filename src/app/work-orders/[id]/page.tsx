@@ -54,6 +54,7 @@ import { InvoiceDetailModal } from "@/features/billing/components/invoice-detail
 import type { Invoice as BillingInvoice } from "@/features/billing/types"
 import { useCancelInvoice } from "@/features/billing/api/use-billing"
 import { toast } from "@/components/ui/sonner"
+import { cn } from "@/lib/utils"
 
 export default function WorkOrderDetailPage() {
   const params = useParams()
@@ -289,8 +290,17 @@ export default function WorkOrderDetailPage() {
     )
   }
 
+  const completionDate = order.completedAt || (activeInvoice ? (activeInvoice.createdAt || activeInvoice.issueDate) : null)
+  const isReopenExpired = completionDate
+    ? Date.now() - new Date(completionDate).getTime() > 48 * 60 * 60 * 1000
+    : false
+
   const handleOpenReopenModal = () => {
     if (!activeInvoice) return
+    if (isReopenExpired) {
+      toast.error("Bu iş emri tamamlanalı 48 saatten fazla olduğu için muhasebe ve denetim güvenliği gereği geri açılamaz. Lütfen yeni bir iş emri oluşturun.")
+      return
+    }
     setIsReopenModalOpen(true)
   }
 
@@ -752,13 +762,24 @@ export default function WorkOrderDetailPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={isCancellingInvoice}
+                    disabled={isCancellingInvoice || isReopenExpired}
                     onClick={handleOpenReopenModal}
-                    className="h-11 px-3.5 rounded-2xl text-xs font-bold text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-1.5 cursor-pointer shadow-xs"
-                    title="Faturayı iptal edip iş emrini lifte geri alır"
+                    className={cn(
+                      "h-11 px-3.5 rounded-2xl text-xs font-bold gap-1.5 cursor-pointer shadow-xs",
+                      isReopenExpired
+                        ? "text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                        : "text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                    )}
+                    title={
+                      isReopenExpired
+                        ? "Tamamlanma üzerinden 48 saat geçtiği için mali denetim gereği iş kilitlenmiştir. Yeni iş emri açınız."
+                        : "Faturayı iptal edip iş emrini lifte geri alır"
+                    }
                   >
                     {isCancellingInvoice ? (
                       <Loader2 size={14} className="animate-spin" />
+                    ) : isReopenExpired ? (
+                      <span className="flex items-center gap-1.5">🔒 Geri Açma Kilitli (&gt;48s)</span>
                     ) : (
                       <span>🔄 İşi Yeniden Aç (Faturayı İptal Et)</span>
                     )}
@@ -1453,12 +1474,24 @@ export default function WorkOrderDetailPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      disabled={isCancellingInvoice}
+                      disabled={isCancellingInvoice || isReopenExpired}
                       onClick={handleOpenReopenModal}
-                      className="h-9 rounded-xl text-[11px] font-bold text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/40 gap-1 cursor-pointer"
+                      className={cn(
+                        "h-9 rounded-xl text-[11px] font-bold gap-1 cursor-pointer",
+                        isReopenExpired
+                          ? "text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-800 cursor-not-allowed opacity-60"
+                          : "text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+                      )}
+                      title={
+                        isReopenExpired
+                          ? "Tamamlanma üzerinden 48 saat geçtiği için iş kilitlenmiştir."
+                          : "Faturayı iptal edip iş emrini lifte geri alır"
+                      }
                     >
                       {isCancellingInvoice ? (
                         <Loader2 size={12} className="animate-spin" />
+                      ) : isReopenExpired ? (
+                        <span>🔒 Kilitli (&gt;48s)</span>
                       ) : (
                         <span>🔄 Yeniden Aç</span>
                       )}
