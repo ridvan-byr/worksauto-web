@@ -8,6 +8,7 @@ import { WorkOrderCard } from "./work-order-card"
 interface KanbanBoardProps {
   orders: WorkOrder[]
   onStatusChange: (id: string, newStatus: WorkOrderStatus) => void
+  onReorderOrders?: (newOrders: WorkOrder[]) => void
 }
 
 const PRIORITY_WEIGHT: Record<string, number> = {
@@ -16,54 +17,178 @@ const PRIORITY_WEIGHT: Record<string, number> = {
   NORMAL: 1,
 }
 
-export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
+const STORAGE_KEY = "worksauto_work_orders_sequence"
+
+export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanBoardProps) {
   const [dragOverColumn, setDragOverColumn] = React.useState<WorkOrderStatus | null>(null)
 
+  // Custom Sequence of Order IDs (persisted in localStorage)
+  const [customOrderIds, setCustomOrderIds] = React.useState<string[]>(() => {
+    if (typeof window === "undefined") return []
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY)
+      return saved ? JSON.parse(saved) : []
+    } catch {
+      return []
+    }
+  })
+
+  // Sync new orders into customOrderIds if not already present
+  React.useEffect(() => {
+    if (!orders || orders.length === 0) return
+    setCustomOrderIds((prev) => {
+      let changed = false
+      const updated = [...prev]
+      orders.forEach((o) => {
+        if (!updated.includes(o.id)) {
+          updated.push(o.id)
+          changed = true
+        }
+      })
+      if (changed) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+        } catch {
+          // ignore
+        }
+        return updated
+      }
+      return prev
+    })
+  }, [orders])
+
+  // Helper to check if the current drag event is actually a Work Order
+  const isWorkOrderDrag = (e: React.DragEvent) => {
+    return e.dataTransfer.types.includes("application/work-order-id")
+  }
+
+  // Generic Reorder Function
+  const reorderTwoOrders = React.useCallback(
+    (draggedId: string, targetId: string, position: "before" | "after") => {
+      setCustomOrderIds((prev) => {
+        const master = [...prev]
+        orders.forEach((o) => {
+          if (!master.includes(o.id)) master.push(o.id)
+        })
+
+        const filtered = master.filter((id) => id !== draggedId)
+        const targetIndex = filtered.indexOf(targetId)
+        if (targetIndex === -1) return prev
+
+        const insertIndex = position === "before" ? targetIndex : targetIndex + 1
+        filtered.splice(insertIndex, 0, draggedId)
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
+        } catch {
+          // ignore
+        }
+
+        return filtered
+      })
+    },
+    [orders]
+  )
+
+  // Move up/down within a specific column
+  const handleMoveWithinColumn = (
+    orderId: string,
+    direction: "up" | "down",
+    columnOrders: WorkOrder[]
+  ) => {
+    const currentIndex = columnOrders.findIndex((o) => o.id === orderId)
+    if (currentIndex === -1) return
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1
+    if (targetIndex < 0 || targetIndex >= columnOrders.length) return
+
+    const targetOrder = columnOrders[targetIndex]
+    reorderTwoOrders(orderId, targetOrder.id, direction === "up" ? "before" : "after")
+  }
+
+  // Handle Drop on Card (Card-to-Card Reordering)
+  const handleCardDrop = (
+    draggedId: string,
+    targetId: string,
+    position: "before" | "after"
+  ) => {
+    const draggedOrder = orders.find((o) => o.id === draggedId)
+    const targetOrder = orders.find((o) => o.id === targetId)
+    if (!draggedOrder || !targetOrder) return
+
+    // If dragged from another column, change status first
+    if (draggedOrder.status !== targetOrder.status) {
+      onStatusChange(draggedId, targetOrder.status)
+    }
+
+    reorderTwoOrders(draggedId, targetId, position)
+  }
+
+  // Handle Drop on Empty Column Area
   const handleDropToColumn = (e: React.DragEvent, targetStatus: WorkOrderStatus) => {
     e.preventDefault()
     setDragOverColumn(null)
-    const id = e.dataTransfer.getData("text/plain")
+    if (!isWorkOrderDrag(e)) return
+
+    const id = e.dataTransfer.getData("application/work-order-id")
     if (id) {
-      onStatusChange(id, targetStatus)
+      const draggedOrder = orders.find((o) => o.id === id)
+      if (draggedOrder && draggedOrder.status !== targetStatus) {
+        onStatusChange(id, targetStatus)
+      }
     }
   }
 
-  // 1. PENDING / QUEUE: En acil olanlar en üstte, aynı aciliyette ilk gelen araç önce alınır (FIFO)
+  // Helper sorter respecting customOrderIds
+  const sortByCustomOrder = React.useCallback(
+    (list: WorkOrder[], defaultSort: (a: WorkOrder, b: WorkOrder) => number) => {
+      return [...list].sort((a, b) => {
+        const indexA = customOrderIds.indexOf(a.id)
+        const indexB = customOrderIds.indexOf(b.id)
+
+        if (indexA !== -1 && indexB !== -1) {
+          return indexA - indexB
+        }
+        if (indexA !== -1) return -1
+        if (indexB !== -1) return 1
+        return defaultSort(a, b)
+      })
+    },
+    [customOrderIds]
+  )
+
+  // 1. PENDING / QUEUE: Custom order, fallback to priority + FIFO
   const pendingOrders = React.useMemo(() => {
-    return orders
-      .filter((o) => o.status === "PENDING" || (o.status as string) === "QUEUE")
-      .sort((a, b) => {
-        const pDiff = (PRIORITY_WEIGHT[b.priority] || 1) - (PRIORITY_WEIGHT[a.priority] || 1)
-        if (pDiff !== 0) return pDiff
-        const timeA = new Date(a.createdAt || 0).getTime()
-        const timeB = new Date(b.createdAt || 0).getTime()
-        return timeA - timeB // Eskiden yeniye (İlk gelen ilk çıkar)
-      })
-  }, [orders])
+    const raw = orders.filter((o) => o.status === "PENDING" || (o.status as string) === "QUEUE")
+    return sortByCustomOrder(raw, (a, b) => {
+      const pDiff = (PRIORITY_WEIGHT[b.priority] || 1) - (PRIORITY_WEIGHT[a.priority] || 1)
+      if (pDiff !== 0) return pDiff
+      const timeA = new Date(a.createdAt || 0).getTime()
+      const timeB = new Date(b.createdAt || 0).getTime()
+      return timeA - timeB
+    })
+  }, [orders, sortByCustomOrder])
 
-  // 2. IN_PROGRESS: Lift sırasına göre düzenli gruplu, ardından aciliyet
+  // 2. IN_PROGRESS: Custom order, fallback to lift + priority
   const inProgressOrders = React.useMemo(() => {
-    return orders
-      .filter((o) => o.status === "IN_PROGRESS")
-      .sort((a, b) => {
-        const liftA = a.assignedLift || ""
-        const liftB = b.assignedLift || ""
-        const liftComp = liftA.localeCompare(liftB, "tr", { numeric: true })
-        if (liftComp !== 0) return liftComp
-        return (PRIORITY_WEIGHT[b.priority] || 1) - (PRIORITY_WEIGHT[a.priority] || 1)
-      })
-  }, [orders])
+    const raw = orders.filter((o) => o.status === "IN_PROGRESS")
+    return sortByCustomOrder(raw, (a, b) => {
+      const liftA = a.assignedLift || ""
+      const liftB = b.assignedLift || ""
+      const liftComp = liftA.localeCompare(liftB, "tr", { numeric: true })
+      if (liftComp !== 0) return liftComp
+      return (PRIORITY_WEIGHT[b.priority] || 1) - (PRIORITY_WEIGHT[a.priority] || 1)
+    })
+  }, [orders, sortByCustomOrder])
 
-  // 3. COMPLETED: En son biten / teslim aşamasına gelen en üstte (LIFO)
+  // 3. COMPLETED: Custom order, fallback to LIFO
   const completedOrders = React.useMemo(() => {
-    return orders
-      .filter((o) => o.status === "COMPLETED")
-      .sort((a, b) => {
-        const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime()
-        const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime()
-        return timeB - timeA // Yeniden eskiye
-      })
-  }, [orders])
+    const raw = orders.filter((o) => o.status === "COMPLETED")
+    return sortByCustomOrder(raw, (a, b) => {
+      const timeA = new Date(a.updatedAt || a.createdAt || 0).getTime()
+      const timeB = new Date(b.updatedAt || b.createdAt || 0).getTime()
+      return timeB - timeA
+    })
+  }, [orders, sortByCustomOrder])
 
   return (
     <div className="space-y-6">
@@ -71,6 +196,10 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
         {/* COLUMN 1: PENDING */}
         <div
           onDragOver={(e) => {
+            if (!isWorkOrderDrag(e)) {
+              e.dataTransfer.dropEffect = "none"
+              return
+            }
             e.preventDefault()
             e.dataTransfer.dropEffect = "move"
             if (dragOverColumn !== "PENDING") setDragOverColumn("PENDING")
@@ -112,8 +241,17 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
                 <span>Bekleyen araç bulunmuyor</span>
               </div>
             ) : (
-              pendingOrders.map((order) => (
-                <WorkOrderCard key={order.id} order={order} onStatusChange={onStatusChange} />
+              pendingOrders.map((order, idx) => (
+                <WorkOrderCard
+                  key={order.id}
+                  order={order}
+                  onStatusChange={onStatusChange}
+                  isFirst={idx === 0}
+                  isLast={idx === pendingOrders.length - 1}
+                  onMoveUp={() => handleMoveWithinColumn(order.id, "up", pendingOrders)}
+                  onMoveDown={() => handleMoveWithinColumn(order.id, "down", pendingOrders)}
+                  onCardDrop={handleCardDrop}
+                />
               ))
             )}
           </div>
@@ -122,6 +260,10 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
         {/* COLUMN 2: IN PROGRESS (ON LIFT) */}
         <div
           onDragOver={(e) => {
+            if (!isWorkOrderDrag(e)) {
+              e.dataTransfer.dropEffect = "none"
+              return
+            }
             e.preventDefault()
             e.dataTransfer.dropEffect = "move"
             if (dragOverColumn !== "IN_PROGRESS") setDragOverColumn("IN_PROGRESS")
@@ -163,8 +305,17 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
                 <span>Şu an liftte olan araç yok</span>
               </div>
             ) : (
-              inProgressOrders.map((order) => (
-                <WorkOrderCard key={order.id} order={order} onStatusChange={onStatusChange} />
+              inProgressOrders.map((order, idx) => (
+                <WorkOrderCard
+                  key={order.id}
+                  order={order}
+                  onStatusChange={onStatusChange}
+                  isFirst={idx === 0}
+                  isLast={idx === inProgressOrders.length - 1}
+                  onMoveUp={() => handleMoveWithinColumn(order.id, "up", inProgressOrders)}
+                  onMoveDown={() => handleMoveWithinColumn(order.id, "down", inProgressOrders)}
+                  onCardDrop={handleCardDrop}
+                />
               ))
             )}
           </div>
@@ -173,6 +324,10 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
         {/* COLUMN 3: COMPLETED */}
         <div
           onDragOver={(e) => {
+            if (!isWorkOrderDrag(e)) {
+              e.dataTransfer.dropEffect = "none"
+              return
+            }
             e.preventDefault()
             e.dataTransfer.dropEffect = "move"
             if (dragOverColumn !== "COMPLETED") setDragOverColumn("COMPLETED")
@@ -214,8 +369,17 @@ export function KanbanBoard({ orders, onStatusChange }: KanbanBoardProps) {
                 <span>Teslime hazır araç yok</span>
               </div>
             ) : (
-              completedOrders.map((order) => (
-                <WorkOrderCard key={order.id} order={order} onStatusChange={onStatusChange} />
+              completedOrders.map((order, idx) => (
+                <WorkOrderCard
+                  key={order.id}
+                  order={order}
+                  onStatusChange={onStatusChange}
+                  isFirst={idx === 0}
+                  isLast={idx === completedOrders.length - 1}
+                  onMoveUp={() => handleMoveWithinColumn(order.id, "up", completedOrders)}
+                  onMoveDown={() => handleMoveWithinColumn(order.id, "down", completedOrders)}
+                  onCardDrop={handleCardDrop}
+                />
               ))
             )}
           </div>

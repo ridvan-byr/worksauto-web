@@ -206,7 +206,9 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
       <div className="flex items-center gap-2 sm:gap-3">
         <Link
           href="/customers"
-          className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 dark:bg-sky-500/20 dark:text-sky-400 dark:hover:bg-sky-500/30 text-xs font-semibold transition-colors cursor-pointer"
+          draggable={false}
+          onDragStart={(e) => e.preventDefault()}
+          className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 dark:bg-sky-500/20 dark:text-sky-400 dark:hover:bg-sky-500/30 text-xs font-semibold transition-colors cursor-pointer select-none"
         >
           <Plus size={15} />
           <span>Hızlı Kabul</span>

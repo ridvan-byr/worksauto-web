@@ -8,19 +8,35 @@ import {
   CheckCircle2,
   XCircle,
   GripVertical,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"
-
 import { PlateBadge } from "@/features/customers/components/plate-badge"
+import { cn } from "@/lib/utils"
 
 interface WorkOrderCardProps {
   order: WorkOrder
   onStatusChange: (id: string, newStatus: WorkOrderStatus) => void
+  onMoveUp?: () => void
+  onMoveDown?: () => void
+  isFirst?: boolean
+  isLast?: boolean
+  onCardDrop?: (draggedId: string, targetId: string, position: "before" | "after") => void
 }
 
-export function WorkOrderCard({ order, onStatusChange }: WorkOrderCardProps) {
+export function WorkOrderCard({
+  order,
+  onStatusChange,
+  onMoveUp,
+  onMoveDown,
+  isFirst = false,
+  isLast = false,
+  onCardDrop,
+}: WorkOrderCardProps) {
   const router = useRouter()
   const [isDragging, setIsDragging] = React.useState(false)
+  const [dropPosition, setDropPosition] = React.useState<"before" | "after" | null>(null)
 
   const handleCardClick = () => {
     router.push(`/work-orders/${order.id}`)
@@ -32,23 +48,117 @@ export function WorkOrderCard({ order, onStatusChange }: WorkOrderCardProps) {
       draggable={order.status !== "CANCELLED"}
       onDragStart={(e) => {
         setIsDragging(true)
+        e.dataTransfer.setData("application/work-order-id", order.id)
+        e.dataTransfer.setData("application/work-order-status", order.status)
         e.dataTransfer.setData("text/plain", order.id)
-        e.dataTransfer.setData("application/json", JSON.stringify({ orderId: order.id, currentStatus: order.status }))
+        e.dataTransfer.setData(
+          "application/json",
+          JSON.stringify({ orderId: order.id, currentStatus: order.status })
+        )
         e.dataTransfer.effectAllowed = "move"
       }}
-      onDragEnd={() => setIsDragging(false)}
-      className={`p-4 sm:p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md hover:border-sky-500/40 transition-all cursor-grab active:cursor-grabbing space-y-3.5 group select-none ${
-        isDragging ? "opacity-40 scale-95 border-sky-400" : ""
-      }`}
+      onDragEnd={() => {
+        setIsDragging(false)
+        setDropPosition(null)
+      }}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("application/work-order-id")) return
+        e.preventDefault()
+        e.stopPropagation()
+        e.dataTransfer.dropEffect = "move"
+
+        const rect = e.currentTarget.getBoundingClientRect()
+        const midY = rect.top + rect.height / 2
+        const pos = e.clientY < midY ? "before" : "after"
+        if (dropPosition !== pos) {
+          setDropPosition(pos)
+        }
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+          setDropPosition(null)
+        }
+      }}
+      onDrop={(e) => {
+        const draggedId = e.dataTransfer.getData("application/work-order-id")
+        if (!draggedId || draggedId === order.id) {
+          setDropPosition(null)
+          return
+        }
+        e.preventDefault()
+        e.stopPropagation()
+        const pos = dropPosition || "after"
+        setDropPosition(null)
+        onCardDrop?.(draggedId, order.id, pos)
+      }}
+      className={cn(
+        "p-4 sm:p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md hover:border-sky-500/40 transition-all cursor-grab active:cursor-grabbing space-y-3.5 group select-none relative",
+        isDragging && "opacity-40 scale-95 border-sky-400 ring-2 ring-sky-400/40"
+      )}
     >
-      {/* Top Header: Plate & WO Number */}
+      {/* Drop Insertion Line Indicator */}
+      {dropPosition === "before" && (
+        <div className="absolute -top-2 left-1 right-1 h-1.5 bg-sky-500 rounded-full shadow-[0_0_10px_rgba(14,165,233,0.9)] z-30 animate-pulse pointer-events-none" />
+      )}
+      {dropPosition === "after" && (
+        <div className="absolute -bottom-2 left-1 right-1 h-1.5 bg-sky-500 rounded-full shadow-[0_0_10px_rgba(14,165,233,0.9)] z-30 animate-pulse pointer-events-none" />
+      )}
+
+      {/* Top Header: Plate, WO Number & Reorder Actions */}
       <div className="flex items-center justify-between gap-2 pt-0.5">
         <PlateBadge plate={order.plate} size="sm" />
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
             {order.workOrderNumber}
           </span>
-          <GripVertical size={14} className="text-slate-300 dark:text-slate-600 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors shrink-0" />
+
+          {/* Up & Down Reorder Micro Buttons */}
+          {(onMoveUp || onMoveDown) && (
+            <div
+              className="flex items-center bg-slate-100 dark:bg-slate-800/90 rounded-lg p-0.5 opacity-0 group-hover:opacity-100 transition-opacity gap-0.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                disabled={isFirst}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onMoveUp?.()
+                }}
+                className={cn(
+                  "w-5 h-5 rounded flex items-center justify-center transition-colors",
+                  isFirst
+                    ? "opacity-25 cursor-not-allowed text-slate-400"
+                    : "hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-sky-500 cursor-pointer"
+                )}
+                title="Sırada Bir Üste Al"
+              >
+                <ChevronUp size={13} />
+              </button>
+              <button
+                type="button"
+                disabled={isLast}
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onMoveDown?.()
+                }}
+                className={cn(
+                  "w-5 h-5 rounded flex items-center justify-center transition-colors",
+                  isLast
+                    ? "opacity-25 cursor-not-allowed text-slate-400"
+                    : "hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 hover:text-sky-500 cursor-pointer"
+                )}
+                title="Sırada Bir Alta Al"
+              >
+                <ChevronDown size={13} />
+              </button>
+            </div>
+          )}
+
+          <GripVertical
+            size={14}
+            className="text-slate-300 dark:text-slate-600 group-hover:text-sky-500 dark:group-hover:text-sky-400 transition-colors shrink-0"
+          />
         </div>
       </div>
 
@@ -65,7 +175,10 @@ export function WorkOrderCard({ order, onStatusChange }: WorkOrderCardProps) {
       {/* Services List Preview */}
       <div className="space-y-1 py-1 border-y border-slate-100 dark:border-slate-800/60">
         {(order.services || []).slice(0, 2).map((s) => (
-          <div key={s.id} className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400">
+          <div
+            key={s.id}
+            className="flex items-center justify-between text-[11px] text-slate-600 dark:text-slate-400"
+          >
             <span className="truncate pr-2">• {s.name}</span>
             <span className="font-mono font-medium shrink-0">{s.laborPrice} ₺</span>
           </div>
