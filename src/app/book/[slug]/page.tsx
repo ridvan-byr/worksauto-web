@@ -289,7 +289,7 @@ export default function PublicBookingPage() {
                 </label>
                 <input
                   type="tel"
-                  placeholder="05XX XXX XX XX veya +90..."
+                  placeholder="0 (5XX) XXX XX XX"
                   value={phone}
                   onChange={handlePhoneChange}
                   maxLength={20}
@@ -307,7 +307,7 @@ export default function PublicBookingPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="34 ABC 123 veya M-AB 1234"
+                  placeholder="34 ABC 123"
                   value={plate}
                   onChange={(e) => setPlate(formatSmartPlate(e.target.value))}
                   className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-sky-500"

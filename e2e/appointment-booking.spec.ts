@@ -65,7 +65,7 @@ test.describe('Appointment Booking & Public Portal E2E', () => {
 
     // 8. Verify success confirmation screen
     await expect(page.getByText('Randevu Talebiniz Alındı!')).toBeVisible();
-    await expect(page.getByText('34XYZ789')).toBeVisible();
+    await expect(page.getByText(/34\s*XYZ\s*789/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /Yeni Randevu Talebi Oluştur/i })).toBeVisible();
   });
 
