@@ -1,6 +1,6 @@
 "use client"
 
-import { useCustomer, useDeleteCustomer } from "@/features/customers/api/use-customers"
+import { useCustomer, useCustomerStats, useDeleteCustomer } from "@/features/customers/api/use-customers"
 import { useDeleteVehicle, type VehicleRecord } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
@@ -25,6 +25,9 @@ import {
   Edit3,
   Eye,
   Printer,
+  CheckCircle2,
+  ShieldAlert,
+  TrendingUp,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Customer, Vehicle } from "@/features/customers/types"
@@ -67,6 +70,7 @@ export default function CustomerDetailPage() {
   const [isCariModalOpen, setIsCariModalOpen] = React.useState(false)
 
   const { data: apiCustomer } = useCustomer(customerId)
+  const { data: stats } = useCustomerStats(customerId)
   const deleteVehicleMutation = useDeleteVehicle()
   const deleteCustomerMutation = useDeleteCustomer()
 
@@ -306,6 +310,106 @@ export default function CustomerDetailPage() {
             <p className="text-[10px] text-slate-400 mt-0.5">
               {customer.balance > 0 ? "Açık Hesap Borcu Var" : "Borçsuz / Bakiye Sıfır"}
             </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Customer Attendance & No-Show Scorecard */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Toplam Randevu */}
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+            <span className="text-xs font-semibold">Toplam Randevu</span>
+            <Calendar size={16} className="text-sky-500" />
+          </div>
+          <div>
+            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              {stats?.totalAppointments ?? customer.appointments.length}
+            </span>
+            <p className="text-[11px] text-slate-400 mt-1">
+              {stats?.completedAppointments ?? 0} Tamamlandı • {stats?.cancelledAppointments ?? 0} İptal
+            </p>
+          </div>
+        </div>
+
+        {/* Randevu Devam Oranı */}
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+            <span className="text-xs font-semibold">Randevu Sadakati</span>
+            <TrendingUp size={16} className="text-emerald-500" />
+          </div>
+          <div>
+            <div className="flex items-baseline gap-1.5">
+              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                %{stats?.attendanceScore ?? 100}
+              </span>
+              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Devam Oranı</span>
+            </div>
+            <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full mt-2 overflow-hidden">
+              <div
+                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.min(100, Math.max(0, stats?.attendanceScore ?? 100))}%` }}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* No-Show Sayısı ve Risk Rozeti */}
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+            <span className="text-xs font-semibold">No-Show (Gelmeme)</span>
+            <AlertTriangle
+              size={16}
+              className={cn(
+                (stats?.noShowCount ?? 0) > 1 ? "text-rose-500" : (stats?.noShowCount ?? 0) === 1 ? "text-amber-500" : "text-slate-400"
+              )}
+            />
+          </div>
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                {stats?.noShowCount ?? 0}
+              </span>
+              <span
+                className={cn(
+                  "text-[10px] font-semibold px-2 py-0.5 rounded-full border",
+                  (stats?.noShowCount ?? 0) === 0
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                    : (stats?.noShowCount ?? 0) <= 2
+                    ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                    : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                )}
+              >
+                {(stats?.noShowCount ?? 0) === 0 ? "Güvenilir" : (stats?.noShowCount ?? 0) <= 2 ? "Dikkat" : "Yüksek Risk"}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Gelmeme Oranı: %{stats?.noShowRate ?? "0"}
+            </p>
+          </div>
+        </div>
+
+        {/* Kredi Limiti & Cari Güvenlik */}
+        <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex flex-col justify-between">
+          <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 mb-2">
+            <span className="text-xs font-semibold">Kredi Limiti</span>
+            <CreditCard size={16} className="text-indigo-500" />
+          </div>
+          <div>
+            <span className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+              {stats?.creditLimit ? `${Number(stats.creditLimit).toLocaleString("tr-TR")} ₺` : "Limitsiz"}
+            </span>
+            <div className="mt-1">
+              {stats?.limitExceeded ? (
+                <span className="inline-flex items-center gap-1 text-[11px] text-rose-600 dark:text-rose-400 font-semibold">
+                  <ShieldAlert size={12} /> Limit Aşıldı
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 size={12} /> Cari Limit Uygun
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>

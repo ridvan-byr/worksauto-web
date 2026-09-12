@@ -11,10 +11,13 @@ import {
   HandCoins,
   FileText,
   TrendingDown,
-  } from "lucide-react"
+  FileSpreadsheet,
+} from "lucide-react"
 
+import { Button } from "@/components/ui/button"
 import { ManualCollectionModal } from "@/features/billing/components/manual-collection-modal"
 import { CariHistoryModal } from "@/features/billing/components/cari-history-modal"
+import { DailyReconciliationModal } from "@/features/billing/components/daily-reconciliation-modal"
 import { CurrentAccount, PaymentMethod } from "@/features/billing/types"
 import { cn } from "@/lib/utils"
 
@@ -22,6 +25,7 @@ export default function CurrentAccountsPage() {
   const [accounts, setAccounts] = React.useState<CurrentAccount[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
   const [filterType, setFilterType] = React.useState<"all" | "exceeded" | "has_balance">("all")
+  const [isReconciliationOpen, setIsReconciliationOpen] = React.useState(false)
 
   // Modals
   const [collectionModalState, setCollectionModalState] = React.useState<{
@@ -156,6 +160,17 @@ export default function CurrentAccountsPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Müşteri borç ve alacak bakiyeleri, tanımlı kredi limitleri ve detaylı ekstre dökümleri.
           </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            onClick={() => setIsReconciliationOpen(true)}
+            className="h-9 px-4 rounded-xl gap-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs"
+          >
+            <FileSpreadsheet size={15} />
+            <span>Gün Sonu Kasa Özeti (Z-Raporu)</span>
+          </Button>
         </div>
       </div>
 
@@ -382,6 +397,13 @@ export default function CurrentAccountsPage() {
         isOpen={historyModalState.isOpen}
         account={historyModalState.account}
         onClose={() => setHistoryModalState({ isOpen: false, account: null })}
+      />
+
+      {/* Daily Reconciliation Modal (Z-Raporu) */}
+      <DailyReconciliationModal
+        isOpen={isReconciliationOpen}
+        accounts={accounts}
+        onClose={() => setIsReconciliationOpen(false)}
       />
     </div>
   )

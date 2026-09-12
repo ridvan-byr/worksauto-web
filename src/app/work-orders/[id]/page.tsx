@@ -1048,6 +1048,25 @@ export default function WorkOrderDetailPage() {
                         </span>
                       </div>
                     )}
+
+                    {/* Negative Margin / Zararına Satış Uyarısı */}
+                    {selectedProduct &&
+                      typeof selectedProduct.purchasePrice === 'number' &&
+                      selectedProduct.purchasePrice > 0 &&
+                      newPartPrice !== "" &&
+                      Number(newPartPrice) < selectedProduct.purchasePrice && (
+                        <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-700 dark:text-rose-400 text-xs flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <AlertTriangle size={15} className="shrink-0 text-rose-600 dark:text-rose-400" />
+                            <span>
+                              <strong>Zararına Satış Uyarısı:</strong> Belirtilen satış fiyatı ({Number(newPartPrice).toLocaleString("tr-TR")} ₺), parçanın depodaki maliyet/alış fiyatının ({selectedProduct.purchasePrice.toLocaleString("tr-TR")} ₺) altındadır!
+                            </span>
+                          </div>
+                          <span className="shrink-0 font-bold font-mono text-rose-700 dark:text-rose-300">
+                            Fark: -{(selectedProduct.purchasePrice - Number(newPartPrice)).toLocaleString("tr-TR")} ₺
+                          </span>
+                        </div>
+                    )}
                   </div>
                 ) : (
                   /* Custom Part Free-Text Mode */

@@ -62,6 +62,8 @@ export interface Vehicle {
   color?: string
   engineNo?: string
   notes?: string
+  inspectionValidUntil?: string | null
+  insuranceValidUntil?: string | null
   lastServiceDate?: string
   createdAt?: string
   updatedAt?: string

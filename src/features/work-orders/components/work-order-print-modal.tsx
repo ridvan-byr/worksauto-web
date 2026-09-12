@@ -230,6 +230,23 @@ export function WorkOrderPrintModal({ isOpen, order, onClose }: WorkOrderPrintMo
                 </table>
               </div>
             )}
+
+            {/* 3. Atölye & Kabul Notları */}
+            {order.notes && order.notes.length > 0 && (
+              <div className="space-y-1.5 pt-2">
+                <p className="text-[11px] font-black uppercase text-slate-600 tracking-wider">
+                  Müşteri Talebi & Atölye Kabul Notları
+                </p>
+                <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-700 space-y-1">
+                  {order.notes.map((n, idx) => (
+                    <div key={n.id || idx} className="text-xs">
+                      <span className="font-bold text-slate-900">{n.authorName || "Servis Danışmanı"}: </span>
+                      <span>{n.text || n.note}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CorporatePrintDocument>
         </div>
       </div>

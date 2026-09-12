@@ -5,11 +5,21 @@ import { Customer } from '../types';
 import { CustomerFormValues } from '../schemas/customer.schema';
 
 export interface CustomerStats {
-  totalSpent: number;
-  totalWorkOrders: number;
   totalAppointments: number;
-  lastServiceDate?: string;
+  completedAppointments: number;
+  cancelledAppointments: number;
+  noShowCount: number;
+  noShowRate: string;
+  attendanceScore: number;
+  riskCategory: string;
   balance: number;
+  totalDebits: number;
+  totalCredits: number;
+  creditLimit: number;
+  limitExceeded: boolean;
+  totalSpent?: number;
+  totalWorkOrders?: number;
+  lastServiceDate?: string;
 }
 
 export function useCustomers(search?: string) {

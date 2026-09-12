@@ -99,6 +99,8 @@ export default function VehiclesPage() {
         customerId: v.customerId,
         customerName: v.customer ? `${v.customer.firstName} ${v.customer.lastName}` : 'Müşteri',
         customerPhone: v.customer?.phone || '',
+        inspectionValidUntil: v.inspectionValidUntil,
+        insuranceValidUntil: v.insuranceValidUntil,
       }))
       setVehicles(mapped)
     }
@@ -423,7 +425,28 @@ export default function VehiclesPage() {
                     {/* Plate & Brand/Model */}
                     <td className="py-4 px-4 sm:px-6">
                       <div className="space-y-1.5">
-                        <PlateBadge plate={v.plate} size="md" />
+                        <div className="flex flex-wrap items-center gap-2">
+                          <PlateBadge plate={v.plate} size="md" />
+                          {(() => {
+                            if (!v.inspectionValidUntil) return null
+                            const days = Math.ceil(
+                              (new Date(v.inspectionValidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                            )
+                            if (days > 30) return null
+                            return (
+                              <span
+                                className={cn(
+                                  "text-[10px] font-bold px-2 py-0.5 rounded-md border",
+                                  days < 0
+                                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                                )}
+                              >
+                                {days < 0 ? "Muayene Geçti" : `Muayene: ${days}g`}
+                              </span>
+                            )
+                          })()}
+                        </div>
                         <p className="font-bold text-slate-900 dark:text-slate-100">
                           {v.brand} {v.model}
                         </p>

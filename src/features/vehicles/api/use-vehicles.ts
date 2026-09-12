@@ -30,6 +30,8 @@ export interface VehicleRecord {
     phone?: string;
   };
   notes?: string;
+  inspectionValidUntil?: string | null;
+  insuranceValidUntil?: string | null;
   createdAt?: string;
 }
 
