@@ -15,6 +15,7 @@ import {
   Filter,
   Search,
   XCircle,
+  Archive,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkOrder, WorkOrderStatus, WorkOrderPriority, WorkOrderNote, WorkOrderPhoto } from "@/features/work-orders/types"
@@ -137,6 +138,7 @@ export default function WorkOrdersPage() {
   const [orders, setOrders] = React.useState<WorkOrder[]>([])
   const [viewMode, setViewMode] = React.useState<"kanban" | "list">("kanban")
   const [selectedStaffFilter, setSelectedStaffFilter] = React.useState<string>("all")
+  const [timeframeFilter, setTimeframeFilter] = React.useState<"active_48h" | "today" | "week" | "all">("active_48h")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
   const [isCancelledModalOpen, setIsCancelledModalOpen] = React.useState(false)
@@ -213,9 +215,13 @@ export default function WorkOrdersPage() {
     return Array.from(nameSet)
   }, [staffMembers, orders])
 
-  // Filter by staff & live search
+  // Filter by staff, timeframe retention & live search
   const displayedOrders = React.useMemo(() => {
+    const now = Date.now()
+    const isSearching = Boolean(searchQuery.trim())
+
     return orders.filter((o) => {
+      // 1. Staff Filter
       if (selectedStaffFilter === "unassigned") {
         if (o.assignedMechanicName && o.assignedMechanicName !== "Usta" && o.assignedMechanicName !== "Atanmamış") {
           return false
@@ -224,27 +230,62 @@ export default function WorkOrdersPage() {
         return false
       }
 
-      if (!searchQuery.trim()) return true
-      const q = searchQuery.toLowerCase().trim()
-      const cleanPlateQ = q.replace(/\s/g, "")
-      const matchPlate = o.plate.toLowerCase().replace(/\s/g, "").includes(cleanPlateQ)
-      const matchNumber = o.workOrderNumber.toLowerCase().includes(q)
-      const matchCustomer = o.customerName.toLowerCase().includes(q)
-      const cleanDigits = q.replace(/\D/g, "")
-      const matchPhone = cleanDigits.length >= 3 && o.customerPhone.replace(/\D/g, "").includes(cleanDigits)
-      return matchPlate || matchNumber || matchCustomer || matchPhone
+      // 2. Search query matches (if searching, search across all timeframes)
+      if (isSearching) {
+        const q = searchQuery.toLowerCase().trim()
+        const cleanPlateQ = q.replace(/\s/g, "")
+        const matchPlate = o.plate.toLowerCase().replace(/\s/g, "").includes(cleanPlateQ)
+        const matchNumber = o.workOrderNumber.toLowerCase().includes(q)
+        const matchCustomer = o.customerName.toLowerCase().includes(q)
+        const cleanDigits = q.replace(/\D/g, "")
+        const matchPhone = cleanDigits.length >= 3 && o.customerPhone.replace(/\D/g, "").includes(cleanDigits)
+        return matchPlate || matchNumber || matchCustomer || matchPhone
+      }
+
+      // 3. Timeframe / Lifecycle Retention Filter (Only applies when NOT actively searching)
+      // Active queue / in-progress orders always stay on board regardless of age
+      if (o.status === "PENDING" || o.status === "IN_PROGRESS") {
+        return true
+      }
+
+      const orderTime = new Date(o.completedAt || o.updatedAt || o.createdAt).getTime()
+      const diffHours = (now - orderTime) / (1000 * 60 * 60)
+
+      if (timeframeFilter === "active_48h") {
+        if (o.status === "COMPLETED") return diffHours <= 48
+        if (o.status === "CANCELLED") return diffHours <= 24
+        return true
+      } else if (timeframeFilter === "today") {
+        return new Date(orderTime).toDateString() === new Date().toDateString()
+      } else if (timeframeFilter === "week") {
+        return diffHours <= 24 * 7
+      }
+
+      // "all" - Show all archived records
+      return true
     })
-  }, [orders, selectedStaffFilter, searchQuery])
+  }, [orders, selectedStaffFilter, searchQuery, timeframeFilter])
 
   // KPIs
   const inProgressCount = orders.filter((o) => o.status === "IN_PROGRESS").length
   const pendingCount = orders.filter((o) => o.status === "PENDING").length
-  const completedCount = orders.filter((o) => o.status === "COMPLETED").length
+  const completedCount = displayedOrders.filter((o) => o.status === "COMPLETED").length
   const cancelledOrdersList = React.useMemo(() => {
-    return orders.filter((o) => o.status === "CANCELLED")
-  }, [orders])
+    const isSearching = Boolean(searchQuery.trim())
+    const now = Date.now()
+    return orders.filter((o) => {
+      if (o.status !== "CANCELLED") return false
+      if (isSearching || timeframeFilter === "all") return true
+      const orderTime = new Date(o.updatedAt || o.createdAt).getTime()
+      const diffHours = (now - orderTime) / (1000 * 60 * 60)
+      if (timeframeFilter === "today") return new Date(orderTime).toDateString() === new Date().toDateString()
+      if (timeframeFilter === "week") return diffHours <= 24 * 7
+      // default: active_48h -> keep last 24h
+      return diffHours <= 24
+    })
+  }, [orders, searchQuery, timeframeFilter])
   const cancelledCount = cancelledOrdersList.length
-  const totalWOCount = orders.length
+  const totalWOCount = displayedOrders.length
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-16">
@@ -348,6 +389,23 @@ export default function WorkOrdersPage() {
                   {name}
                 </option>
               ))}
+            </select>
+          </div>
+
+          {/* Timeframe & Archival Retention Filter */}
+          <div className="flex items-center gap-2 text-xs text-slate-500 shrink-0">
+            <Archive size={14} />
+            <span className="font-medium shrink-0">Görünüm:</span>
+            <select
+              value={timeframeFilter}
+              onChange={(e) => setTimeframeFilter(e.target.value as any)}
+              className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+              title="Atölye aktif panosu tamamlanan işleri 48 saat, iptalleri 24 saat gösterir"
+            >
+              <option value="active_48h">Aktif Atölye (Son 48s)</option>
+              <option value="today">Sadece Bugün</option>
+              <option value="week">Bu Hafta (Son 7 Gün)</option>
+              <option value="all">Tüm Arşiv (Geçmiş Dahil)</option>
             </select>
           </div>
         </div>

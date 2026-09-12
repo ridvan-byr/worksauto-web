@@ -22,6 +22,17 @@ const QUICK_NOTES = [
   "⚡ Lift kontrolü tamamlandı",
 ]
 
+function formatNoteText(text: string | undefined): string {
+  if (!text) return ""
+  return text
+    .replace(/CUSTOMER_REQUEST/g, "Müşteri randevuyu iptal etti / vazgeçti")
+    .replace(/PARTS_UNAVAILABLE/g, "Gerekli yedek parça temin edilemedi")
+    .replace(/CAPACITY_FULL/g, "Servis atölye lift kapasitesi dolu")
+    .replace(/PRICE_DISAGREEMENT/g, "Fiyat konusunda anlaşılamadı")
+    .replace(/NO_SHOW/g, "Randevuya gelinmedi (No-Show)")
+    .replace(/OTHER/g, "Diğer gerekçe")
+}
+
 export function TechnicianNotes({
   notes,
   onAddNote,
@@ -228,7 +239,7 @@ export function TechnicianNotes({
                       </div>
                     </div>
                   ) : (
-                    <p className="whitespace-pre-wrap select-text">{note.text || note.note}</p>
+                    <p className="whitespace-pre-wrap select-text">{formatNoteText(note.text || note.note)}</p>
                   )}
                 </div>
 

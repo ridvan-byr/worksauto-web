@@ -49,6 +49,9 @@ import { PhotoGallery } from "@/features/work-orders/components/photo-gallery"
 import { WorkOrder, WorkOrderStatus, WorkOrderNote, WorkOrderPhoto } from "@/features/work-orders/types"
 import { WorkOrderInvoiceModal } from "@/features/work-orders/components/work-order-invoice-modal"
 import { WorkOrderPrintModal } from "@/features/work-orders/components/work-order-print-modal"
+import { ReopenWorkOrderModal } from "@/features/work-orders/components/reopen-work-order-modal"
+import { InvoiceDetailModal } from "@/features/billing/components/invoice-detail-modal"
+import type { Invoice as BillingInvoice } from "@/features/billing/types"
 import { useCancelInvoice } from "@/features/billing/api/use-billing"
 import { toast } from "@/components/ui/sonner"
 
@@ -104,6 +107,8 @@ export default function WorkOrderDetailPage() {
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = React.useState(false)
   const [isPrintModalOpen, setIsPrintModalOpen] = React.useState(false)
   const [isCancellingInvoice, setIsCancellingInvoice] = React.useState(false)
+  const [isReopenModalOpen, setIsReopenModalOpen] = React.useState(false)
+  const [isInvoiceDetailOpen, setIsInvoiceDetailOpen] = React.useState(false)
   const addItemMutation = useAddWorkOrderItem()
   const updateStatusMutation = useUpdateWorkOrderStatus()
   const removeItemMutation = useRemoveWorkOrderItem()
@@ -214,13 +219,83 @@ export default function WorkOrderDetailPage() {
   const isOrderLocked = order.status === "COMPLETED" || order.status === "CANCELLED"
   const activeInvoice = order.invoice && order.invoice.status !== "CANCELLED" ? order.invoice : null
 
-  const handleCancelInvoiceAndReopen = async () => {
-    if (!activeInvoice) return
-    const confirmed = window.confirm(
-      `Faturayı (#${activeInvoice.invoiceNumber}) iptal edip iş emrini tekrar "Devam Eden İşlemler" statüsüne almak istediğinize emin misiniz?\n\nCari hesaptaki borç kaydı ve varsa tahsilat tutarı otomatik olarak dengelenecektir.`
-    )
-    if (!confirmed) return
+  // Map order & active invoice to BillingInvoice format for InvoiceDetailModal
+  const mappedInvoiceForModal = React.useMemo<BillingInvoice | null>(() => {
+    if (!activeInvoice || !order) return null
+    const subtotal = Number(activeInvoice.subtotal || order.subtotal || order.laborTotal || 0)
+    const taxAmount = Number(activeInvoice.kdvAmount || order.taxRate ? (subtotal * 0.2) : 0)
+    const grandTotal = Number(activeInvoice.grandTotal || order.grandTotal || (subtotal + taxAmount))
+    const paidAmount = Number(activeInvoice.paidAmount || 0)
+    const remainingAmount = Number(activeInvoice.remainingAmount ?? (grandTotal - paidAmount))
 
+    return {
+      id: activeInvoice.id,
+      tenantId: order.tenantId || "ten_1",
+      invoiceNumber: activeInvoice.invoiceNumber,
+      workOrderId: order.id,
+      workOrderNumber: order.workOrderNumber,
+      customerId: order.customerId,
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      customerType: (((order.customer as any)?.type || (order as any).customerType || "individual") === "corporate" ? "corporate" : "individual") as "individual" | "corporate",
+      companyTitle: (order.customer as any)?.companyTitle || (order as any).companyTitle,
+      taxOffice: (order.customer as any)?.taxOffice || (order as any).taxOffice,
+      taxNumber: (order.customer as any)?.taxNumber || (order as any).taxNumber,
+      vehiclePlate: order.plate,
+      vehicleBrand: order.brand,
+      vehicleModel: order.model,
+      vehicleYear: order.year || 2024,
+      vehicleKm: order.kilometer || 0,
+      vehicleVin: order.vin,
+      issueDate: activeInvoice.issueDate ? new Date(activeInvoice.issueDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      dueDate: activeInvoice.dueDate ? new Date(activeInvoice.dueDate).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+      subtotal,
+      taxAmount,
+      grandTotal,
+      paidAmount,
+      remainingAmount,
+      status: (activeInvoice.status === "PAID" ? "PAID" : activeInvoice.status === "PARTIALLY_PAID" ? "PARTIALLY_PAID" : "UNPAID") as any,
+      payments: (activeInvoice.payments || []).map((p: any) => ({
+        id: p.id,
+        customerId: order.customerId,
+        invoiceId: activeInvoice.id,
+        date: p.paymentDate || new Date().toISOString(),
+        amount: Number(p.amount),
+        method: (p.paymentMethod === "CREDIT_CARD" ? "POS" : p.paymentMethod === "BANK_TRANSFER" ? "BANK_TRANSFER" : "CASH") as any,
+        performedByName: order.customerName,
+        createdAt: p.paymentDate || new Date().toISOString(),
+      })),
+      items: [
+        ...(order.services || []).map((s) => ({
+          id: s.id,
+          type: "SERVICE" as const,
+          name: s.name,
+          quantity: 1,
+          unitPrice: s.laborPrice,
+          totalPrice: s.laborPrice,
+        })),
+        ...(order.parts || []).map((p) => ({
+          id: p.id,
+          type: "PART" as const,
+          name: p.name,
+          code: p.partNumber,
+          quantity: p.quantity,
+          unitPrice: p.unitPrice,
+          totalPrice: p.totalPrice,
+        })),
+      ],
+      createdAt: activeInvoice.issueDate || order.createdAt || new Date().toISOString(),
+      updatedAt: activeInvoice.dueDate || order.updatedAt || new Date().toISOString(),
+    }
+  }, [activeInvoice, order])
+
+  const handleOpenReopenModal = () => {
+    if (!activeInvoice) return
+    setIsReopenModalOpen(true)
+  }
+
+  const handleConfirmReopen = async () => {
+    if (!activeInvoice) return
     setIsCancellingInvoice(true)
     try {
       await cancelInvoiceMutation.mutateAsync({
@@ -228,6 +303,7 @@ export default function WorkOrderDetailPage() {
         reason: "İş emrine ek işlem yapılması için fatura iptali ve yeniden açma",
       })
       await refetch()
+      setIsReopenModalOpen(false)
       toast.success("İş emri başarıyla yeniden açıldı! Artık yeni parça ve işçilik ekleyebilirsiniz.")
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Fatura iptal edilemedi."
@@ -239,7 +315,7 @@ export default function WorkOrderDetailPage() {
 
   const handleStatusUpdate = async (status: WorkOrderStatus) => {
     if (status === "IN_PROGRESS" && activeInvoice) {
-      await handleCancelInvoiceAndReopen()
+      handleOpenReopenModal()
       return
     }
     try {
@@ -678,7 +754,7 @@ export default function WorkOrderDetailPage() {
                     type="button"
                     variant="outline"
                     disabled={isCancellingInvoice}
-                    onClick={handleCancelInvoiceAndReopen}
+                    onClick={handleOpenReopenModal}
                     className="h-11 px-3.5 rounded-2xl text-xs font-bold text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 hover:bg-amber-50 dark:hover:bg-amber-950/30 gap-1.5 cursor-pointer shadow-xs"
                     title="Faturayı iptal edip iş emrini lifte geri alır"
                   >
@@ -1368,7 +1444,7 @@ export default function WorkOrderDetailPage() {
                       variant="outline"
                       size="sm"
                       className="h-9 rounded-xl text-xs font-bold gap-1.5 cursor-pointer"
-                      onClick={() => router.push("/invoices")}
+                      onClick={() => setIsInvoiceDetailOpen(true)}
                     >
                       <ExternalLink size={13} />
                       <span>Faturayı Gör</span>
@@ -1379,7 +1455,7 @@ export default function WorkOrderDetailPage() {
                       variant="outline"
                       size="sm"
                       disabled={isCancellingInvoice}
-                      onClick={handleCancelInvoiceAndReopen}
+                      onClick={handleOpenReopenModal}
                       className="h-9 rounded-xl text-[11px] font-bold text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/40 gap-1 cursor-pointer"
                     >
                       {isCancellingInvoice ? (
@@ -1432,6 +1508,27 @@ export default function WorkOrderDetailPage() {
         isOpen={isPrintModalOpen}
         order={order}
         onClose={() => setIsPrintModalOpen(false)}
+      />
+
+      {/* Reopen Work Order & Cancel Invoice Centered Confirmation Modal */}
+      {activeInvoice && (
+        <ReopenWorkOrderModal
+          isOpen={isReopenModalOpen}
+          onClose={() => setIsReopenModalOpen(false)}
+          onConfirm={handleConfirmReopen}
+          isLoading={isCancellingInvoice}
+          workOrderNumber={order.workOrderNumber}
+          invoiceNumber={activeInvoice.invoiceNumber}
+          plate={order.plate}
+          grandTotal={activeInvoice.grandTotal}
+        />
+      )}
+
+      {/* Embedded Invoice Detail & Print Modal (No page redirect) */}
+      <InvoiceDetailModal
+        isOpen={isInvoiceDetailOpen}
+        invoice={mappedInvoiceForModal}
+        onClose={() => setIsInvoiceDetailOpen(false)}
       />
     </div>
   )
