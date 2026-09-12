@@ -3,6 +3,7 @@
 import * as React from "react"
 import { useParams } from "next/navigation"
 import Link from "next/link"
+import { useTheme } from "next-themes"
 import {
   Wrench,
   CheckCircle2,
@@ -110,6 +111,12 @@ const STATUS_STEPS = [
 export default function PublicVehicleTrackPage() {
   const params = useParams()
   const token = params.token as string
+  const { setTheme } = useTheme()
+
+  // Ensure public customer track page responds to device OS theme
+  React.useEffect(() => {
+    setTheme("system")
+  }, [setTheme])
 
   const [data, setData] = React.useState<TrackingData | null>(null)
   const [loading, setLoading] = React.useState(true)

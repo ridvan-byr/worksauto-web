@@ -23,7 +23,6 @@ export const metadata: Metadata = {
     "Araç servisleri ve atölyeler için çok kiracılı (multi-tenant) randevu, iş emri, stok ve cari yönetim platformu.",
   icons: {
     icon: [
-      { url: "/brand/favicon.ico" },
       { url: "/brand/favicon.svg", type: "image/svg+xml" },
       { url: "/brand/favicon-32x32.png", sizes: "32x32", type: "image/png" },
     ],
