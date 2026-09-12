@@ -1390,6 +1390,11 @@ export default function WorkOrderDetailPage() {
                     </Button>
                   </div>
                 </div>
+              ) : order.status === "CANCELLED" ? (
+                <div className="w-full p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 text-xs font-semibold text-center flex items-center justify-center gap-1.5">
+                  <Ban size={15} />
+                  <span>İptal Edilen İş Emrine Fatura Kesilemez</span>
+                </div>
               ) : (
                 <Button
                   type="button"
