@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import { Layers, Plus, Pencil, Trash2, CheckCircle2, Globe, Wrench, ShieldAlert } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -31,10 +32,15 @@ export function WorkshopBaysTab({
   isUpdating,
   isDeleting,
 }: WorkshopBaysTabProps) {
+  const [mounted, setMounted] = React.useState(false)
   const [filter, setFilter] = React.useState<"all" | "active">("active")
   const [isModalOpen, setIsModalOpen] = React.useState(false)
   const [editingBay, setEditingBay] = React.useState<WorkshopBayRecord | null>(null)
   const [deletingBay, setDeletingBay] = React.useState<WorkshopBayRecord | null>(null)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const activeBays = React.useMemo(() => {
     return (bays || []).filter((b) => b.isActive)
@@ -283,24 +289,30 @@ export function WorkshopBaysTab({
       />
 
       {/* Delete confirmation modal */}
-      {deletingBay && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-xl">
+      {mounted && deletingBay && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-150"
+          onClick={() => setDeletingBay(null)}
+        >
+          <div
+            className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-2xl animate-in zoom-in-95 duration-150 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center gap-3 text-rose-600 dark:text-rose-400">
-              <div className="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-rose-500/10 flex items-center justify-center shrink-0">
                 <ShieldAlert size={20} />
               </div>
-              <div>
+              <div className="min-w-0">
                 <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   İstasyonu Silmek İstiyor musunuz?
                 </h4>
-                <p className="text-xs text-slate-500">{deletingBay.name}</p>
+                <p className="text-xs text-slate-500 truncate">{deletingBay.name}</p>
               </div>
             </div>
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
               Bu istasyonu sildiğinizde, atölye lift listenizden kaldırılacaktır. Daha önce tamamlanmış geçmiş iş emirleri bu durumdan etkilenmez.
             </p>
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
               <Button
                 variant="outline"
                 size="sm"
@@ -314,13 +326,14 @@ export function WorkshopBaysTab({
                 size="sm"
                 onClick={handleDelete}
                 disabled={isDeleting}
-                className="h-8 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white cursor-pointer"
+                className="h-8 text-xs font-semibold rounded-xl bg-rose-600 hover:bg-rose-700 text-white cursor-pointer shadow-xs shadow-rose-500/20"
               >
                 {isDeleting ? "Siliniyor..." : "Evet, Sil"}
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )
