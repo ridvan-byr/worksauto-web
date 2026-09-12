@@ -2,14 +2,15 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
+import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { X, Wrench, Play, ArrowRight, ArrowLeft, User, Search, UserPlus } from "lucide-react"
+import { X, Wrench, Play, ArrowRight, ArrowLeft, User, Search, UserPlus, AlertTriangle, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { WorkOrder } from "../types"
 import { useCustomers } from "@/features/customers/api/use-customers"
-import { useCreateWorkOrder } from "@/features/work-orders/api/use-work-orders"
+import { useCreateWorkOrder, useWorkOrders } from "@/features/work-orders/api/use-work-orders"
 import { useStaff, useWorkshopBays } from "@/features/settings/api/use-settings"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import {
@@ -29,12 +30,14 @@ interface CreateWorkOrderModalProps {
 }
 
 export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkOrderModalProps) {
+  const router = useRouter()
   const [mounted, setMounted] = React.useState(false)
   const [step, setStep] = React.useState<1 | 2>(1)
   const [customerMode, setCustomerMode] = React.useState<"search" | "quick-lead">("search")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
 
   const { data: apiCustomers } = useCustomers()
+  const { data: allWorkOrders = [] } = useWorkOrders()
   const { data: staffList = [] } = useStaff()
   const { data: bays = [] } = useWorkshopBays()
   const createOrderMutation = useCreateWorkOrder()
@@ -130,6 +133,17 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId)
   const selectedVehicle = selectedCustomer?.vehicles.find((v) => v.id === selectedVehicleId)
+
+  // Detect if selected vehicle already has an active, unfinished work order
+  const activeWorkOrderForVehicle = React.useMemo(() => {
+    if (!selectedVehicleId || !allWorkOrders) return null
+    return allWorkOrders.find(
+      (wo) =>
+        wo.vehicleId === selectedVehicleId &&
+        wo.status !== "COMPLETED" &&
+        wo.status !== "CANCELLED"
+    )
+  }, [selectedVehicleId, allWorkOrders])
 
   const handleClose = () => {
     reset()
@@ -284,6 +298,52 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
               />
             )}
 
+            {selectedVehicle && activeWorkOrderForVehicle && (
+              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 p-4 text-amber-900 dark:text-amber-200 animate-in fade-in duration-200">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                    <AlertTriangle size={18} />
+                  </div>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <p className="text-xs font-bold text-amber-900 dark:text-amber-300">
+                        Bu Araca Ait Halen Devam Eden Bir İş Emri Var!
+                      </p>
+                      <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                        #{activeWorkOrderForVehicle.workOrderNumber}
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-800/90 dark:text-amber-300/80 leading-relaxed">
+                      <strong>{selectedVehicle.plate}</strong> plakalı araç şu anda atölyede{" "}
+                      <span className="font-semibold text-slate-900 dark:text-white">
+                        {activeWorkOrderForVehicle.status === "IN_PROGRESS"
+                          ? "İşlemde (Onarımda)"
+                          : "Kuyrukta (Sırada)"}
+                      </span>{" "}
+                      durumundadır. Çifte kayıt ve mükerrer fatura oluşmaması için mevcut iş emrine gidebilirsiniz.
+                    </p>
+                    <div className="pt-2 flex flex-wrap items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-1.5 cursor-pointer shadow-xs"
+                        onClick={() => {
+                          handleClose()
+                          router.push(`/work-orders/${activeWorkOrderForVehicle.id}`)
+                        }}
+                      >
+                        <ExternalLink size={13} />
+                        <span>Mevcut İş Emrine Git (#{activeWorkOrderForVehicle.workOrderNumber})</span>
+                      </Button>
+                      <span className="text-[11px] text-amber-800/70 dark:text-amber-400/70 italic">
+                        (Ayrı bir işlem ise aşağıdan "Atölye Detaylarına Geç" ile devam edebilirsiniz)
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {customerMode === "search" && (
               <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800/80 flex justify-end gap-2">
                 <Button
@@ -336,6 +396,16 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                 </button>
               </div>
             )}
+
+            {selectedVehicle && activeWorkOrderForVehicle && (
+              <div className="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300">
+                <AlertTriangle size={15} className="text-amber-500 shrink-0" />
+                <span>
+                  <strong>Hatırlatma:</strong> Bu araç için halen açık olan <strong>#{activeWorkOrderForVehicle.workOrderNumber}</strong> iş emri bulunmaktadır. Onaylamanız halinde <strong>ek 2. bir iş emri</strong> açılacaktır.
+                </span>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
