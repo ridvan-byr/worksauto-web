@@ -288,7 +288,10 @@ export async function generateAestheticExcel(options: AestheticExcelOptions): Pr
         cell.alignment = { vertical: "middle", horizontal: "center" }
         cell.font = { name: "Segoe UI", size: 10, color: { argb: "FF334155" } }
       } else {
-        cell.value = String(val)
+        const safeStr = ["=", "+", "-", "@", "\t", "\r"].some((prefix) => strVal.trim().startsWith(prefix))
+          ? `'${strVal}`
+          : strVal
+        cell.value = safeStr
         cell.alignment = {
           vertical: "middle",
           horizontal: "left",

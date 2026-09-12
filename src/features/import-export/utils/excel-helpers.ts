@@ -605,6 +605,19 @@ export async function downloadSampleTemplate(_type: "all" | "customer" | "vehicl
 }
 
 /**
+ * Hücre değerini Excel Formül Enjeksiyonuna (CSV/Formula Injection) karşı güvenli hale getirir
+ */
+function sanitizeCellForExcel(val: unknown): unknown {
+  if (typeof val === "string") {
+    const trimmed = val.trim()
+    if (["=", "+", "-", "@", "\t", "\r"].some((prefix) => trimmed.startsWith(prefix))) {
+      return `'${val}`
+    }
+  }
+  return val
+}
+
+/**
  * Tablodaki Verileri Excel Dosyası Olarak İndirir (Export)
  */
 export function exportToExcel(data: Record<string, unknown>[], fileName: string, sheetName: string = "Veriler") {
@@ -612,7 +625,16 @@ export function exportToExcel(data: Record<string, unknown>[], fileName: string,
     throw new Error("Dışa aktarılacak veri bulunamadı.")
   }
 
-  const worksheet = XLSX.utils.json_to_sheet(data)
+  // Security: Sanitize all values against Excel Formula Injection
+  const sanitizedData = data.map((row) => {
+    const sanitizedRow: Record<string, unknown> = {}
+    for (const [key, val] of Object.entries(row)) {
+      sanitizedRow[key] = sanitizeCellForExcel(val)
+    }
+    return sanitizedRow
+  })
+
+  const worksheet = XLSX.utils.json_to_sheet(sanitizedData)
   const workbook = XLSX.utils.book_new()
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName)
 
