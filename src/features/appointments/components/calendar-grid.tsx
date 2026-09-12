@@ -1,10 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { Clock, Plus } from "lucide-react"
+import { Clock, Plus, CalendarClock, Move } from "lucide-react"
 import { Appointment } from "../types"
-
 import { PlateBadge } from "@/features/customers/components/plate-badge"
+import { RescheduleAppointmentModal } from "./reschedule-appointment-modal"
+import { useRescheduleAppointment } from "../api/use-appointments"
 import { cn } from "@/lib/utils"
 
 interface CalendarGridProps {
@@ -12,6 +13,7 @@ interface CalendarGridProps {
   appointments: Appointment[]
   onSelectAppointment: (app: Appointment) => void
   onSlotClick: (date: string, time: string) => void
+  onReschedule?: (id: string, newDate: string, newTime: string, reason?: string, notifyCustomer?: boolean) => Promise<void> | void
 }
 
 const TIME_SLOTS = [
@@ -31,7 +33,19 @@ export function CalendarGrid({
   appointments,
   onSelectAppointment,
   onSlotClick,
+  onReschedule,
 }: CalendarGridProps) {
+  const rescheduleMutation = useRescheduleAppointment()
+
+  // Drag and Drop States
+  const [draggedApp, setDraggedApp] = React.useState<Appointment | null>(null)
+  const [dropTarget, setDropTarget] = React.useState<{ dateStr: string; timeSlot: string } | null>(null)
+  const [rescheduleModalData, setRescheduleModalData] = React.useState<{
+    appointment: Appointment
+    targetDate: string
+    targetTime: string
+  } | null>(null)
+
   // Generate 7 working days (Mon-Sun)
   const weekDays = React.useMemo(() => {
     const formatLocalDate = (d: Date) => {
@@ -60,161 +74,294 @@ export function CalendarGrid({
     return days
   }, [currentWeekStart])
 
-  return (
-    <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden">
-      <div className="overflow-x-auto">
-        <div className="min-w-[1040px]">
-          {/* Weekday Columns Header */}
-          <div className="grid grid-cols-8 border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/60">
-            {/* Time column header */}
-            <div className="p-3.5 text-center text-[11px] font-bold text-slate-400 border-r border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center gap-1">
-              <Clock size={13} />
-              <span>Saat</span>
-            </div>
+  const handleConfirmReschedule = async ({
+    reason,
+    notifyCustomer,
+  }: {
+    reason: string
+    notifyCustomer: boolean
+  }) => {
+    if (!rescheduleModalData) return
+    const { appointment, targetDate, targetTime } = rescheduleModalData
 
-            {/* 7 Day Headers (Mon-Sun) */}
-            {weekDays.map((day) => (
-              <div
-                key={day.dateStr}
-                className={cn(
-                  "p-3 text-center border-r border-slate-200/60 dark:border-slate-800/60 last:border-r-0 transition-colors",
-                  day.isToday && "bg-sky-500/5 dark:bg-sky-500/10",
-                  day.isPast && "opacity-60 bg-slate-100/30 dark:bg-slate-950/20"
-                )}
-              >
-                <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                  {day.dayName}
-                </p>
-                <p
+    const [hours, minutes] = targetTime.split(":").map(Number)
+    const [year, month, day] = targetDate.split("-").map(Number)
+    const startDateTime = new Date(year, month - 1, day, hours || 0, minutes || 0, 0, 0)
+    const durationMin = appointment.totalDurationMinutes || 60
+    const endDateTime = new Date(startDateTime.getTime() + durationMin * 60000)
+
+    try {
+      if (onReschedule) {
+        await onReschedule(appointment.id, targetDate, targetTime, reason, notifyCustomer)
+      } else {
+        await rescheduleMutation.mutateAsync({
+          id: appointment.id,
+          slotDate: targetDate,
+          slotStartTime: startDateTime.toISOString(),
+          slotEndTime: endDateTime.toISOString(),
+          assignedMechanicId: appointment.assignedStaffId,
+          reason,
+          notifyCustomer,
+        })
+      }
+      setRescheduleModalData(null)
+    } catch {
+      // Handled by mutation toast
+    }
+  }
+
+  return (
+    <>
+      <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <div className="min-w-[1040px]">
+            {/* Weekday Columns Header */}
+            <div className="grid grid-cols-8 border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/60">
+              {/* Time column header */}
+              <div className="p-3.5 text-center text-[11px] font-bold text-slate-400 border-r border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center gap-1">
+                <Clock size={13} />
+                <span>Saat</span>
+              </div>
+
+              {/* 7 Day Headers (Mon-Sun) */}
+              {weekDays.map((day) => (
+                <div
+                  key={day.dateStr}
                   className={cn(
-                    "text-base font-bold mt-0.5 inline-flex w-7 h-7 items-center justify-center rounded-full",
-                    day.isToday
-                      ? "bg-sky-500 text-white shadow-xs"
-                      : day.isPast
-                      ? "text-slate-400 dark:text-slate-500"
-                      : "text-slate-900 dark:text-slate-100"
+                    "p-3 text-center border-r border-slate-200/60 dark:border-slate-800/60 last:border-r-0 transition-colors",
+                    day.isToday && "bg-sky-500/5 dark:bg-sky-500/10",
+                    day.isPast && "opacity-60 bg-slate-100/30 dark:bg-slate-950/20"
                   )}
                 >
-                  {day.dayNumber}
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* Time Slot Rows */}
-          <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
-            {TIME_SLOTS.map((timeSlot) => (
-              <div key={timeSlot} className="grid grid-cols-8 min-h-[96px]">
-                {/* Time Label */}
-                <div className="p-3 text-center text-xs font-mono font-bold text-slate-400 border-r border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center bg-slate-50/30 dark:bg-slate-950/20">
-                  {timeSlot}
+                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                    {day.dayName}
+                  </p>
+                  <p
+                    className={cn(
+                      "text-base font-bold mt-0.5 inline-flex w-7 h-7 items-center justify-center rounded-full",
+                      day.isToday
+                        ? "bg-sky-500 text-white shadow-xs"
+                        : day.isPast
+                        ? "text-slate-400 dark:text-slate-500"
+                        : "text-slate-900 dark:text-slate-100"
+                    )}
+                  >
+                    {day.dayNumber}
+                  </p>
                 </div>
+              ))}
+            </div>
 
-                {/* 7 Day Cells (Mon-Sun) */}
-                {weekDays.map((day) => {
-                  const now = new Date()
-                  const currentHour = now.getHours()
-                  const currentMinute = now.getMinutes()
-                  const currentTimeStr = `${String(currentHour).padStart(2, "0")}:${String(currentMinute).padStart(2, "0")}`
-                  const isSlotInPast = day.isPast || (day.isToday && timeSlot <= currentTimeStr)
+            {/* Time Slot Rows */}
+            <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60">
+              {TIME_SLOTS.map((timeSlot) => (
+                <div key={timeSlot} className="grid grid-cols-8 min-h-[96px]">
+                  {/* Time Label */}
+                  <div className="p-3 text-center text-xs font-mono font-bold text-slate-400 border-r border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center bg-slate-50/30 dark:bg-slate-950/20">
+                    {timeSlot}
+                  </div>
 
-                  // Find appointments in this day and near this time slot, strictly deduplicated by id
-                  const cellAppointmentsMap = new Map<string, Appointment>()
-                  for (const a of appointments) {
-                    if (a.date !== day.dateStr) continue
-                    const slotHour = parseInt(timeSlot.split(":")[0])
-                    const appHour = parseInt(a.time.split(":")[0])
-                    if (slotHour === appHour && a.id) {
-                      cellAppointmentsMap.set(a.id, a)
+                  {/* 7 Day Cells (Mon-Sun) */}
+                  {weekDays.map((day) => {
+                    const now = new Date()
+                    const currentHour = now.getHours()
+                    const currentMinute = now.getMinutes()
+                    const currentTimeStr = `${String(currentHour).padStart(2, "0")}:${String(currentMinute).padStart(2, "0")}`
+                    const isSlotInPast = day.isPast || (day.isToday && timeSlot <= currentTimeStr)
+
+                    // Find appointments in this day and near this time slot, strictly deduplicated by id
+                    const cellAppointmentsMap = new Map<string, Appointment>()
+                    for (const a of appointments) {
+                      if (a.date !== day.dateStr) continue
+                      const slotHour = parseInt(timeSlot.split(":")[0])
+                      const appHour = parseInt(a.time.split(":")[0])
+                      if (slotHour === appHour && a.id) {
+                        cellAppointmentsMap.set(a.id, a)
+                      }
                     }
-                  }
-                  const cellAppointments = Array.from(cellAppointmentsMap.values())
+                    const cellAppointments = Array.from(cellAppointmentsMap.values())
 
-                  return (
-                    <div
-                      key={day.dateStr + timeSlot}
-                      onClick={(e) => {
-                        // Only trigger if clicked on the empty space, not inside a card, and slot is not in the past
-                        if (e.target === e.currentTarget && !isSlotInPast) {
-                          onSlotClick(day.dateStr, timeSlot)
+                    const isCellDropTarget =
+                      dropTarget?.dateStr === day.dateStr && dropTarget?.timeSlot === timeSlot
+
+                    return (
+                      <div
+                        key={day.dateStr + timeSlot}
+                        onClick={(e) => {
+                          // Only trigger if clicked on the empty space, not inside a card, and slot is not in the past
+                          if (e.target === e.currentTarget && !isSlotInPast) {
+                            onSlotClick(day.dateStr, timeSlot)
+                          }
+                        }}
+                        onDragOver={(e) => {
+                          if (!draggedApp) return
+                          e.preventDefault()
+                          if (!isSlotInPast) {
+                            e.dataTransfer.dropEffect = "move"
+                            if (dropTarget?.dateStr !== day.dateStr || dropTarget?.timeSlot !== timeSlot) {
+                              setDropTarget({ dateStr: day.dateStr, timeSlot })
+                            }
+                          } else {
+                            e.dataTransfer.dropEffect = "none"
+                          }
+                        }}
+                        onDragLeave={(e) => {
+                          if (e.currentTarget.contains(e.relatedTarget as Node)) return
+                          if (dropTarget?.dateStr === day.dateStr && dropTarget?.timeSlot === timeSlot) {
+                            setDropTarget(null)
+                          }
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault()
+                          setDropTarget(null)
+                          if (!draggedApp || isSlotInPast) return
+
+                          // Skip if dropped onto identical slot
+                          if (draggedApp.date === day.dateStr && draggedApp.time === timeSlot) {
+                            setDraggedApp(null)
+                            return
+                          }
+
+                          // Trigger Reschedule Confirmation Modal
+                          setRescheduleModalData({
+                            appointment: draggedApp,
+                            targetDate: day.dateStr,
+                            targetTime: timeSlot,
+                          })
+                          setDraggedApp(null)
+                        }}
+                        className={cn(
+                          "p-1.5 border-r border-slate-200/60 dark:border-slate-800/60 last:border-r-0 relative group transition-all flex flex-col gap-1.5",
+                          day.isToday && "bg-sky-500/[0.02] dark:bg-sky-500/[0.03]",
+                          isSlotInPast
+                            ? "bg-slate-100/40 dark:bg-slate-950/40 opacity-70 cursor-not-allowed"
+                            : "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer",
+                          isCellDropTarget &&
+                            "ring-2 ring-sky-500 ring-inset bg-sky-500/15 dark:bg-sky-500/25 border-dashed border-sky-400 scale-[1.01] z-10"
+                        )}
+                        title={
+                          isSlotInPast
+                            ? "Geçmiş bir tarih veya saate randevu taşınamaz / oluşturulamaz"
+                            : undefined
                         }
-                      }}
-                      className={cn(
-                        "p-1.5 border-r border-slate-200/60 dark:border-slate-800/60 last:border-r-0 relative group transition-colors flex flex-col gap-1.5",
-                        day.isToday && "bg-sky-500/[0.02] dark:bg-sky-500/[0.03]",
-                        isSlotInPast
-                          ? "bg-slate-100/40 dark:bg-slate-950/40 opacity-70 cursor-not-allowed"
-                          : "hover:bg-slate-50/80 dark:hover:bg-slate-800/40 cursor-pointer"
-                      )}
-                      title={isSlotInPast ? "Geçmiş bir tarih veya saate randevu oluşturulamaz" : undefined}
-                    >
-                      {cellAppointments.map((app) => (
-                        <div
-                          key={app.id}
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            onSelectAppointment(app)
-                          }}
-                          className={cn(
-                            "p-2 rounded-xl border text-left shadow-2xs transition-all cursor-pointer space-y-1.5 overflow-hidden",
-                            app.status === "APPROVED"
-                              ? "bg-sky-500/10 border-sky-500/30 hover:border-sky-500 text-sky-950 dark:text-sky-100"
-                              : app.status === "PENDING"
-                              ? "bg-amber-500/10 border-amber-500/30 hover:border-amber-500 text-amber-950 dark:text-amber-100"
-                              : app.status === "COMPLETED"
-                              ? "bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500 text-emerald-950 dark:text-emerald-100"
-                              : app.status === "CANCELLED"
-                              ? "bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 opacity-60 text-slate-500 line-through"
-                              : "bg-rose-500/10 border-rose-500/30 hover:border-rose-500 text-rose-950 dark:text-rose-100"
-                          )}
-                        >
-                          {/* Top Header: Time and Status Dot */}
-                          <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-mono font-bold flex items-center gap-1 opacity-90 tabular-nums">
-                              <Clock size={10} className="opacity-70" />
-                              {app.time}
+                      >
+                        {/* Drop Target Visual Overlay */}
+                        {isCellDropTarget && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center bg-sky-500/10 dark:bg-sky-950/50 backdrop-blur-2xs rounded-xl z-20 pointer-events-none border-2 border-dashed border-sky-500 animate-in fade-in duration-100">
+                            <span className="text-[10px] font-bold text-sky-700 dark:text-sky-300 bg-white/95 dark:bg-slate-900/95 px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">
+                              <CalendarClock size={12} className="text-sky-500" />
+                              <span>Buraya Taşı ({timeSlot})</span>
                             </span>
-                            <span
+                          </div>
+                        )}
+
+                        {cellAppointments.map((app) => {
+                          const isDraggable = app.status !== "COMPLETED" && app.status !== "CANCELLED"
+                          const isBeingDragged = draggedApp?.id === app.id
+
+                          return (
+                            <div
+                              key={app.id}
+                              draggable={isDraggable}
+                              onDragStart={(e) => {
+                                if (!isDraggable) return
+                                e.dataTransfer.setData("text/plain", app.id)
+                                e.dataTransfer.effectAllowed = "move"
+                                setDraggedApp(app)
+                              }}
+                              onDragEnd={() => {
+                                setDraggedApp(null)
+                                setDropTarget(null)
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onSelectAppointment(app)
+                              }}
                               className={cn(
-                                "w-1.5 h-1.5 rounded-full shrink-0",
-                                app.status === "APPROVED" && "bg-sky-500",
-                                app.status === "PENDING" && "bg-amber-500",
-                                app.status === "COMPLETED" && "bg-emerald-500",
-                                app.status === "CANCELLED" && "bg-slate-400"
+                                "p-2 rounded-xl border text-left shadow-2xs transition-all space-y-1.5 overflow-hidden relative group/card select-none",
+                                isDraggable
+                                  ? "cursor-grab active:cursor-grabbing hover:shadow-md"
+                                  : "cursor-pointer",
+                                isBeingDragged &&
+                                  "opacity-40 scale-95 border-dashed border-sky-500 ring-2 ring-sky-400/50",
+                                app.status === "APPROVED"
+                                  ? "bg-sky-500/10 border-sky-500/30 hover:border-sky-500 text-sky-950 dark:text-sky-100"
+                                  : app.status === "PENDING"
+                                  ? "bg-amber-500/10 border-amber-500/30 hover:border-amber-500 text-amber-950 dark:text-amber-100"
+                                  : app.status === "COMPLETED"
+                                  ? "bg-emerald-500/10 border-emerald-500/30 hover:border-emerald-500 text-emerald-950 dark:text-emerald-100"
+                                  : app.status === "CANCELLED"
+                                  ? "bg-slate-100 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700 opacity-60 text-slate-500 line-through"
+                                  : "bg-rose-500/10 border-rose-500/30 hover:border-rose-500 text-rose-950 dark:text-rose-100"
                               )}
-                            />
-                          </div>
+                            >
+                              {/* Drag Indicator handle on hover for draggable cards */}
+                              {isDraggable && (
+                                <div className="absolute top-1.5 right-6 opacity-0 group-hover/card:opacity-100 transition-opacity text-slate-400">
+                                  <Move size={10} />
+                                </div>
+                              )}
 
-                          {/* Plate Badge - Dedicated row so it never clips */}
-                          <div className="overflow-hidden">
-                            <PlateBadge plate={app.plate} size="xs" />
-                          </div>
+                              {/* Top Header: Time and Status Dot */}
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-mono font-bold flex items-center gap-1 opacity-90 tabular-nums">
+                                  <Clock size={10} className="opacity-70" />
+                                  {app.time}
+                                </span>
+                                <span
+                                  className={cn(
+                                    "w-1.5 h-1.5 rounded-full shrink-0",
+                                    app.status === "APPROVED" && "bg-sky-500",
+                                    app.status === "PENDING" && "bg-amber-500",
+                                    app.status === "COMPLETED" && "bg-emerald-500",
+                                    app.status === "CANCELLED" && "bg-slate-400"
+                                  )}
+                                />
+                              </div>
 
-                          <div className="overflow-hidden">
-                            <p className="text-[11px] font-bold truncate leading-tight">
-                              {app.customerName}
-                            </p>
-                            <p className="text-[10px] opacity-70 truncate mt-0.5">
-                              {app.services[0]?.name || "Servis İşlemi"}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
+                              {/* Plate Badge - Dedicated row so it never clips */}
+                              <div className="overflow-hidden">
+                                <PlateBadge plate={app.plate} size="xs" />
+                              </div>
 
-                      {/* Hover Quick Add Plus Indicator */}
-                      {cellAppointments.length === 0 && !isSlotInPast && (
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400">
-                          <Plus size={16} />
-                        </div>
-                      )}
-                    </div>
-                  )
-                })}
-              </div>
-            ))}
+                              <div className="overflow-hidden">
+                                <p className="text-[11px] font-bold truncate leading-tight">
+                                  {app.customerName}
+                                </p>
+                                <p className="text-[10px] opacity-70 truncate mt-0.5">
+                                  {app.services[0]?.name || "Servis İşlemi"}
+                                </p>
+                              </div>
+                            </div>
+                          )
+                        })}
+
+                        {/* Hover Quick Add Plus Indicator */}
+                        {cellAppointments.length === 0 && !isSlotInPast && !draggedApp && (
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute inset-0 flex items-center justify-center pointer-events-none text-slate-400">
+                            <Plus size={16} />
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Reschedule Confirmation Modal */}
+      <RescheduleAppointmentModal
+        isOpen={Boolean(rescheduleModalData)}
+        appointment={rescheduleModalData?.appointment || null}
+        targetDate={rescheduleModalData?.targetDate || ""}
+        targetTime={rescheduleModalData?.targetTime || ""}
+        onClose={() => setRescheduleModalData(null)}
+        onConfirm={handleConfirmReschedule}
+        isPending={rescheduleMutation.isPending}
+      />
+    </>
   )
 }

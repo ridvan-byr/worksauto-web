@@ -30,8 +30,8 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. Public Booking Routes (/book/[slug])
-  if (pathname.startsWith('/book')) {
+  // 3. Public Routes: Booking (/book/[slug]), Customer Portal & KVKK Consent (/c/*), Legal (/legal/*)
+  if (pathname.startsWith('/book') || pathname.startsWith('/c/') || pathname.startsWith('/legal')) {
     return NextResponse.next();
   }
 

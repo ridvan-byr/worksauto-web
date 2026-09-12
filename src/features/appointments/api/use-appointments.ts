@@ -41,6 +41,8 @@ export interface RescheduleAppointmentInput {
   slotEndTime: string;
   assignedMechanicId?: string;
   assignedLift?: string;
+  reason?: string;
+  notifyCustomer?: boolean;
 }
 
 export function useRescheduleAppointment() {

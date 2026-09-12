@@ -17,6 +17,18 @@ describe('Next.js Edge Route Guard (proxy)', () => {
     expect(res.headers.get('location')).toBeNull()
   })
 
+  it('allows public customer KVKK consent routes without any cookies', () => {
+    const req = createMockRequest('https://app.worksauto.com/c/kvkk?token=abcdef123456')
+    const res = proxy(req)
+    expect(res.headers.get('location')).toBeNull()
+  })
+
+  it('allows public legal routes without any cookies', () => {
+    const req = createMockRequest('https://app.worksauto.com/legal/consent')
+    const res = proxy(req)
+    expect(res.headers.get('location')).toBeNull()
+  })
+
   it('redirects unauthenticated users from protected tenant pages to /sign-in', () => {
     const req = createMockRequest('https://app.worksauto.com/customers')
     const res = proxy(req)

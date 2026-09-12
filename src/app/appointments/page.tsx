@@ -239,7 +239,13 @@ export default function AppointmentsPage() {
     }
   }
 
-  const handleReschedule = async (id: string, newDate: string, newTime: string) => {
+  const handleReschedule = async (
+    id: string,
+    newDate: string,
+    newTime: string,
+    reason?: string,
+    notifyCustomer?: boolean
+  ) => {
     const targetApp = appointments.find((a) => a.id === id)
     const durationMin = targetApp?.totalDurationMinutes || 60
     const [hours, minutes] = newTime.split(":").map(Number)
@@ -262,6 +268,8 @@ export default function AppointmentsPage() {
         slotStartTime: startDateTime.toISOString(),
         slotEndTime: endDateTime.toISOString(),
         assignedMechanicId: targetApp?.assignedStaffId,
+        reason,
+        notifyCustomer,
       })
     } catch (e) {
       console.error('API reschedule appointment error:', e)
@@ -488,6 +496,7 @@ export default function AppointmentsPage() {
             setSelectedSlot({ date, time })
             setIsCreateModalOpen(true)
           }}
+          onReschedule={handleReschedule}
         />
       ) : (
         <ListView

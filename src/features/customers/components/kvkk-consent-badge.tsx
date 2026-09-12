@@ -128,6 +128,9 @@ export function KvkkConsentBadge({
     }
   }
 
+  const latestToken = consents?.history?.find((h) => h.verificationToken)?.verificationToken
+  const pageUrl = latestToken ? `/c/kvkk?token=${latestToken}` : `/c/kvkk`
+
   const formattedPhone = customerPhone ? customerPhone.replace(/\D/g, "") : ""
   const whatsappUrl = generatedLink
     ? `https://wa.me/${formattedPhone.startsWith("0") ? "9" + formattedPhone : "90" + formattedPhone}?text=${encodeURIComponent(
@@ -137,20 +140,31 @@ export function KvkkConsentBadge({
 
   return (
     <>
-      <div className={cn("inline-flex items-center gap-2", className)}>
+      <div className={cn("inline-flex items-center gap-1.5", className)}>
         {isApproved ? (
-          <button
-            type="button"
-            onClick={() => setIsModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/15 transition-colors cursor-pointer"
-            title="KVKK Aydınlatma ve Onay Kaydı Mevcut"
-          >
-            <ShieldCheck size={13} className="text-emerald-500" />
-            <span>KVKK Onaylı</span>
-            {hasCommercialSms && (
-              <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 rounded font-mono">+İYS</span>
-            )}
-          </button>
+          <div className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setIsModalOpen(true)}
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 hover:bg-emerald-500/15 transition-colors cursor-pointer"
+              title="KVKK Aydınlatma ve Onay Kaydı Detayları"
+            >
+              <ShieldCheck size={13} className="text-emerald-500" />
+              <span>KVKK Onaylı</span>
+              {hasCommercialSms && (
+                <span className="text-[10px] px-1.5 py-0.2 bg-emerald-500/20 rounded font-mono">+İYS</span>
+              )}
+            </button>
+            <a
+              href={pageUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center w-6 h-6 rounded-full text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
+              title="Müşteri KVKK Sayfasını Ayrı Sekmede Aç"
+            >
+              <ExternalLink size={12} />
+            </a>
+          </div>
         ) : (
           <div className="inline-flex items-center gap-1.5">
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
@@ -173,6 +187,16 @@ export function KvkkConsentBadge({
               )}
               <span>Onay İste</span>
             </Button>
+
+            <a
+              href="/c/kvkk"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center w-6 h-6 rounded-full text-slate-400 hover:text-sky-600 dark:hover:text-sky-400 hover:bg-sky-500/10 transition-colors"
+              title="Genel KVKK Aydınlatma Sayfasını Ayrı Sekmede Aç"
+            >
+              <ExternalLink size={12} />
+            </a>
           </div>
         )}
       </div>
@@ -258,6 +282,18 @@ export function KvkkConsentBadge({
                       </div>
                     ))}
                   </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <a
+                    href={pageUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 flex items-center justify-center gap-2 text-xs font-semibold transition-colors"
+                  >
+                    <ExternalLink size={14} />
+                    <span>KVKK Onay Sayfasını Ayrı Sekmede Aç</span>
+                  </a>
                 </div>
               </div>
             ) : (

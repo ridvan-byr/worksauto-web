@@ -74,6 +74,81 @@ function ConsentContent() {
     )
   }
 
+  // If no token is passed, render the general public KVKK information page
+  if (!token) {
+    return (
+      <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col py-8 px-4 sm:px-6 selection:bg-sky-500 selection:text-white">
+        <div className="max-w-2xl w-full mx-auto space-y-6">
+          {/* Brand & Security Header */}
+          <div className="flex items-center justify-between">
+            <BrandLogo />
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold border border-emerald-500/20">
+              <Lock size={12} />
+              <span>256-Bit SSL Güvenli</span>
+            </div>
+          </div>
+
+          {/* Banner */}
+          <div className="p-6 rounded-3xl bg-linear-to-br from-sky-500/10 via-indigo-500/5 to-transparent border border-sky-500/20 space-y-2">
+            <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 font-semibold text-xs">
+              <ShieldCheck size={16} />
+              <span>Yasal Bilgilendirme Protokolü</span>
+            </div>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+              Kişisel Verilerin Korunması ve İşlenmesi Aydınlatma Metni
+            </h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+              6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) uyarınca, oto servis ve bakım süreçleriniz kapsamında işlenen kişisel verileriniz hakkında bilgilendirme metnidir.
+            </p>
+          </div>
+
+          {/* Policy Body */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xs space-y-5 text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            <section className="space-y-1.5">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">1. Veri Sorumlusu</h3>
+              <p>
+                Bu aydınlatma metni, 6698 sayılı Kişisel Verilerin Korunması Kanunu (“KVKK”) ve ilgili mevzuat uyarınca, servisimizde işlem gören araç sahipleri ve müşterilerimizin kişisel verilerinin korunması amacıyla hazırlanmıştır.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">2. İşlenen Kişisel Veriler</h3>
+              <p>
+                Servis operasyonlarının yürütülmesi kapsamında; kimlik bilgileriniz (ad, soyad, T.C. kimlik numarası), iletişim bilgileriniz (telefon numarası, adres, e-posta), araç bilgileri (plaka, şasi no, marka, model, kilometre) ve servis işlem / iş emri geçmişiniz işlenmektedir.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">3. Kişisel Verilerin İşlenme Amaçları</h3>
+              <p>
+                Kişisel verileriniz; araç bakım, onarım, periyodik servis ve yedek parça montaj hizmetlerinin gerçekleştirilmesi, garanti ve iş emri süreçlerinin takibi, yasal faturalandırma ve muhasebe yükümlülüklerinin yerine getirilmesi ile onayınız halinde bakım hatırlatma ve ticari ileti bildirimlerinin iletilmesi amacıyla işlenmektedir.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">4. Veri Aktarımı</h3>
+              <p>
+                Kişisel verileriniz; kanunen yetkili kamu kurum ve kuruluşları, adli merciler, anlaşmalı sigorta şirketleri (kasko/trafik hasar süreçlerinde) ve güvenli bulut servis sağlayıcıları haricinde üçüncü şahıslara aktarılmamaktadır.
+              </p>
+            </section>
+
+            <section className="space-y-1.5">
+              <h3 className="font-bold text-slate-900 dark:text-white text-sm">5. İlgili Kişi Olarak Haklarınız (Madde 11)</h3>
+              <p>
+                KVKK 11. maddesi uyarınca; verilerinizin işlenip işlenmediğini öğrenme, yanlış verilerin düzeltilmesini talep etme ve kanuni şartlar dahilinde silinmesini veya anonimleştirilmesini talep etme hakkına sahipsiniz.
+              </p>
+            </section>
+          </div>
+
+          {/* Footer */}
+          <footer className="text-center text-[11px] text-slate-400 pt-4">
+            WorksAuto • 6698 Sayılı KVKK & İYS Uyumlu Dijital Servis Altyapısı
+          </footer>
+        </div>
+      </div>
+    )
+  }
+
   if (error || !verification || !verification.valid) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-950">

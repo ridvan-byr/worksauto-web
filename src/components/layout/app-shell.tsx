@@ -40,13 +40,14 @@ export function AppShell({ children, defaultCollapsed = false }: AppShellProps) 
   const { user, tenant, isLoading } = useAuth()
   const currentPath = pathname || (typeof window !== "undefined" ? window.location.pathname : "")
 
-  // Immersive Fullscreen Routes: Login, Onboarding, Legal & Admin do NOT render the tenant dashboard shell
+  // Immersive Fullscreen Routes: Login, Onboarding, Legal, Customer Public & Admin do NOT render the tenant dashboard shell
   const isImmersiveRoute =
     currentPath === "/sign-in" ||
     currentPath === "/login" ||
     currentPath === "/onboarding" ||
     currentPath.startsWith("/legal") ||
     currentPath.startsWith("/book") ||
+    currentPath.startsWith("/c/") ||
     currentPath.startsWith("/admin")
 
   if (isImmersiveRoute) {
