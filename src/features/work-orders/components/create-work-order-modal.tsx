@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { X, Wrench, Play, ArrowRight, ArrowLeft, User, Search, UserPlus, AlertTriangle, ExternalLink } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { WorkOrder } from "../types"
 import { useCustomers } from "@/features/customers/api/use-customers"
@@ -153,6 +154,12 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
   }
 
   const handleNextStep = async () => {
+    if (activeWorkOrderForVehicle) {
+      toast.error(
+        `Bu araca ait aktif (#${activeWorkOrderForVehicle.workOrderNumber}) iş emri bulunmaktadır. Mükerrer iş emri açılamaz.`
+      )
+      return
+    }
     const isValid = await trigger(["customerId", "vehicleId"])
     if (isValid) {
       setStep(2)
@@ -161,6 +168,12 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
 
   const onSubmit = async (values: CreateWorkOrderModalValues) => {
     if (!selectedCustomer || !selectedVehicle) return
+    if (activeWorkOrderForVehicle) {
+      toast.error(
+        `Bu araca ait aktif (#${activeWorkOrderForVehicle.workOrderNumber}) iş emri bulunmaktadır. Mükerrer iş emri açılamaz.`
+      )
+      return
+    }
     setIsSubmitting(true)
 
     try {
@@ -299,34 +312,34 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
             )}
 
             {selectedVehicle && activeWorkOrderForVehicle && (
-              <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 p-4 text-amber-900 dark:text-amber-200 animate-in fade-in duration-200">
+              <div className="rounded-2xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-950/20 p-4 text-rose-900 dark:text-rose-200 animate-in fade-in duration-200">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                  <div className="p-2 rounded-xl bg-rose-500/20 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5">
                     <AlertTriangle size={18} />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-1.5">
+                  <div className="flex-1 min-w-0 space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-xs font-bold text-amber-900 dark:text-amber-300">
-                        Bu Araca Ait Halen Devam Eden Bir İş Emri Var!
+                      <p className="text-xs font-bold text-rose-900 dark:text-rose-300">
+                        Mükerrer İş Emri Engellendi: Bu Araç Halen Atölyede!
                       </p>
-                      <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300">
+                      <span className="text-[11px] font-mono font-semibold px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-800 dark:text-rose-300">
                         #{activeWorkOrderForVehicle.workOrderNumber}
                       </span>
                     </div>
-                    <p className="text-xs text-amber-800/90 dark:text-amber-300/80 leading-relaxed">
+                    <p className="text-xs text-rose-800/90 dark:text-rose-300/80 leading-relaxed">
                       <strong>{selectedVehicle.plate}</strong> plakalı araç şu anda atölyede{" "}
                       <span className="font-semibold text-slate-900 dark:text-white">
                         {activeWorkOrderForVehicle.status === "IN_PROGRESS"
                           ? "İşlemde (Onarımda)"
                           : "Kuyrukta (Sırada)"}
                       </span>{" "}
-                      durumundadır. Çifte kayıt ve mükerrer fatura oluşmaması için mevcut iş emrine gidebilirsiniz.
+                      durumundadır. Çifte faturalandırma ve servis karışıklığını önlemek amacıyla aynı araca mükerrer iş emri açılamaz.
                     </p>
-                    <div className="pt-2 flex flex-wrap items-center gap-2">
+                    <div className="pt-1 flex flex-wrap items-center gap-2">
                       <Button
                         type="button"
                         size="sm"
-                        className="h-8 px-3 text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold gap-1.5 cursor-pointer shadow-xs"
+                        className="h-8 px-3.5 text-xs bg-rose-600 hover:bg-rose-700 text-white font-semibold gap-1.5 cursor-pointer shadow-xs"
                         onClick={() => {
                           handleClose()
                           router.push(`/work-orders/${activeWorkOrderForVehicle.id}`)
@@ -335,8 +348,8 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                         <ExternalLink size={13} />
                         <span>Mevcut İş Emrine Git (#{activeWorkOrderForVehicle.workOrderNumber})</span>
                       </Button>
-                      <span className="text-[11px] text-amber-800/70 dark:text-amber-400/70 italic">
-                        (Ayrı bir işlem ise aşağıdan "Atölye Detaylarına Geç" ile devam edebilirsiniz)
+                      <span className="text-[11px] text-rose-800/80 dark:text-rose-400/80">
+                        İlave parça veya işçilik eklemek için lütfen mevcut iş emrini kullanınız.
                       </span>
                     </div>
                   </div>
@@ -357,10 +370,14 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
                 <Button
                   type="button"
                   onClick={handleNextStep}
-                  disabled={!selectedCustomerId || !selectedVehicleId}
+                  disabled={!selectedCustomerId || !selectedVehicleId || Boolean(activeWorkOrderForVehicle)}
                   className="h-10 px-5 text-xs font-semibold gap-1.5 cursor-pointer disabled:opacity-50"
                 >
-                  <span>Atölye Detaylarına Geç</span>
+                  <span>
+                    {activeWorkOrderForVehicle
+                      ? "İş Emri Zaten Açık (Kilitli)"
+                      : "Atölye Detaylarına Geç"}
+                  </span>
                   <ArrowRight size={14} />
                 </Button>
               </div>
@@ -398,11 +415,25 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
             )}
 
             {selectedVehicle && activeWorkOrderForVehicle && (
-              <div className="p-2.5 rounded-xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/20 flex items-center gap-2 text-xs text-amber-800 dark:text-amber-300">
-                <AlertTriangle size={15} className="text-amber-500 shrink-0" />
-                <span>
-                  <strong>Hatırlatma:</strong> Bu araç için halen açık olan <strong>#{activeWorkOrderForVehicle.workOrderNumber}</strong> iş emri bulunmaktadır. Onaylamanız halinde <strong>ek 2. bir iş emri</strong> açılacaktır.
-                </span>
+              <div className="p-3 rounded-2xl border border-rose-500/30 bg-rose-500/10 dark:bg-rose-950/20 flex items-center justify-between gap-3 text-xs text-rose-800 dark:text-rose-300">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-rose-500 shrink-0" />
+                  <span>
+                    <strong>Mükerrer Kayıt Engellendi:</strong> Bu araç için halen açık olan <strong>#{activeWorkOrderForVehicle.workOrderNumber}</strong> iş emri bulunmaktadır.
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 shrink-0 cursor-pointer"
+                  onClick={() => {
+                    handleClose()
+                    router.push(`/work-orders/${activeWorkOrderForVehicle.id}`)
+                  }}
+                >
+                  Mevcut Emre Git
+                </Button>
               </div>
             )}
 
@@ -532,8 +563,8 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
               </Button>
               <Button
                 type="submit"
-                disabled={isSubmitting}
-                className="h-10 px-5 text-xs font-semibold gap-1.5 cursor-pointer shadow-md shadow-sky-500/20"
+                disabled={isSubmitting || Boolean(activeWorkOrderForVehicle)}
+                className="h-10 px-5 text-xs font-semibold gap-1.5 cursor-pointer shadow-md shadow-sky-500/20 disabled:opacity-50"
               >
                 {isSubmitting ? (
                   <span>Kaydediliyor...</span>
