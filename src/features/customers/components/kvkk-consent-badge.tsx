@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import {
   ShieldCheck,
   ShieldAlert,
@@ -20,6 +21,34 @@ import {
 } from "../api/use-consent"
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/sonner"
+
+export const formatConsentType = (type?: string) => {
+  switch (type) {
+    case "KVKK_AYDINLATMA":
+      return "KVKK Aydınlatma & Açık Rıza Metni"
+    case "COMMERCIAL_SMS":
+      return "Ticari İleti İzni (İYS / SMS & WhatsApp)"
+    case "COMMERCIAL_CALL":
+      return "Ticari Sesli Arama İzni (İYS)"
+    default:
+      return type ? type.replace(/_/g, " ") : "Yasal Rıza"
+  }
+}
+
+export const formatConsentChannel = (channel?: string) => {
+  switch (channel) {
+    case "SMS_LINK":
+      return "SMS Doğrulama Linki (Mobil Onay)"
+    case "PAPER_FORM":
+      return "Islak İmzalı Fiziksel Form"
+    case "IN_PERSON":
+      return "Serviste Yüz Yüze Beyan"
+    case "WEB_PORTAL":
+      return "Müşteri Web Portalı"
+    default:
+      return channel ? channel.replace(/_/g, " ") : "SMS Doğrulama Linki"
+  }
+}
 
 interface KvkkConsentBadgeProps {
   customerId: string
@@ -44,6 +73,11 @@ export function KvkkConsentBadge({
   const [isDirectFormOpen, setIsDirectFormOpen] = React.useState(false)
   const [directChannel, setDirectChannel] = React.useState<"PAPER_FORM" | "IN_PERSON">("PAPER_FORM")
   const [directCommercialSms, setDirectCommercialSms] = React.useState(true)
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   if (isLoading) {
     return (
@@ -144,7 +178,7 @@ export function KvkkConsentBadge({
       </div>
 
       {/* Detail / Share Modal */}
-      {isModalOpen && (
+      {mounted && isModalOpen && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
           <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-5">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
@@ -190,8 +224,8 @@ export function KvkkConsentBadge({
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500 dark:text-slate-400">Onay Kanalı:</span>
-                    <span className="font-mono text-slate-800 dark:text-slate-200 font-semibold">
-                      {consents?.latestChannel || "SMS_LINK"}
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {formatConsentChannel(consents?.latestChannel || "SMS_LINK")}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -204,17 +238,21 @@ export function KvkkConsentBadge({
 
                 <div className="space-y-2">
                   <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Onay Geçmişi:</span>
-                  <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
+                  <div className="max-h-48 overflow-y-auto space-y-2 pr-1">
                     {consents?.history?.map((rec) => (
                       <div
                         key={rec.id}
-                        className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 text-[11px] flex items-center justify-between"
+                        className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-800 text-[11px] flex items-center justify-between gap-3"
                       >
-                        <div>
-                          <p className="font-semibold text-slate-900 dark:text-slate-100">{rec.consentType}</p>
-                          <p className="text-slate-400">Kanal: {rec.channel} • v{rec.policyVersion}</p>
+                        <div className="space-y-0.5">
+                          <p className="font-semibold text-slate-900 dark:text-slate-100">
+                            {formatConsentType(rec.consentType)}
+                          </p>
+                          <p className="text-slate-400">
+                            Kanal: {formatConsentChannel(rec.channel)} • v{rec.policyVersion}
+                          </p>
                         </div>
-                        <span className="text-slate-400 font-mono">
+                        <span className="text-slate-400 font-mono shrink-0">
                           {rec.grantedAt ? new Date(rec.grantedAt).toLocaleDateString("tr-TR") : "-"}
                         </span>
                       </div>
@@ -358,7 +396,8 @@ export function KvkkConsentBadge({
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )

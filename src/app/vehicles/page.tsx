@@ -3,6 +3,7 @@
 import { useVehicles, useDeleteVehicle, type VehicleRecord } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import {
   Car,
@@ -32,6 +33,7 @@ import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/ve
 import { cn } from "@/lib/utils"
 
 export default function VehiclesPage() {
+  const [mounted, setMounted] = React.useState(false)
   const [vehicles, setVehicles] = React.useState<VehicleRecord[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
   const [brandFilter, setBrandFilter] = React.useState<string>("all")
@@ -39,6 +41,10 @@ export default function VehiclesPage() {
   const [vehicleToEdit, setVehicleToEdit] = React.useState<VehicleRecord | null>(null)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Brand dropdown filter state
   const [isBrandDropdownOpen, setIsBrandDropdownOpen] = React.useState(false)
@@ -470,7 +476,7 @@ export default function VehiclesPage() {
       </div>
 
       {/* Delete Vehicle Confirmation Modal */}
-      {vehicleToDelete && (
+      {mounted && vehicleToDelete && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-start gap-3">
@@ -521,7 +527,8 @@ export default function VehiclesPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Excel Import Modal */}

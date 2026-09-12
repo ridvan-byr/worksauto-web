@@ -1,10 +1,11 @@
 "use client"
 
-import { useCustomers, useCreateCustomer } from "@/features/customers/api/use-customers"
+import { useCustomers, useCreateCustomer, useDeleteCustomer } from "@/features/customers/api/use-customers"
 import { useCreateVehicle } from "@/features/vehicles/api/use-vehicles"
 import { useQueryClient } from "@tanstack/react-query"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import {
   Users,
@@ -18,6 +19,8 @@ import {
   ChevronRight,
   UploadCloud,
   Download,
+  Trash2,
+  AlertTriangle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Customer } from "@/features/customers/types"
@@ -32,15 +35,22 @@ import { cn } from "@/lib/utils"
 
 export default function CustomersPage() {
   const queryClient = useQueryClient()
+  const [mounted, setMounted] = React.useState(false)
   const [customers, setCustomers] = React.useState<Customer[]>([])
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
+  const [customerToDelete, setCustomerToDelete] = React.useState<Customer | null>(null)
   const [searchQuery, setSearchQuery] = React.useState("")
   const [filterType, setFilterType] = React.useState<"all" | "individual" | "corporate" | "debtors" | "leads">("all")
 
   const { data: apiCustomers } = useCustomers(searchQuery)
   const createCustomerMutation = useCreateCustomer()
   const createVehicleMutation = useCreateVehicle()
+  const deleteCustomerMutation = useDeleteCustomer()
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Pure live API customers sync (100% PostgreSQL)
   React.useEffect(() => {
@@ -414,12 +424,12 @@ export default function CustomersPage() {
                                 <ChevronRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-sky-500" />
                               </Link>
                               {c.isLead && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-normal self-center">
                                   Potansiyel Müşteri
                                 </span>
                               )}
                               {c.type === "corporate" && !c.taxNumber && (
-                                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0" title="Resmi fatura düzenlenebilmesi için 10 haneli Vergi Numarası (VKN) girilmelidir">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-normal self-center" title="Resmi fatura düzenlenebilmesi için 10 haneli Vergi Numarası (VKN) girilmelidir">
                                   ⚠️ VKN Eksik
                                 </span>
                               )}
@@ -471,13 +481,23 @@ export default function CustomersPage() {
 
                       {/* Actions */}
                       <td className="py-4 px-4 sm:px-6 text-right">
-                        <Link
-                          href={`/customers/${c.id}`}
-                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
-                        >
-                          <span>Profili Aç</span>
-                          <ArrowUpRight size={13} />
-                        </Link>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Link
+                            href={`/customers/${c.id}`}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                          >
+                            <span>Profili Aç</span>
+                            <ArrowUpRight size={13} />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => setCustomerToDelete(c)}
+                            className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-rose-50 dark:hover:bg-rose-950/40 hover:border-rose-300 dark:hover:border-rose-800 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 transition-colors cursor-pointer shadow-2xs"
+                            title="Müşteriyi Sil / Arşivle"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
@@ -516,6 +536,74 @@ export default function CustomersPage() {
         data={exportData}
         availableColumns={customerExportColumns}
       />
+
+      {/* Delete Customer Confirmation Modal */}
+      {mounted && customerToDelete && createPortal(
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 border border-rose-500/20 flex items-center justify-center shrink-0">
+                <AlertTriangle size={24} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                  Müşteriyi Silmek İstiyor Musunuz?
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                  <strong>
+                    {customerToDelete.type === "corporate" && customerToDelete.companyTitle
+                      ? customerToDelete.companyTitle
+                      : `${customerToDelete.name} ${customerToDelete.surname}`}
+                  </strong> adlı müşteri kaydı sistemden silinecektir.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-400 space-y-1">
+              <p className="font-semibold">⚠️ Güvenlik ve Mevzuat Kuralları:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-[10.5px]">
+                <li>Devam eden açık iş emri bulunan müşteriler silinemez.</li>
+                <li>Ödenmemiş cari borç bakiyesi olan müşteriler silinemez.</li>
+                <li>Geçmiş faturalar ve tahsilatlar muhasebe mevzuatı gereği korunur.</li>
+              </ul>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setCustomerToDelete(null)}
+                disabled={deleteCustomerMutation.isPending}
+                className="h-10 px-4 text-xs font-semibold cursor-pointer"
+              >
+                Vazgeç
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await deleteCustomerMutation.mutateAsync(customerToDelete.id)
+                    setCustomers((prev) => prev.filter((c) => c.id !== customerToDelete.id))
+                    setCustomerToDelete(null)
+                  } catch {}
+                }}
+                disabled={deleteCustomerMutation.isPending}
+                className="h-10 px-4 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white cursor-pointer shadow-md shadow-rose-600/20"
+              >
+                {deleteCustomerMutation.isPending ? (
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <span>Evet, Müşteriyi Sil</span>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   )
 }

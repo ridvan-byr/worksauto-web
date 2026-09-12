@@ -4,6 +4,7 @@ import { useCustomer, useDeleteCustomer } from "@/features/customers/api/use-cus
 import { useDeleteVehicle, type VehicleRecord } from "@/features/vehicles/api/use-vehicles"
 
 import * as React from "react"
+import { createPortal } from "react-dom"
 import Link from "next/link"
 import { useParams, useRouter } from "next/navigation"
 import {
@@ -22,6 +23,8 @@ import {
   Trash2,
   AlertTriangle,
   Edit3,
+  Eye,
+  Printer,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Customer, Vehicle } from "@/features/customers/types"
@@ -30,14 +33,29 @@ import { AddVehicleModal } from "@/features/customers/components/add-vehicle-mod
 import { EditCustomerModal } from "@/features/customers/components/edit-customer-modal"
 import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
 import { KvkkConsentBadge } from "@/features/customers/components/kvkk-consent-badge"
+import { InvoiceDetailModal } from "@/features/billing/components/invoice-detail-modal"
+import { CariHistoryModal } from "@/features/billing/components/cari-history-modal"
+import { Invoice, CurrentAccount } from "@/features/billing/types"
 import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/vehicle-formatters"
 import { cn } from "@/lib/utils"
+
+export const formatDateDisplay = (val?: string | null) => {
+  if (!val || val === "-" || val === "null" || val === "undefined") return "-"
+  try {
+    const d = new Date(val)
+    if (isNaN(d.getTime())) return val
+    return d.toLocaleDateString("tr-TR")
+  } catch {
+    return val
+  }
+}
 
 export default function CustomerDetailPage() {
   const params = useParams()
   const router = useRouter()
   const customerId = params.id as string
 
+  const [mounted, setMounted] = React.useState(false)
   const [customer, setCustomer] = React.useState<Customer | null>(null)
   const [activeTab, setActiveTab] = React.useState<"appointments" | "workOrders" | "invoices" | "movements">("workOrders")
   const [isAddVehicleModalOpen, setIsAddVehicleModalOpen] = React.useState(false)
@@ -45,10 +63,16 @@ export default function CustomerDetailPage() {
   const [isDeleteCustomerModalOpen, setIsDeleteCustomerModalOpen] = React.useState(false)
   const [vehicleToDelete, setVehicleToDelete] = React.useState<Vehicle | null>(null)
   const [vehicleToEdit, setVehicleToEdit] = React.useState<Vehicle | null>(null)
+  const [selectedInvoice, setSelectedInvoice] = React.useState<Invoice | null>(null)
+  const [isCariModalOpen, setIsCariModalOpen] = React.useState(false)
 
   const { data: apiCustomer } = useCustomer(customerId)
   const deleteVehicleMutation = useDeleteVehicle()
   const deleteCustomerMutation = useDeleteCustomer()
+
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Load customer data with live API sync and mock fallback
   React.useEffect(() => {
@@ -409,7 +433,7 @@ export default function CustomerDetailPage() {
               "px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap",
               activeTab === "workOrders"
                 ? "bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/60"
             )}
           >
             <Wrench size={14} />
@@ -423,7 +447,7 @@ export default function CustomerDetailPage() {
               "px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap",
               activeTab === "appointments"
                 ? "bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/60"
             )}
           >
             <Calendar size={14} />
@@ -437,7 +461,7 @@ export default function CustomerDetailPage() {
               "px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap",
               activeTab === "invoices"
                 ? "bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/60"
             )}
           >
             <Receipt size={14} />
@@ -451,7 +475,7 @@ export default function CustomerDetailPage() {
               "px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2 transition-all cursor-pointer whitespace-nowrap",
               activeTab === "movements"
                 ? "bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/60"
             )}
           >
             <CreditCard size={14} />
@@ -549,57 +573,118 @@ export default function CustomerDetailPage() {
                 Bu müşteriye ait fatura kaydı bulunmuyor.
               </div>
             ) : (
-              customer.invoices.map((inv) => (
-                <div
-                  key={inv.id}
-                  className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between gap-4"
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-mono font-bold text-slate-900 dark:text-slate-100">
-                        {inv.invoiceNumber}
-                      </span>
-                      <PlateBadge plate={inv.plate} size="sm" />
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Fatura Tarihi: {inv.date} • Vade: {inv.dueDate}
-                    </p>
-                  </div>
+              customer.invoices.map((inv) => {
+                const fullInvoice: Invoice = {
+                  id: inv.id,
+                  invoiceNumber: inv.invoiceNumber,
+                  tenantId: customer.tenantId,
+                  customerId: customer.id,
+                  customerName: displayName,
+                  customerPhone: customer.phone,
+                  customerType: (customer.type === "corporate" || (customer.type as string) === "CORPORATE") ? "corporate" : "individual",
+                  companyTitle: customer.companyTitle,
+                  vehiclePlate: inv.plate,
+                  vehicleBrand: customer.vehicles.find((v) => v.plate === inv.plate)?.brand || "Kayıtlı Araç",
+                  vehicleModel: customer.vehicles.find((v) => v.plate === inv.plate)?.model || "",
+                  vehicleYear: customer.vehicles.find((v) => v.plate === inv.plate)?.year || 2024,
+                  vehicleKm: customer.vehicles.find((v) => v.plate === inv.plate)?.kilometer || 0,
+                  items: [
+                    {
+                      id: "item_1",
+                      type: "SERVICE",
+                      name: "Periyodik Bakım ve Mekanik Servis Hizmet Bedeli",
+                      quantity: 1,
+                      unitPrice: inv.totalAmount ? Math.round(inv.totalAmount / 1.2) : 0,
+                      totalPrice: inv.totalAmount ? Math.round(inv.totalAmount / 1.2) : 0,
+                    },
+                  ],
+                  subtotal: inv.totalAmount ? Math.round(inv.totalAmount / 1.2) : 0,
+                  taxAmount: inv.totalAmount ? inv.totalAmount - Math.round(inv.totalAmount / 1.2) : 0,
+                  grandTotal: inv.totalAmount ?? 0,
+                  paidAmount: inv.paidAmount ?? 0,
+                  remainingAmount: (inv.totalAmount ?? 0) - (inv.paidAmount ?? 0),
+                  status: inv.status === "PAID" ? "PAID" : inv.paidAmount > 0 ? "PARTIALLY_PAID" : "UNPAID",
+                  payments: [],
+                  issueDate: inv.date && inv.date !== "-" ? inv.date : new Date().toISOString().split("T")[0],
+                  dueDate: inv.dueDate && inv.dueDate !== "-" ? inv.dueDate : new Date().toISOString().split("T")[0],
+                  createdAt: inv.date && inv.date !== "-" ? inv.date : new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                }
 
-                  <div className="text-right flex items-center gap-4">
-                    <div>
-                      <p className="text-sm font-bold font-mono text-slate-900 dark:text-slate-100">
-                        {(inv.totalAmount ?? 0).toLocaleString("tr-TR")} ₺
+                return (
+                  <div
+                    key={inv.id}
+                    onClick={() => setSelectedInvoice(fullInvoice)}
+                    className="p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 hover:border-sky-500/50 dark:hover:border-sky-500/50 hover:bg-sky-50/20 dark:hover:bg-sky-950/20 transition-all cursor-pointer flex items-center justify-between gap-4 group shadow-2xs hover:shadow-xs"
+                    title="Fatura Detayını Görüntüle & Yazdır"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
+                          {inv.invoiceNumber}
+                        </span>
+                        <PlateBadge plate={inv.plate} size="sm" />
+                        <span className="text-[10px] text-sky-600 dark:text-sky-400 font-semibold opacity-0 group-hover:opacity-100 transition-opacity inline-flex items-center gap-1">
+                          <Eye size={12} />
+                          Detay Görüntüle
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-400">
+                        Fatura Tarihi: {formatDateDisplay(inv.date)} • Vade: {formatDateDisplay(inv.dueDate)}
                       </p>
-                      {(inv.paidAmount ?? 0) < (inv.totalAmount ?? 0) && (
-                        <p className="text-[10px] text-rose-500 font-medium">
-                          Kalan: {((inv.totalAmount ?? 0) - (inv.paidAmount ?? 0)).toLocaleString("tr-TR")} ₺
-                        </p>
-                      )}
                     </div>
 
-                    <span
-                      className={cn(
-                        "text-[10px] font-bold px-2.5 py-1 rounded-xl border",
-                        inv.status === "PAID"
-                          ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                          : inv.status === "PARTIAL"
-                          ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
-                          : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-                      )}
-                    >
-                      {inv.status === "PAID" ? "Ödendi" : inv.status === "PARTIAL" ? "Kısmi Ödeme" : "Ödenmedi"}
-                    </span>
+                    <div className="text-right flex items-center gap-4">
+                      <div>
+                        <p className="text-sm font-bold font-mono text-slate-900 dark:text-slate-100">
+                          {(inv.totalAmount ?? 0).toLocaleString("tr-TR")} ₺
+                        </p>
+                        {(inv.paidAmount ?? 0) < (inv.totalAmount ?? 0) && (
+                          <p className="text-[10px] text-rose-500 font-medium">
+                            Kalan: {((inv.totalAmount ?? 0) - (inv.paidAmount ?? 0)).toLocaleString("tr-TR")} ₺
+                          </p>
+                        )}
+                      </div>
+
+                      <span
+                        className={cn(
+                          "text-[10px] font-bold px-2.5 py-1 rounded-xl border",
+                          inv.status === "PAID"
+                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                            : inv.status === "PARTIAL"
+                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                            : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                        )}
+                      >
+                        {inv.status === "PAID" ? "Ödendi" : inv.status === "PARTIAL" ? "Kısmi Ödeme" : "Ödenmedi"}
+                      </span>
+                    </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         )}
 
         {/* Tab 4: Cari Movements */}
         {activeTab === "movements" && (
-          <div className="p-4 sm:p-6 space-y-2">
+          <div className="p-4 sm:p-6 space-y-3">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-1 border-b border-slate-100 dark:border-slate-800/60">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Müşteriye ait tüm borç, alacak ve tahsilat hareket dökümü ({customer.movements.length} Kayıt).
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsCariModalOpen(true)}
+                className="h-8 px-3 rounded-xl gap-1.5 text-xs font-semibold border-sky-200 dark:border-sky-800 text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-950/50 cursor-pointer shadow-2xs shrink-0"
+              >
+                <Printer size={13} />
+                <span>Cari Ekstre Yazdır / İncele</span>
+              </Button>
+            </div>
+
             {customer.movements.length === 0 ? (
               <div className="py-10 text-center text-slate-400 text-xs">
                 Kayıtlı cari hesap hareketi bulunmuyor.
@@ -608,14 +693,16 @@ export default function CustomerDetailPage() {
               customer.movements.map((m) => (
                 <div
                   key={m.id}
-                  className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between gap-3 text-xs"
+                  onClick={() => setIsCariModalOpen(true)}
+                  className="p-3.5 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-950/40 hover:border-sky-500/40 dark:hover:border-sky-500/40 hover:bg-sky-50/20 dark:hover:bg-sky-950/20 transition-all cursor-pointer flex items-center justify-between gap-3 text-xs group"
+                  title="Cari Hesap Ekstresini Görüntüle"
                 >
                   <div className="space-y-0.5">
-                    <p className="font-semibold text-slate-900 dark:text-slate-100">
+                    <p className="font-semibold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors">
                       {m.description}
                     </p>
                     <p className="text-[10px] text-slate-400 font-mono">
-                      {m.date} {m.documentNo && `• Evrak: ${m.documentNo}`}
+                      {formatDateDisplay(m.date)} {m.documentNo && `• Evrak: ${m.documentNo}`}
                     </p>
                   </div>
 
@@ -657,7 +744,7 @@ export default function CustomerDetailPage() {
       />
 
       {/* Delete Vehicle Confirmation Modal */}
-      {vehicleToDelete && (
+      {mounted && vehicleToDelete && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
           <div className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200">
             <div className="flex items-start gap-3">
@@ -713,7 +800,8 @@ export default function CustomerDetailPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* Edit Customer Modal */}
@@ -727,7 +815,7 @@ export default function CustomerDetailPage() {
       )}
 
       {/* Delete Customer Confirmation Modal */}
-      {isDeleteCustomerModalOpen && customer && (
+      {mounted && isDeleteCustomerModalOpen && customer && createPortal(
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
           <div
             className="w-full max-w-md rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl p-6 space-y-4 animate-in zoom-in-95 duration-200"
@@ -785,8 +873,44 @@ export default function CustomerDetailPage() {
               </Button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
+
+      {/* Invoice Detail Modal */}
+      <InvoiceDetailModal
+        isOpen={!!selectedInvoice}
+        invoice={selectedInvoice}
+        onClose={() => setSelectedInvoice(null)}
+      />
+
+      {/* Cari History Modal */}
+      <CariHistoryModal
+        isOpen={isCariModalOpen}
+        account={{
+          customerId: customer.id,
+          customerName: displayName,
+          customerPhone: customer.phone,
+          customerType: (customer.type === "corporate" || (customer.type as string) === "CORPORATE") ? "corporate" : "individual",
+          companyTitle: customer.companyTitle,
+          totalDebits: customer.movements.filter((m) => m.type === "DEBIT").reduce((acc, m) => acc + m.amount, 0),
+          totalCredits: customer.movements.filter((m) => m.type !== "DEBIT").reduce((acc, m) => acc + m.amount, 0),
+          balance: customer.balance,
+          creditLimit: 50000,
+          movements: customer.movements.map((m) => ({
+            id: m.id,
+            customerId: customer.id,
+            date: formatDateDisplay(m.date),
+            type: m.type === "DEBIT" ? "INVOICE" : "PAYMENT",
+            description: m.description,
+            referenceNo: m.documentNo,
+            debit: m.type === "DEBIT" ? m.amount : 0,
+            credit: m.type !== "DEBIT" ? m.amount : 0,
+            balanceAfter: m.balanceAfter,
+          })),
+        }}
+        onClose={() => setIsCariModalOpen(false)}
+      />
     </div>
   )
 }
