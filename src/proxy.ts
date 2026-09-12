@@ -30,8 +30,14 @@ export function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // 3. Public Routes: Booking (/book/[slug]), Customer Portal & KVKK Consent (/c/*), Legal (/legal/*)
-  if (pathname.startsWith('/book') || pathname.startsWith('/c/') || pathname.startsWith('/legal')) {
+  // 3. Public Routes: Booking (/book/[slug]), Customer Portal & KVKK Consent (/c/*), Legal (/legal/*), Live Vehicle Tracking (/track/*), Online Payment (/pay/*)
+  if (
+    pathname.startsWith('/book') ||
+    pathname.startsWith('/c/') ||
+    pathname.startsWith('/legal') ||
+    pathname.startsWith('/track') ||
+    pathname.startsWith('/pay')
+  ) {
     return NextResponse.next();
   }
 

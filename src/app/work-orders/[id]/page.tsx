@@ -43,6 +43,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
+import { useAuth } from "@/features/auth/auth-context"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
 import { TechnicianNotes } from "@/features/work-orders/components/technician-notes"
 import { PhotoGallery } from "@/features/work-orders/components/photo-gallery"
@@ -103,6 +104,8 @@ export default function WorkOrderDetailPage() {
     setIsSearchOpen(false)
   }
 
+  const { user } = useAuth()
+  const isTechnician = user?.role === 'TECHNICIAN'
   const { data: apiOrder, refetch } = useWorkOrder(id)
   const cancelInvoiceMutation = useCancelInvoice()
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = React.useState(false)
@@ -962,14 +965,16 @@ export default function WorkOrderDetailPage() {
                         </span>
                         {!isOrderLocked && (
                           <div className="flex items-center gap-0.5">
-                            <button
-                              type="button"
-                              onClick={() => handleStartEditService({ id: srv.id, name: srv.name, laborPrice: srv.laborPrice })}
-                              className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/30 transition-colors cursor-pointer"
-                              title="İşçiliği Düzenle"
-                            >
-                              <Edit2 size={13} />
-                            </button>
+                            {!isTechnician && (
+                              <button
+                                type="button"
+                                onClick={() => handleStartEditService({ id: srv.id, name: srv.name, laborPrice: srv.laborPrice })}
+                                className="p-1.5 rounded-lg text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-950/30 transition-colors cursor-pointer"
+                                title="İşçiliği Düzenle"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                            )}
                             <button
                               type="button"
                               disabled={deletingItemId === srv.id}

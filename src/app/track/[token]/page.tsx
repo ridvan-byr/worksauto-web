@@ -47,7 +47,14 @@ interface TrackingData {
   }
   services: Array<{ id: string; name: string; completed: boolean }>
   parts: Array<{ id: string; name: string; quantity: number }>
-  photos: Array<{ id: string; url: string; type: string; caption?: string }>
+  photos: Array<{
+    id: string
+    url: string
+    display_url?: string
+    rawUrl?: string
+    type: string
+    caption?: string
+  }>
   tenant?: {
     title: string
     phone: string
@@ -394,23 +401,32 @@ export default function PublicVehicleTrackPage() {
               <span>Araç Kabul & Hasar Fotoğrafları ({data.photos.length})</span>
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-              {data.photos.map((photo) => (
-                <button
-                  key={photo.id}
-                  type="button"
-                  onClick={() => setSelectedPhoto(photo.url)}
-                  className="aspect-video rounded-2xl overflow-hidden border border-slate-800 bg-slate-800 relative group cursor-pointer"
-                >
-                  <img
-                    src={photo.url}
-                    alt={photo.caption || "Araç Fotoğrafı"}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <ExternalLink size={16} className="text-white" />
-                  </div>
-                </button>
-              ))}
+              {data.photos.map((photo) => {
+                const raw = photo.display_url || photo.url
+                const apiBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1").replace(/\/$/, "")
+                const fullImgUrl =
+                  raw.startsWith("http://") || raw.startsWith("https://") || raw.startsWith("data:")
+                    ? raw
+                    : `${apiBase}/media/files/${raw.replace(/^\/?(api\/v1\/)?media\/files\//, "")}`
+
+                return (
+                  <button
+                    key={photo.id}
+                    type="button"
+                    onClick={() => setSelectedPhoto(fullImgUrl)}
+                    className="aspect-video rounded-2xl overflow-hidden border border-slate-800 bg-slate-800 relative group cursor-pointer"
+                  >
+                    <img
+                      src={fullImgUrl}
+                      alt={photo.caption || "Araç Fotoğrafı"}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <ExternalLink size={16} className="text-white" />
+                    </div>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}

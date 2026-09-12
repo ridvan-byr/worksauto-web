@@ -29,6 +29,18 @@ describe('Next.js Edge Route Guard (proxy)', () => {
     expect(res.headers.get('location')).toBeNull()
   })
 
+  it('allows public live vehicle tracking routes without any cookies', () => {
+    const req = createMockRequest('https://app.worksauto.com/track/0a9a1351-4091-49b0-9a2f-7faec3b18ba0')
+    const res = proxy(req)
+    expect(res.headers.get('location')).toBeNull()
+  })
+
+  it('allows public online payment routes without any cookies', () => {
+    const req = createMockRequest('https://app.worksauto.com/pay/inv-123456')
+    const res = proxy(req)
+    expect(res.headers.get('location')).toBeNull()
+  })
+
   it('redirects unauthenticated users from protected tenant pages to /sign-in', () => {
     const req = createMockRequest('https://app.worksauto.com/customers')
     const res = proxy(req)
