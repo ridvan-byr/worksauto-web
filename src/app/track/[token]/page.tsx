@@ -640,32 +640,27 @@ export default function PublicVehicleTrackPage() {
         )}
       </main>
 
-      {/* Modern, Bottom-Pinned Corporate Footer */}
-      <footer className="mt-auto w-full border-t border-white/[0.08] bg-[#070b12]/90 backdrop-blur-xl py-6 relative z-10">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-          <div className="space-y-1">
-            <p className="text-xs font-semibold text-slate-200">
-              {data.tenant?.title || "WorksAuto Servis"}
-            </p>
-            <p className="text-[11px] text-slate-500">
-              © {new Date().getFullYear()} Tüm hakları saklıdır • Güvenli Araç Takip Portalı
-            </p>
+      {/* Modern, Bottom-Pinned Corporate Footer (Centered Brand Layout) */}
+      <footer className="mt-auto w-full border-t border-white/[0.08] bg-[#070b12]/90 backdrop-blur-xl py-8 px-4 relative z-10 text-center">
+        <div className="max-w-xl mx-auto space-y-3">
+          {/* Centered Brand Logo */}
+          <div className="flex items-center justify-center">
+            <img
+              src="/brand/worksauto-logo-white.png"
+              alt="WorksAuto"
+              className="h-6 sm:h-7 w-auto object-contain opacity-90"
+            />
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/[0.03] border border-white/[0.06] text-slate-400 text-xs">
-              <span className="text-[11px] text-slate-400">Altyapı:</span>
-              <img
-                src="/brand/worksauto-logo-white.png"
-                alt="WorksAuto"
-                className="h-4 w-auto object-contain opacity-80"
-              />
-            </div>
-            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-[10px] font-semibold border border-emerald-500/20">
-              <ShieldCheck size={12} />
-              <span>256-Bit SSL</span>
-            </div>
-          </div>
+          {/* Explanation Text */}
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Bu canlı takip sayfası <strong className="text-slate-200">{data.tenant?.title || "WorksAuto Servis"}</strong> adına <strong className="text-slate-200">WorksAuto</strong> canlı araç takip altyapısı tarafından sağlanmaktadır.
+          </p>
+
+          {/* Copyright */}
+          <p className="text-[11px] text-slate-500">
+            © {new Date().getFullYear()} WorksAuto. Tüm hakları saklıdır.
+          </p>
         </div>
       </footer>
 
