@@ -32,6 +32,18 @@ describe("excel-helpers", () => {
       expect(guessTargetField("Ad Soyad")).toBe("fullName")
       expect(guessTargetField("Adı")).toBe("firstName")
       expect(guessTargetField("Soyadı")).toBe("lastName")
+      expect(guessTargetField("Müşteri Adı")).toBe("firstName")
+      expect(guessTargetField("Müşteri Soyadı")).toBe("lastName")
+    })
+
+    it("should never map Cari Kodu, Cari No, Müşteri No, Sıra No to customer names", () => {
+      expect(guessTargetField("Cari Kodu")).not.toBe("fullName")
+      expect(guessTargetField("Cari Kodu")).toBe("")
+      expect(guessTargetField("Cari No")).toBe("")
+      expect(guessTargetField("Müşteri No")).toBe("")
+      expect(guessTargetField("Müşteri Kodu")).toBe("")
+      expect(guessTargetField("Sıra No")).toBe("")
+      expect(guessTargetField("Hesap Kodu")).toBe("")
     })
   })
 

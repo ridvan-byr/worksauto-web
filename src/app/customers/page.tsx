@@ -424,12 +424,12 @@ export default function CustomersPage() {
                                 <ChevronRight size={13} className="opacity-0 group-hover:opacity-100 transition-opacity text-sky-500" />
                               </Link>
                               {c.isLead && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-normal self-center">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-none translate-y-[1.5px]">
                                   Potansiyel Müşteri
                                 </span>
                               )}
                               {c.type === "corporate" && !c.taxNumber && (
-                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-normal self-center" title="Resmi fatura düzenlenebilmesi için 10 haneli Vergi Numarası (VKN) girilmelidir">
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-none translate-y-[1.5px]" title="Resmi fatura düzenlenebilmesi için 10 haneli Vergi Numarası (VKN) girilmelidir">
                                   ⚠️ VKN Eksik
                                 </span>
                               )}

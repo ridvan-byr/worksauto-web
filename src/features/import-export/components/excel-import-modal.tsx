@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
 import {
   guessTargetField,
+  guessTargetFieldWithScore,
   readExcelFile,
   downloadSampleTemplate,
   parseFullName,
@@ -228,24 +229,33 @@ export function ExcelImportModal({
     mode: "single" | "split"
   } => {
     const initialMap: Record<string, string> = {}
+    const scoreMap: Record<string, number> = {}
     let hasFirst = false
     let hasLast = false
 
     headers.forEach((h) => {
-      const target = guessTargetField(h)
-      if (target && !initialMap[target]) {
-        initialMap[target] = h
-        if (target === "firstName") hasFirst = true
-        if (target === "lastName") hasLast = true
+      const { target, score } = guessTargetFieldWithScore(h)
+      if (target && score > 0) {
+        if (!initialMap[target] || score > (scoreMap[target] || 0)) {
+          initialMap[target] = h
+          scoreMap[target] = score
+          if (target === "firstName") hasFirst = true
+          if (target === "lastName") hasLast = true
+        }
       }
     })
 
     let detectedMode: "single" | "split" = "single"
+    // Hem ad hem soyad ayrı sütunlar olarak tespit edildiyse otomatik ayrı sütun moduna geç
     if (hasFirst && hasLast) {
       detectedMode = "split"
       delete initialMap.fullName
     } else {
       detectedMode = "single"
+      // Tek bir isim sütunu varsa (Örn: "Müşteri Adı" ama soyadı sütunu yoksa) fullName olarak ata
+      if (!initialMap.fullName && initialMap.firstName) {
+        initialMap.fullName = initialMap.firstName
+      }
       delete initialMap.firstName
       delete initialMap.lastName
     }

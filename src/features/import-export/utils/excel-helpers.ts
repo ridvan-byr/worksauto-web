@@ -68,25 +68,43 @@ export function parseFullName(input: string): { firstName: string; lastName: str
  * Sütun başlığından hedef alanı akıllı tahmin etme (Smart Guess)
  * Türkçe karakter duyarlı, otomobil istisnası ve zengin eşanlamlı sözlük içerir.
  */
-export function guessTargetField(columnHeader: string): string {
-  if (!columnHeader || typeof columnHeader !== "string") return ""
+export interface GuessResult {
+  target: string
+  score: number // 1-100
+}
+
+/**
+ * Sütun başlığından hedef alanı ve güven skorunu (1-100) akıllı tahmin etme
+ * Türkçe karakter duyarlı, otomobil istisnası ve zengin eşanlamlı sözlük içerir.
+ */
+export function guessTargetFieldWithScore(columnHeader: string): GuessResult {
+  if (!columnHeader || typeof columnHeader !== "string") return { target: "", score: 0 }
 
   const raw = columnHeader.trim()
   const lower = raw.toLocaleLowerCase("tr-TR")
   const norm = lower.replace(/[^a-z0-9ğüşıöç]/gi, "")
 
   // 1. Plaka
-  if (norm.includes("plaka") || norm.includes("plate") || norm === "aracplaka" || norm.includes("plakano")) {
-    return "plate"
+  if (norm === "plaka" || norm === "aracplaka" || norm === "plakano" || norm === "plate") {
+    return { target: "plate", score: 100 }
+  }
+  if (norm.includes("plaka") || norm.includes("plate")) {
+    return { target: "plate", score: 85 }
   }
 
   // 2. Yakıt (Öncelikli: "yakıt cinsi" içindeki t+c harflerinin vergi no ile çakışmasını önler)
+  if (norm === "yakit" || norm === "yakıt" || norm === "yakittipi" || norm === "yakıttipi" || norm === "fuel") {
+    return { target: "fuelType", score: 100 }
+  }
   if (norm.includes("yakit") || norm.includes("yakıt") || norm.includes("fuel")) {
-    return "fuelType"
+    return { target: "fuelType", score: 80 }
   }
 
   // 3. Telefon (Önemli: "otomobil" içindeki "mobil" telefon sayılmamalı!)
   const isOtomobil = norm.includes("otomobil")
+  if (norm === "telefon" || norm === "tel" || norm === "gsm" || norm === "ceptel" || norm === "telefonno" || norm === "phone") {
+    return { target: "phone", score: 100 }
+  }
   const hasPhoneKeywords =
     norm.includes("telefon") ||
     norm.includes("phone") ||
@@ -95,14 +113,16 @@ export function guessTargetField(columnHeader: string): string {
     norm.includes("telno") ||
     norm.includes("iletisim") ||
     norm.includes("iletişim") ||
-    norm === "tel" ||
     (!isOtomobil && norm.includes("mobil"))
 
   if (hasPhoneKeywords) {
-    return "phone"
+    return { target: "phone", score: 85 }
   }
 
   // 4. Marka / Üretici (Örn: "Otomobil Üreticisi / Marka")
+  if (norm === "marka" || norm === "brand" || norm === "aracmarkasi" || norm === "araçmarkası") {
+    return { target: "brand", score: 100 }
+  }
   if (
     norm.includes("marka") ||
     norm.includes("brand") ||
@@ -110,10 +130,13 @@ export function guessTargetField(columnHeader: string): string {
     norm.includes("uretici") ||
     norm.includes("üretici")
   ) {
-    return "brand"
+    return { target: "brand", score: 85 }
   }
 
   // 5. Model Yılı / Sene (Örn: "Üretim Senesi", "Model Yılı", "Yıl")
+  if (norm === "modelyili" || norm === "modelyılı" || norm === "yil" || norm === "yıl" || norm === "year") {
+    return { target: "year", score: 100 }
+  }
   if (
     norm.includes("modelyili") ||
     norm.includes("modelyılı") ||
@@ -126,15 +149,21 @@ export function guessTargetField(columnHeader: string): string {
     norm.includes("yıl") ||
     norm.includes("year")
   ) {
-    return "year"
+    return { target: "year", score: 80 }
   }
 
   // 6. Araç Modeli (Not: Yıl kelimesi içermiyorsa)
+  if (norm === "model" || norm === "aracmodeli" || norm === "araçmodeli") {
+    return { target: "model", score: 100 }
+  }
   if (norm.includes("model") || norm.includes("tip") || norm.includes("kasa") || norm.includes("seri")) {
-    return "model"
+    return { target: "model", score: 75 }
   }
 
   // 7. Şirket / Firma Ünvanı
+  if (norm === "unvan" || norm === "ünvan" || norm === "firma" || norm === "sirket" || norm === "şirket" || norm === "firmaunvani" || norm === "firmaünvanı" || norm === "cariunvan" || norm === "cariunvani") {
+    return { target: "companyTitle", score: 100 }
+  }
   if (
     norm.includes("unvan") ||
     norm.includes("ünvan") ||
@@ -145,51 +174,95 @@ export function guessTargetField(columnHeader: string): string {
     norm.includes("kuruluş") ||
     norm.includes("kurulus")
   ) {
-    return "companyTitle"
+    return { target: "companyTitle", score: 80 }
   }
 
-  // 8. Müşteri Adı Soyadı (Birleşik veya tek sütun)
-  const hasSoyad = norm.includes("soyad") || norm.includes("surname") || norm.includes("soyisim")
-  const normWithoutSoyad = norm.replace(/soyad/g, "").replace(/soyisim/g, "").replace(/surname/g, "")
-  const hasAd = normWithoutSoyad.includes("ad") || normWithoutSoyad.includes("isim") || normWithoutSoyad.includes("name")
-  const hasMusteri = norm.includes("musteri") || norm.includes("müşteri") || norm.includes("cari")
+  // 8. Müşteri Adı Soyadı (Birleşik veya Ayrı)
+  // KRİTİK: Cari Kodu, Cari No, Müşteri No, Sıra No, vb. ASLA ad-soyad olamaz!
+  const isCodeOrId =
+    norm.includes("kod") ||
+    norm.includes("code") ||
+    norm.includes("no") ||
+    norm.includes("numara") ||
+    norm.includes("id") ||
+    norm.includes("ref") ||
+    norm.includes("hesap") ||
+    norm.includes("sira") ||
+    norm.includes("sıra")
 
-  if (
-    (hasAd && hasSoyad) ||
-    norm.includes("adsoyad") ||
-    norm.includes("isimsoyisim") ||
-    norm.includes("advesoyad") ||
-    (hasMusteri && !hasSoyad && !hasAd)
-  ) {
-    return "fullName"
-  }
+  if (!isCodeOrId) {
+    const hasSoyad = norm.includes("soyad") || norm.includes("surname") || norm.includes("soyisim")
+    const normWithoutSoyad = norm.replace(/soyad/g, "").replace(/soyisim/g, "").replace(/surname/g, "")
+    const hasAd = normWithoutSoyad.includes("ad") || normWithoutSoyad.includes("isim") || normWithoutSoyad.includes("name")
 
-  // 9. Soyad Tek Başına
-  if (hasSoyad) {
-    return "lastName"
-  }
+    // Tam Ad (Ad + Soyad birlikte)
+    if (
+      norm === "musteriadisoyadi" ||
+      norm === "müşteriadısoyadı" ||
+      norm === "adsoyad" ||
+      norm === "adısoyadı" ||
+      norm === "adisoyadi" ||
+      norm === "isimsoyisim" ||
+      norm === "advesoyad" ||
+      norm === "tamad" ||
+      norm === "fullname"
+    ) {
+      return { target: "fullName", score: 100 }
+    }
+    if ((hasAd && hasSoyad) || norm.includes("adsoyad") || norm.includes("isimsoyisim") || norm.includes("advesoyad")) {
+      return { target: "fullName", score: 95 }
+    }
 
-  // 10. Ad Tek Başına
-  if (hasAd || norm === "first") {
-    return "firstName"
+    // Ayrı Soyad
+    if (norm === "soyad" || norm === "soyadi" || norm === "soyadı" || norm === "musterisoyadi" || norm === "müşterisoyadı" || norm === "surname") {
+      return { target: "lastName", score: 100 }
+    }
+    if (hasSoyad) {
+      return { target: "lastName", score: 85 }
+    }
+
+    // Ayrı Ad
+    if (norm === "ad" || norm === "adi" || norm === "adı" || norm === "musteriadi" || norm === "müşteriadı" || norm === "isim" || norm === "firstname") {
+      return { target: "firstName", score: 100 }
+    }
+    if (hasAd || norm === "first") {
+      return { target: "firstName", score: 85 }
+    }
+
+    // Genel müşteri / cari başlığı (Örn: "Müşteri", "Cari", "İlgili Kişi")
+    if (norm === "musteri" || norm === "müşteri" || norm === "cari" || norm === "cariadi" || norm === "ilgilikisi" || norm === "muhatap") {
+      return { target: "fullName", score: 65 }
+    }
   }
 
   // 11. Kilometre
+  if (norm === "km" || norm === "kilometre" || norm === "guncelkm" || norm === "güncelkm" || norm === "mileage") {
+    return { target: "kilometer", score: 100 }
+  }
   if (norm.includes("km") || norm.includes("kilo") || norm.includes("mileage") || norm.includes("sayac") || norm.includes("sayaç")) {
-    return "kilometer"
+    return { target: "kilometer", score: 80 }
   }
 
   // 12. Şasi No (VIN)
+  if (norm === "sasino" || norm === "şasino" || norm === "vin" || norm === "chassis") {
+    return { target: "vin", score: 100 }
+  }
   if (norm.includes("sasi") || norm.includes("şasi") || norm.includes("vin") || norm.includes("chassis")) {
-    return "vin"
+    return { target: "vin", score: 80 }
   }
 
   // 13. E-Posta
+  if (norm === "eposta" || norm === "e-posta" || norm === "email" || norm === "mail") {
+    return { target: "email", score: 100 }
+  }
   if (norm.includes("mail") || norm.includes("eposta") || norm.includes("e-posta") || norm.includes("posta")) {
-    return "email"
+    return { target: "email", score: 80 }
   }
 
   // 14. Vergi No
+  if (norm === "vkn" || norm === "tckn" || norm === "vergino" || norm === "vergikimlikno" || norm === "tckimlikno") {
+    return { target: "taxNumber", score: 100 }
+  }
   if (
     norm.includes("vergi") ||
     norm.includes("vkn") ||
@@ -198,15 +271,21 @@ export function guessTargetField(columnHeader: string): string {
     norm.includes("tcno") ||
     norm === "tc"
   ) {
-    return "taxNumber"
+    return { target: "taxNumber", score: 80 }
   }
 
   // 15. Vergi Dairesi
+  if (norm === "vergidairesi" || norm === "daire") {
+    return { target: "taxOffice", score: 100 }
+  }
   if (norm.includes("daire") || norm.includes("dairesi")) {
-    return "taxOffice"
+    return { target: "taxOffice", score: 80 }
   }
 
   // 16. Vites / Şanzıman
+  if (norm === "vites" || norm === "vitesturu" || norm === "vitestürü" || norm === "sanziman" || norm === "şanzıman") {
+    return { target: "transmission", score: 100 }
+  }
   if (
     norm.includes("vites") ||
     norm.includes("trans") ||
@@ -214,15 +293,22 @@ export function guessTargetField(columnHeader: string): string {
     norm.includes("şanzıman") ||
     norm.includes("sanziman")
   ) {
-    return "transmission"
+    return { target: "transmission", score: 80 }
   }
 
   // 17. Not
+  if (norm === "not" || norm === "notlar" || norm === "aciklama" || norm === "açıklama" || norm === "notes") {
+    return { target: "notes", score: 100 }
+  }
   if (norm.includes("not") || norm.includes("aciklama") || norm.includes("açıklama") || norm.includes("note")) {
-    return "notes"
+    return { target: "notes", score: 70 }
   }
 
-  return ""
+  return { target: "", score: 0 }
+}
+
+export function guessTargetField(columnHeader: string): string {
+  return guessTargetFieldWithScore(columnHeader).target
 }
 
 /**
