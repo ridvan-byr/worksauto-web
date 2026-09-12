@@ -26,45 +26,56 @@ export function ThemeToggle() {
     setOpen(false)
     if (newTheme === theme) return
 
-    const isReduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    if (!document.startViewTransition || isReduced) {
-      setTheme(newTheme)
-      return
-    }
+    try {
+      const isReduced =
+        typeof window !== "undefined" &&
+        window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-    const x = e.clientX
-    const y = e.clientY
-    const endRadius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
-    )
+      if (!document.startViewTransition || isReduced) {
+        setTheme(newTheme)
+        return
+      }
 
-    const transition = document.startViewTransition(() => {
-      setTheme(newTheme)
-    })
+      const x = e.clientX
+      const y = e.clientY
+      const endRadius = Math.hypot(
+        Math.max(x, window.innerWidth - x),
+        Math.max(y, window.innerHeight - y)
+      )
 
-    transition.ready
-      .then(() => {
-        document.documentElement.animate(
-          {
-            clipPath: [
-              `circle(0px at ${x}px ${y}px)`,
-              `circle(${endRadius}px at ${x}px ${y}px)`,
-            ],
-          },
-          {
-            duration: 350,
-            easing: "cubic-bezier(0.16, 1, 0.3, 1)",
-            pseudoElement: "::view-transition-new(root)",
+      const transition = document.startViewTransition(() => {
+        setTheme(newTheme)
+      })
+
+      transition.ready
+        .then(() => {
+          try {
+            document.documentElement.animate(
+              {
+                clipPath: [
+                  `circle(0px at ${x}px ${y}px)`,
+                  `circle(${endRadius}px at ${x}px ${y}px)`,
+                ],
+              },
+              {
+                duration: 350,
+                easing: "cubic-bezier(0.16, 1, 0.3, 1)",
+                pseudoElement: "::view-transition-new(root)",
+              }
+            )
+          } catch {
+            // Safe fallback if browser doesn't support pseudoElement in Web Animations API
           }
-        )
-      })
-      .catch(() => {
-        // Safe fallback if transition is interrupted
-      })
+        })
+        .catch(() => {
+          setTheme(newTheme)
+        })
+    } catch {
+      setTheme(newTheme)
+    }
   }
 
-  // Consistent icon render: default to dark (defaultTheme="dark") before mount to avoid pop-in
+  // Consistent icon render: default to dark before mount to avoid pop-in
   const isDark = mounted ? resolvedTheme === "dark" : true
 
   return (
@@ -92,6 +103,7 @@ export function ThemeToggle() {
       {open && (
         <div className="absolute right-0 mt-2 w-36 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1.5 shadow-xl shadow-slate-950/20 backdrop-blur-xl z-50 animate-in fade-in slide-in-from-top-2 duration-150">
           <button
+            type="button"
             onClick={(e) => changeThemeWithAnimation("light", e)}
             className={cn(
               "flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer text-left",
@@ -105,6 +117,7 @@ export function ThemeToggle() {
           </button>
 
           <button
+            type="button"
             onClick={(e) => changeThemeWithAnimation("dark", e)}
             className={cn(
               "flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer text-left",
@@ -118,6 +131,7 @@ export function ThemeToggle() {
           </button>
 
           <button
+            type="button"
             onClick={(e) => changeThemeWithAnimation("system", e)}
             className={cn(
               "flex items-center gap-2.5 w-full px-3 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer text-left",

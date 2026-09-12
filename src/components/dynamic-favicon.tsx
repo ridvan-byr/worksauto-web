@@ -13,13 +13,7 @@ export function DynamicFavicon() {
       ? "/brand/favicon-white-32x32.png"
       : "/brand/favicon-32x32.png"
 
-    // 1. Remove conflicting static icon links so the browser clears its internal icon cache
-    const existingIcons = document.querySelectorAll<HTMLLinkElement>(
-      "link[rel*='icon']:not(#worksauto-dynamic-favicon)"
-    )
-    existingIcons.forEach((el) => el.remove())
-
-    // 2. Re-create or update our dedicated managed favicon link
+    // Find or create our dedicated managed favicon link
     let managedLink = document.getElementById("worksauto-dynamic-favicon") as HTMLLinkElement | null
 
     if (!managedLink) {
@@ -31,8 +25,16 @@ export function DynamicFavicon() {
       document.head.appendChild(managedLink)
     }
 
-    // Changing the href with cache-busting timestamp forces browser tab to re-render the icon immediately
-    managedLink.href = `${targetIcon}?v=${isDark ? "dark" : "light"}-${Date.now()}`
+    managedLink.href = `${targetIcon}?v=${isDark ? "dark" : "light"}`
+
+    // Also update any existing icon links in-place WITHOUT removing them from DOM
+    // (Crucial: never remove Next.js metadata link nodes from DOM to avoid React reconciliation crashes)
+    const existingLinks = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']")
+    existingLinks.forEach((link) => {
+      if (link.id !== "worksauto-dynamic-favicon") {
+        link.href = `${targetIcon}?v=${isDark ? "dark" : "light"}`
+      }
+    })
   }, [resolvedTheme])
 
   return null
