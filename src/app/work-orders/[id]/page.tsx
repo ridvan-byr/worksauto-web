@@ -205,19 +205,8 @@ export default function WorkOrderDetailPage() {
     }
   }, [id, apiOrder])
 
-  if (!order) {
-    return (
-      <div className="p-8 text-center space-y-4">
-        <p className="text-slate-500">İş emri bulunamadı.</p>
-        <Link href="/work-orders">
-          <Button variant="outline" size="sm">İş Emirlerine Dön</Button>
-        </Link>
-      </div>
-    )
-  }
-
-  const isOrderLocked = order.status === "COMPLETED" || order.status === "CANCELLED"
-  const activeInvoice = order.invoice && order.invoice.status !== "CANCELLED" ? order.invoice : null
+  const isOrderLocked = order?.status === "COMPLETED" || order?.status === "CANCELLED"
+  const activeInvoice = order?.invoice && order.invoice.status !== "CANCELLED" ? order.invoice : null
 
   // Map order & active invoice to BillingInvoice format for InvoiceDetailModal
   const mappedInvoiceForModal = React.useMemo<BillingInvoice | null>(() => {
@@ -288,6 +277,17 @@ export default function WorkOrderDetailPage() {
       updatedAt: activeInvoice.dueDate || order.updatedAt || new Date().toISOString(),
     }
   }, [activeInvoice, order])
+
+  if (!order) {
+    return (
+      <div className="p-8 text-center space-y-4">
+        <p className="text-slate-500">İş emri bulunamadı.</p>
+        <Link href="/work-orders">
+          <Button variant="outline" size="sm">İş Emirlerine Dön</Button>
+        </Link>
+      </div>
+    )
+  }
 
   const handleOpenReopenModal = () => {
     if (!activeInvoice) return
