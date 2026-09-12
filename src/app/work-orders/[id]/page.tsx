@@ -17,7 +17,7 @@ import {
 import { useProducts, type ProductRecord } from "@/features/inventory/api/use-inventory"
 
 import * as React from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams } from "next/navigation"
 import Link from "next/link"
 import {
   ArrowLeft,
@@ -59,7 +59,6 @@ import { cn } from "@/lib/utils"
 
 export default function WorkOrderDetailPage() {
   const params = useParams()
-  const router = useRouter()
   const id = params.id as string
 
   const [order, setOrder] = React.useState<WorkOrder | null>(null)
@@ -230,10 +229,10 @@ export default function WorkOrderDetailPage() {
       customerId: order.customerId,
       customerName: order.customerName,
       customerPhone: order.customerPhone,
-      customerType: (((order.customer as any)?.type || (order as any).customerType || "individual") === "corporate" ? "corporate" : "individual") as "individual" | "corporate",
-      companyTitle: (order.customer as any)?.companyTitle || (order as any).companyTitle,
-      taxOffice: (order.customer as any)?.taxOffice || (order as any).taxOffice,
-      taxNumber: (order.customer as any)?.taxNumber || (order as any).taxNumber,
+      customerType: (((order.customer as Record<string, unknown> | undefined)?.type || (order as unknown as Record<string, unknown>).customerType || "individual") === "corporate" ? "corporate" : "individual") as "individual" | "corporate",
+      companyTitle: String((order.customer as Record<string, unknown> | undefined)?.companyTitle || (order as unknown as Record<string, unknown>).companyTitle || ""),
+      taxOffice: String((order.customer as Record<string, unknown> | undefined)?.taxOffice || (order as unknown as Record<string, unknown>).taxOffice || ""),
+      taxNumber: String((order.customer as Record<string, unknown> | undefined)?.taxNumber || (order as unknown as Record<string, unknown>).taxNumber || ""),
       vehiclePlate: order.plate,
       vehicleBrand: order.brand,
       vehicleModel: order.model,
@@ -247,16 +246,16 @@ export default function WorkOrderDetailPage() {
       grandTotal,
       paidAmount,
       remainingAmount,
-      status: (activeInvoice.status === "PAID" ? "PAID" : activeInvoice.status === "PARTIALLY_PAID" ? "PARTIALLY_PAID" : "UNPAID") as any,
-      payments: (activeInvoice.payments || []).map((p: any) => ({
-        id: p.id,
+      status: (activeInvoice.status === "PAID" ? "PAID" : activeInvoice.status === "PARTIALLY_PAID" ? "PARTIALLY_PAID" : "UNPAID") as BillingInvoice["status"],
+      payments: (activeInvoice.payments || []).map((p: Record<string, unknown>) => ({
+        id: String(p.id || ""),
         customerId: order.customerId,
         invoiceId: activeInvoice.id,
-        date: p.paymentDate || new Date().toISOString(),
+        date: String(p.paymentDate || new Date().toISOString()),
         amount: Number(p.amount),
-        method: (p.paymentMethod === "CREDIT_CARD" ? "POS" : p.paymentMethod === "BANK_TRANSFER" ? "BANK_TRANSFER" : "CASH") as any,
+        method: (p.paymentMethod === "CREDIT_CARD" ? "POS" : p.paymentMethod === "BANK_TRANSFER" ? "BANK_TRANSFER" : "CASH") as "CASH" | "POS" | "BANK_TRANSFER",
         performedByName: order.customerName,
-        createdAt: p.paymentDate || new Date().toISOString(),
+        createdAt: String(p.paymentDate || new Date().toISOString()),
       })),
       items: [
         ...(order.services || []).map((s) => ({
@@ -358,8 +357,9 @@ export default function WorkOrderDetailPage() {
       toast.success("İş emri iptal edildi.", {
         description: "İş emri iptal edildi ve parçalar otomatik olarak stoğa iade edildi.",
       })
-    } catch (e: any) {
-      toast.error(e?.message || "İş emri iptal edilirken bir hata oluştu.")
+    } catch (e: unknown) {
+      const err = e as Error
+      toast.error(err?.message || "İş emri iptal edilirken bir hata oluştu.")
     }
   }
 

@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button"
 import { WorkOrder, WorkOrderStatus, WorkOrderPriority, WorkOrderNote, WorkOrderPhoto } from "@/features/work-orders/types"
 import { KanbanBoard } from "@/features/work-orders/components/kanban-board"
 import { WorkOrderListView } from "@/features/work-orders/components/work-order-list-view"
-import { CreateWorkOrderModal } from "@/features/work-orders/components/create-work-order-modal"
+import { CreateWorkOrderModal, type CreateWorkOrderModalValues } from "@/features/work-orders/components/create-work-order-modal"
 import { CancelledWorkOrdersModal } from "@/features/work-orders/components/cancelled-work-orders-modal"
 import { cn } from "@/lib/utils"
 
@@ -141,7 +141,7 @@ export default function WorkOrdersPage() {
   const [timeframeFilter, setTimeframeFilter] = React.useState<"active_48h" | "today" | "week" | "all">("active_48h")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
-  const [cloneInitialData, setCloneInitialData] = React.useState<any>(null)
+  const [cloneInitialData, setCloneInitialData] = React.useState<Partial<CreateWorkOrderModalValues> | null>(null)
   const [isCancelledModalOpen, setIsCancelledModalOpen] = React.useState(false)
   const [listInitialFilter, setListInitialFilter] = React.useState<string>("all")
 
@@ -192,7 +192,9 @@ export default function WorkOrdersPage() {
       customerId: order.customerId,
       vehicleId: order.vehicleId,
       assignedLift: order.assignedLift || "",
-      assignedMechanic: order.assignedMechanic || "",
+      assignedMechanic: typeof order.assignedMechanic === "string"
+        ? order.assignedMechanic
+        : (order.assignedMechanic as { id?: string } | undefined)?.id || "",
       priority: order.priority || "NORMAL",
       serviceName: "Hızlı Arıza Tespiti & Genel Kontrol",
       laborPrice: 750,
@@ -414,7 +416,7 @@ export default function WorkOrdersPage() {
             <span className="font-medium shrink-0">Görünüm:</span>
             <select
               value={timeframeFilter}
-              onChange={(e) => setTimeframeFilter(e.target.value as any)}
+              onChange={(e) => setTimeframeFilter(e.target.value as "active_48h" | "today" | "week" | "all")}
               className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
               title="Atölye aktif panosu tamamlanan işleri 48 saat, iptalleri 24 saat gösterir"
             >

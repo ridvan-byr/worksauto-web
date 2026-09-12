@@ -57,9 +57,9 @@ export default function InvoicesPage() {
             : Math.max(0, grandTotal - paidAmount)
         )
 
-        const rawItems = (inv.workOrder?.items && inv.workOrder.items.length > 0)
+        const rawItems = (((inv.workOrder?.items && inv.workOrder.items.length > 0)
           ? inv.workOrder.items
-          : (inv.items || [])
+          : (inv.items || [])) as unknown as Array<Record<string, unknown>>)
 
         return {
           id: inv.id,
@@ -105,13 +105,13 @@ export default function InvoicesPage() {
             createdAt: p.createdAt,
           })),
           items: rawItems.length > 0
-            ? rawItems.map((i: any, idx: number) => ({
-                id: i.id || `item_${idx}`,
+            ? rawItems.map((i, idx: number) => ({
+                id: (i.id as string) || `item_${idx}`,
                 type: (i.itemType === 'PART' || i.type === 'PART' ? 'PART' : 'SERVICE') as "SERVICE" | "PART",
-                name: i.name || i.description || 'Hizmet / Kalem',
+                name: (i.name as string) || (i.description as string) || 'Hizmet / Kalem',
                 quantity: Number(i.quantity || 1),
                 unitPrice: Number(i.unitPrice || 0),
-                totalPrice: Number(i.totalPrice ?? ((i.quantity || 1) * (i.unitPrice || 0))),
+                totalPrice: Number(i.totalPrice ?? (Number(i.quantity || 1) * Number(i.unitPrice || 0))),
               }))
             : [
                 { id: 'item_1', type: 'SERVICE' as const, name: 'Genel Servis & Bakım Bedeli', quantity: 1, unitPrice: subtotal, totalPrice: subtotal }

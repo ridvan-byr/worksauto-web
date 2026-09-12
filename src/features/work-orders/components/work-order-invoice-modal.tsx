@@ -239,8 +239,9 @@ export function WorkOrderInvoiceModal({
                   <input
                     type="checkbox"
                     checked={useAdvanceOffset}
+                    disabled={isLoadingAdvance}
                     onChange={(e) => setUseAdvanceOffset(e.target.checked)}
-                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 cursor-pointer"
+                    className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 border-slate-300 cursor-pointer disabled:opacity-50"
                   />
                   <span className="text-xs font-bold text-sky-800 dark:text-sky-200">
                     Avanstan Mahsup Et

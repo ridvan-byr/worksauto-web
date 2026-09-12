@@ -24,6 +24,8 @@ import {
   CreateWorkOrderModalValues,
 } from "../schemas/work-order.schema"
 
+export type { CreateWorkOrderModalValues }
+
 interface CreateWorkOrderModalProps {
   isOpen: boolean
   onClose: () => void

@@ -25,7 +25,7 @@ export function ReopenWorkOrderModal({
   workOrderNumber,
   invoiceNumber,
   plate,
-  grandTotal,
+  grandTotal: _grandTotal,
   paidAmount = 0,
 }: ReopenWorkOrderModalProps) {
   const [mounted, setMounted] = React.useState(false)
