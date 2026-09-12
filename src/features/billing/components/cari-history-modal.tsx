@@ -6,6 +6,7 @@ import { X, Printer, AlertTriangle, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CorporatePrintDocument } from "@/components/print/corporate-print-document"
 import { CurrentAccount } from "../types"
+import { cn } from "@/lib/utils"
 
 interface CariHistoryModalProps {
   isOpen: boolean
@@ -127,9 +128,19 @@ export function CariHistoryModal({ isOpen, account, onClose }: CariHistoryModalP
                   <p className="text-slate-500 text-[11px]">
                     Toplam Tahsil Edilen: <strong className="text-emerald-600 font-mono">{account.totalCredits.toLocaleString("tr-TR")} ₺</strong>
                   </p>
-                  <p className="text-xs font-bold text-rose-600 mt-1 font-mono">
-                    Açık Bakiye: {account.balance.toLocaleString("tr-TR")} ₺
-                  </p>
+                  {account.balance > 0 ? (
+                    <p className="text-xs font-bold text-rose-600 mt-1 font-mono">
+                      Açık Borç: +{account.balance.toLocaleString("tr-TR")} ₺
+                    </p>
+                  ) : account.balance < 0 ? (
+                    <p className="text-xs font-bold text-sky-600 mt-1 font-mono">
+                      Müşteri Avansı: {account.balance.toLocaleString("tr-TR")} ₺
+                    </p>
+                  ) : (
+                    <p className="text-xs font-semibold text-slate-500 mt-1 font-mono">
+                      Bakiye Kapalı (0 ₺)
+                    </p>
+                  )}
                 </div>
               </div>
             }
@@ -143,9 +154,24 @@ export function CariHistoryModal({ isOpen, account, onClose }: CariHistoryModalP
                   <span>Yapılan Tahsilatlar:</span>
                   <span>-{account.totalCredits.toLocaleString("tr-TR")} ₺</span>
                 </div>
-                <div className="flex justify-between text-sm font-black text-rose-600 pt-2 border-t border-slate-200">
+                <div
+                  className={cn(
+                    "flex justify-between text-sm font-black pt-2 border-t border-slate-200",
+                    account.balance > 0
+                      ? "text-rose-600"
+                      : account.balance < 0
+                      ? "text-sky-600"
+                      : "text-slate-700"
+                  )}
+                >
                   <span className="font-sans text-slate-900">MUTABIK BAKİYE:</span>
-                  <span>{account.balance.toLocaleString("tr-TR")} ₺</span>
+                  <span>
+                    {account.balance > 0
+                      ? `+${account.balance.toLocaleString("tr-TR")} ₺ (Borçlu)`
+                      : account.balance < 0
+                      ? `${account.balance.toLocaleString("tr-TR")} ₺ (Avans / Alacaklı)`
+                      : "0 ₺ (Kapalı)"}
+                  </span>
                 </div>
               </div>
             }

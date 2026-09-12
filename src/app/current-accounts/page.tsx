@@ -12,6 +12,7 @@ import {
   FileText,
   TrendingDown,
   FileSpreadsheet,
+  Receipt,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -24,7 +25,7 @@ import { cn } from "@/lib/utils"
 export default function CurrentAccountsPage() {
   const [accounts, setAccounts] = React.useState<CurrentAccount[]>([])
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [filterType, setFilterType] = React.useState<"all" | "exceeded" | "has_balance">("all")
+  const [filterType, setFilterType] = React.useState<"all" | "exceeded" | "has_balance" | "has_advance">("all")
   const [isReconciliationOpen, setIsReconciliationOpen] = React.useState(false)
 
   // Modals
@@ -77,7 +78,12 @@ export default function CurrentAccountsPage() {
   }, [apiAccounts])
 
   // KPIs
-  const totalOpenBalance = accounts.reduce((sum, a) => sum + a.balance, 0)
+  const totalOpenBalance = accounts
+    .filter((a) => a.balance > 0)
+    .reduce((sum, a) => sum + a.balance, 0)
+  const totalAdvances = accounts
+    .filter((a) => a.balance < 0)
+    .reduce((sum, a) => sum + Math.abs(a.balance), 0)
   const totalCredits = accounts.reduce((sum, a) => sum + a.totalCredits, 0)
   const exceededCount = accounts.filter((a) => a.balance > a.creditLimit).length
   const totalAccountsCount = accounts.length
@@ -86,6 +92,7 @@ export default function CurrentAccountsPage() {
     return accounts.filter((a) => {
       if (filterType === "exceeded" && a.balance <= a.creditLimit) return false
       if (filterType === "has_balance" && a.balance <= 0) return false
+      if (filterType === "has_advance" && a.balance >= 0) return false
 
       if (!searchQuery.trim()) return true
       const q = searchQuery.toLowerCase().trim()
@@ -119,7 +126,7 @@ export default function CurrentAccountsPage() {
     setAccounts((prev) =>
       prev.map((acc) => {
         if (acc.customerId !== customerId) return acc
-        const newBalance = Math.max(0, acc.balance - amount)
+        const newBalance = acc.balance - amount
         const newCredits = acc.totalCredits + amount
         return {
           ...acc,
@@ -178,10 +185,15 @@ export default function CurrentAccountsPage() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
-            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Açık Cari Alacak</p>
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Açık Cari Alacak (Borçlu)</p>
             <p className="text-2xl font-bold text-rose-600 dark:text-rose-400 font-mono">
-              {totalOpenBalance.toLocaleString("tr-TR")} ₺
+              +{totalOpenBalance.toLocaleString("tr-TR")} ₺
             </p>
+            {totalAdvances > 0 && (
+              <p className="text-[10px] font-bold text-sky-600 dark:text-sky-400 font-mono">
+                Müşteri Avansları: {totalAdvances.toLocaleString("tr-TR")} ₺
+              </p>
+            )}
           </div>
           <div className="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center">
             <TrendingDown size={20} />
@@ -243,11 +255,12 @@ export default function CurrentAccountsPage() {
             { id: "all", label: "Tüm Cariler" },
             { id: "exceeded", label: "⚠️ Limiti Aşanlar", alert: true },
             { id: "has_balance", label: "Açık Borcu Olanlar" },
+            { id: "has_advance", label: "💼 Avansı Olanlar" },
           ].map((tab) => (
             <button
               key={tab.id}
               type="button"
-              onClick={() => setFilterType(tab.id as "all" | "exceeded" | "has_balance")}
+              onClick={() => setFilterType(tab.id as "all" | "exceeded" | "has_balance" | "has_advance")}
               className={cn(
                 "px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border",
                 filterType === tab.id
@@ -324,9 +337,17 @@ export default function CurrentAccountsPage() {
 
                       {/* Balance */}
                       <td className="py-4 px-4 font-mono text-xs">
-                        <span className={acc.balance > 0 ? "font-bold text-rose-600 dark:text-rose-400" : "text-slate-400"}>
-                          {acc.balance.toLocaleString("tr-TR")} ₺
-                        </span>
+                        {acc.balance > 0 ? (
+                          <span className="font-bold text-rose-600 dark:text-rose-400">
+                            +{acc.balance.toLocaleString("tr-TR")} ₺
+                          </span>
+                        ) : acc.balance < 0 ? (
+                          <span className="font-bold text-sky-600 dark:text-sky-400">
+                            {acc.balance.toLocaleString("tr-TR")} ₺
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">0 ₺</span>
+                        )}
                       </td>
 
                       {/* Risk Badge */}
@@ -337,14 +358,19 @@ export default function CurrentAccountsPage() {
                             <span>Limit Aşıldı (+{(acc.balance - acc.creditLimit).toLocaleString("tr-TR")} ₺)</span>
                           </span>
                         ) : acc.balance > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                             <ShieldCheck size={11} />
-                            <span>Limit Dahilinde</span>
+                            <span>Borçlu ({acc.balance.toLocaleString("tr-TR")} ₺)</span>
+                          </span>
+                        ) : acc.balance < 0 ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
+                            <Receipt size={11} />
+                            <span>Müşteri Alacaklı / Avans ({Math.abs(acc.balance).toLocaleString("tr-TR")} ₺)</span>
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 dark:text-slate-400 border border-slate-500/20">
                             <ShieldCheck size={11} />
-                            <span>Borç Yok (Sıfır)</span>
+                            <span>Bakiye Kapalı (0 ₺)</span>
                           </span>
                         )}
                       </td>
