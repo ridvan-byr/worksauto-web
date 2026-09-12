@@ -120,6 +120,17 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
     }
   }, [selectedCustomerId, selectedVehicleId, customers, setValue])
 
+  // Detect if selected vehicle already has an active, unfinished work order
+  const activeWorkOrderForVehicle = React.useMemo(() => {
+    if (!selectedVehicleId || !allWorkOrders) return null
+    return allWorkOrders.find(
+      (wo) =>
+        wo.vehicleId === selectedVehicleId &&
+        wo.status !== "COMPLETED" &&
+        wo.status !== "CANCELLED"
+    )
+  }, [selectedVehicleId, allWorkOrders])
+
   React.useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden"
@@ -133,17 +144,6 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
 
   const selectedCustomer = customers.find((c) => c.id === selectedCustomerId)
   const selectedVehicle = selectedCustomer?.vehicles.find((v) => v.id === selectedVehicleId)
-
-  // Detect if selected vehicle already has an active, unfinished work order
-  const activeWorkOrderForVehicle = React.useMemo(() => {
-    if (!selectedVehicleId || !allWorkOrders) return null
-    return allWorkOrders.find(
-      (wo) =>
-        wo.vehicleId === selectedVehicleId &&
-        wo.status !== "COMPLETED" &&
-        wo.status !== "CANCELLED"
-    )
-  }, [selectedVehicleId, allWorkOrders])
 
   const handleClose = () => {
     reset()
