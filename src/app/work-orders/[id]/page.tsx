@@ -38,6 +38,7 @@ import {
   AlertTriangle,
   Check,
   ExternalLink,
+  Ban,
   Printer,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -247,6 +248,31 @@ export default function WorkOrderDetailPage() {
       console.warn('API status update error:', e)
     }
     setOrder((prev) => (prev ? { ...prev, status } : null))
+  }
+
+  const handleCancelWorkOrder = async () => {
+    if (!order) return
+    if (order.status === "COMPLETED") {
+      toast.error("Tamamlanmış iş emri doğrudan iptal edilemez. Önce faturayı iptal etmelisiniz.")
+      return
+    }
+    const confirmed = window.confirm(
+      `#${order.workOrderNumber} numaralı iş emrini İPTAL etmek istediğinize emin misiniz?\n\n` +
+      `• Varsa bu iş emrine eklenmiş tüm parçalar otomatik olarak stoğa iade edilecektir.\n` +
+      `• Araç üzerindeki açık iş emri kaydı kapanacaktır.\n` +
+      `• Bu işlem geri alınamaz.`
+    )
+    if (!confirmed) return
+
+    try {
+      await updateStatusMutation.mutateAsync({ id: order.id, status: "CANCELLED" })
+      setOrder((prev) => (prev ? { ...prev, status: "CANCELLED" } : null))
+      toast.success("İş emri iptal edildi.", {
+        description: "İş emri iptal edildi ve parçalar otomatik olarak stoğa iade edildi.",
+      })
+    } catch (e: any) {
+      toast.error(e?.message || "İş emri iptal edilirken bir hata oluştu.")
+    }
   }
 
   const handleRemoveItem = async (itemId: string, itemName: string) => {
@@ -569,18 +595,40 @@ export default function WorkOrderDetailPage() {
         {/* Big Touch-Friendly Mechanic Action Buttons with Rollback */}
         <div className="flex flex-wrap items-center gap-2.5 self-stretch md:self-auto">
           {order.status === "PENDING" && (
-            <Button
-              type="button"
-              onClick={() => handleStatusUpdate("IN_PROGRESS")}
-              className="h-12 px-6 rounded-2xl text-xs font-bold gap-2 bg-sky-600 hover:bg-sky-700 text-white shadow-lg shadow-sky-600/25 cursor-pointer flex-1 md:flex-initial"
-            >
-              <Play size={16} fill="currentColor" />
-              <span>Aracı Lifte Al (İşleme Başla)</span>
-            </Button>
+            <div className="flex items-center gap-2 flex-1 md:flex-initial">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelWorkOrder}
+                className="h-12 px-4 rounded-2xl text-xs font-semibold text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 gap-1.5 cursor-pointer"
+                title="Yanlışlıkla açıldıysa bu iş emrini iptal et"
+              >
+                <Ban size={15} />
+                <span>İş Emrini İptal Et</span>
+              </Button>
+              <Button
+                type="button"
+                onClick={() => handleStatusUpdate("IN_PROGRESS")}
+                className="h-12 px-6 rounded-2xl text-xs font-bold gap-2 bg-sky-600 hover:bg-sky-700 text-white shadow-lg shadow-sky-600/25 cursor-pointer flex-1 md:flex-initial"
+              >
+                <Play size={16} fill="currentColor" />
+                <span>Aracı Lifte Al (İşleme Başla)</span>
+              </Button>
+            </div>
           )}
 
           {order.status === "IN_PROGRESS" && (
             <div className="flex items-center gap-2 flex-1 md:flex-initial">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCancelWorkOrder}
+                className="h-12 px-3.5 rounded-2xl text-xs font-semibold text-rose-600 dark:text-rose-400 border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 gap-1.5 cursor-pointer"
+                title="İş emrini iptal et ve parçaları stoğa iade et"
+              >
+                <Ban size={15} />
+                <span>İptal Et</span>
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -598,6 +646,16 @@ export default function WorkOrderDetailPage() {
                 <CheckCircle2 size={16} />
                 <span>İşi Tamamla & Teslime Hazırla</span>
               </Button>
+            </div>
+          )}
+
+          {order.status === "CANCELLED" && (
+            <div className="p-3 px-4 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-700 dark:text-rose-400 font-bold text-xs flex items-center gap-2">
+              <Ban size={16} className="text-rose-600 dark:text-rose-400" />
+              <span>Bu İş Emri İptal Edilmiştir</span>
+              <span className="text-[11px] font-normal text-rose-600/80 dark:text-rose-400/80">
+                (Parçalar otomatik stoğa iade edildi)
+              </span>
             </div>
           )}
 
