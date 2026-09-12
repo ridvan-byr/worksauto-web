@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils"
 import { WorkOrder } from "../types"
 import { useCustomers } from "@/features/customers/api/use-customers"
 import { useCreateWorkOrder, useWorkOrders } from "@/features/work-orders/api/use-work-orders"
-import { useStaff, useWorkshopBays } from "@/features/settings/api/use-settings"
+import { useStaff, useWorkshopBays, useServices } from "@/features/settings/api/use-settings"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import {
   CustomerSearchSelect,
@@ -41,7 +41,28 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
   const { data: allWorkOrders = [] } = useWorkOrders()
   const { data: staffList = [] } = useStaff()
   const { data: bays = [] } = useWorkshopBays()
+  const { data: serviceCatalog = [] } = useServices()
   const createOrderMutation = useCreateWorkOrder()
+
+  // Predefined service templates with recommended price
+  const suggestedServices = React.useMemo(() => {
+    if (serviceCatalog && serviceCatalog.length > 0) {
+      return serviceCatalog
+        .filter((s) => s.isActive !== false)
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          price: Number(s.basePrice || 750),
+        }))
+    }
+    return [
+      { id: "p1", name: "Hızlı Arıza Tespiti & Genel Kontrol", price: 750 },
+      { id: "p2", name: "Periyodik Bakım İşçiliği", price: 1250 },
+      { id: "p3", name: "Elektronik / Bilgisayarlı Beyin Testi", price: 950 },
+      { id: "p4", name: "Fren & Yürüyen Aksam Kontrolü", price: 600 },
+      { id: "p5", name: "Ücretsiz Kontrol / Garanti İncelemesi", price: 0 },
+    ]
+  }, [serviceCatalog])
 
   // Only actual workshop technicians / mechanics (exclude administrative OWNER/CASHIER)
   const mechanicStaffList = React.useMemo(() => {
@@ -494,15 +515,56 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
               </div>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                Başlangıç İşlemi <span className="text-rose-500">*</span>
-              </label>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                  Başlangıç İşlemi <span className="text-rose-500">*</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Katalogdan seçebilir veya serbest yazabilirsiniz
+                </span>
+              </div>
               <input
                 type="text"
+                list="suggested-services-list"
+                placeholder="Örn: Hızlı Arıza Tespiti & Genel Kontrol"
                 {...register("serviceName")}
+                onChange={(e) => {
+                  setValue("serviceName", e.target.value, { shouldValidate: true })
+                  const match = suggestedServices.find(
+                    (s) => s.name.toLowerCase() === e.target.value.toLowerCase()
+                  )
+                  if (match) {
+                    setValue("laborPrice", match.price, { shouldValidate: true })
+                  }
+                }}
                 className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
+              <datalist id="suggested-services-list">
+                {suggestedServices.map((s) => (
+                  <option key={s.id} value={s.name}>
+                    {s.name} (Önerilen: {s.price} ₺)
+                  </option>
+                ))}
+              </datalist>
+
+              {/* Quick Template Badges */}
+              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                {suggestedServices.slice(0, 4).map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => {
+                      setValue("serviceName", s.name, { shouldValidate: true })
+                      setValue("laborPrice", s.price, { shouldValidate: true })
+                    }}
+                    className="text-[10px] px-2 py-0.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-100/70 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 dark:hover:text-sky-400 hover:border-sky-300 transition-colors cursor-pointer"
+                  >
+                    {s.name} ({s.price} ₺)
+                  </button>
+                ))}
+              </div>
+
               {errors.serviceName && (
                 <p className="text-[10px] text-rose-500">{errors.serviceName.message}</p>
               )}
@@ -510,14 +572,33 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
-                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                  Taban İşçilik (TL) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="number"
-                  {...register("laborPrice", { valueAsNumber: true })}
-                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    Taban İşçilik (TL) <span className="text-rose-500">*</span>
+                  </label>
+                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                    Önerilen Fiyat
+                  </span>
+                </div>
+                <div className="relative">
+                  <input
+                    type="number"
+                    min="0"
+                    step="50"
+                    {...register("laborPrice", { valueAsNumber: true })}
+                    className="w-full h-10 px-3 pr-14 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setValue("laborPrice", 0, { shouldValidate: true })}
+                      className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-amber-100 dark:hover:bg-amber-950 hover:text-amber-700 transition-colors cursor-pointer"
+                      title="Garanti veya ücretsiz kontrol için 0 TL yap"
+                    >
+                      0 ₺
+                    </button>
+                  </div>
+                </div>
                 {errors.laborPrice && (
                   <p className="text-[10px] text-rose-500">{errors.laborPrice.message}</p>
                 )}
