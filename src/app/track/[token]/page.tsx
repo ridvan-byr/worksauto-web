@@ -21,6 +21,8 @@ import {
   Car,
   MapPin,
   MessageCircle,
+  XCircle,
+  Clock,
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -253,24 +255,32 @@ export default function PublicVehicleTrackPage() {
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border",
-                  data.status === "COMPLETED"
+                  data.status === "CANCELLED"
+                    ? "bg-rose-50 dark:bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30"
+                    : data.status === "COMPLETED"
                     ? "bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30"
                     : data.status === "IN_PROGRESS"
                     ? "bg-sky-50 dark:bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-200 dark:border-sky-500/30"
                     : "bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-500/30"
                 )}
               >
-                <span
-                  className={cn(
-                    "w-1.5 h-1.5 rounded-full",
-                    data.status === "COMPLETED"
-                      ? "bg-emerald-500 dark:bg-emerald-400"
-                      : data.status === "IN_PROGRESS"
-                      ? "bg-sky-500 dark:bg-sky-400 animate-pulse"
-                      : "bg-amber-500 dark:bg-amber-400"
-                  )}
-                />
-                {data.status === "COMPLETED"
+                {data.status === "CANCELLED" ? (
+                  <XCircle size={13} />
+                ) : (
+                  <span
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      data.status === "COMPLETED"
+                        ? "bg-emerald-500 dark:bg-emerald-400"
+                        : data.status === "IN_PROGRESS"
+                        ? "bg-sky-500 dark:bg-sky-400 animate-pulse"
+                        : "bg-amber-500 dark:bg-amber-400"
+                    )}
+                  />
+                )}
+                {data.status === "CANCELLED"
+                  ? "İş Emri İptal Edildi"
+                  : data.status === "COMPLETED"
                   ? "Teslimata Hazır"
                   : data.status === "IN_PROGRESS"
                   ? "İşlem Sürüyor"
@@ -304,76 +314,94 @@ export default function PublicVehicleTrackPage() {
           </div>
         </div>
 
-        {/* Minimalist Live Stepper Timeline */}
-        <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-5 transition-colors">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Sparkles size={14} className="text-sky-500 dark:text-sky-400" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
-                Canlı Servis Aşamaları
-              </h3>
-            </div>
-            <span className="text-[11px] text-slate-500 font-mono">
-              Aşama {currentStepIndex + 1} / 4
-            </span>
-          </div>
-
-          {/* Stepper Progress Bar (Horizontal on all devices) */}
-          <div className="relative pt-1 pb-1">
-            <div className="grid grid-cols-4 gap-2 relative z-10">
-              {STATUS_STEPS.map((step, idx) => {
-                const isPast = idx < currentStepIndex
-                const isCurrent = idx === currentStepIndex
-
-                return (
-                  <div key={step.key} className="flex flex-col items-center text-center">
-                    {/* Bar Indicator */}
-                    <div
-                      className={cn(
-                        "h-1.5 w-full rounded-full transition-all duration-300 mb-2.5",
-                        isPast
-                          ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
-                          : isCurrent
-                          ? "bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.5)] animate-pulse"
-                          : "bg-slate-200 dark:bg-white/[0.08]"
-                      )}
-                    />
-                    <span
-                      className={cn(
-                        "text-[10px] sm:text-xs font-semibold tracking-tight transition-colors line-clamp-1",
-                        isPast
-                          ? "text-emerald-600 dark:text-emerald-400"
-                          : isCurrent
-                          ? "text-slate-900 dark:text-white font-bold"
-                          : "text-slate-400 dark:text-slate-500"
-                      )}
-                    >
-                      {step.shortTitle}
-                    </span>
-                  </div>
-                )
-              })}
+        {/* Status Section: Stepper Timeline or Cancellation Notice */}
+        {data.status === "CANCELLED" ? (
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-rose-200 dark:border-rose-500/20 backdrop-blur-md shadow-xs dark:shadow-xl space-y-3 transition-colors">
+            <div className="flex items-start gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <XCircle size={22} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                  Bu Servis İş Emri İptal Edilmiştir
+                </h3>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                  Aracınıza ait servis iş emri iptal edilmiştir. Yapılan veya planlanan herhangi bir aktif bakım/onarım işlemi bulunmamaktadır. Ayrıntılı bilgi almak ya da yeni bir servis randevusu oluşturmak için servis danışmanınız ile iletişime geçebilirsiniz.
+                </p>
+              </div>
             </div>
           </div>
-
-          {/* Active Step Description Card */}
-          <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.06] flex items-start gap-3">
-            <div
-              className={cn(
-                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold",
-                data.status === "COMPLETED"
-                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                  : "bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20"
-              )}
-            >
-              {data.status === "COMPLETED" ? <Check size={16} /> : currentStepIndex + 1}
+        ) : (
+          <div className="p-5 sm:p-6 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-5 transition-colors">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Sparkles size={14} className="text-sky-500 dark:text-sky-400" />
+                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300">
+                  Canlı Servis Aşamaları
+                </h3>
+              </div>
+              <span className="text-[11px] text-slate-500 font-mono">
+                Aşama {currentStepIndex + 1} / 4
+              </span>
             </div>
-            <div className="space-y-0.5 min-w-0">
-              <h4 className="text-xs font-bold text-slate-900 dark:text-white">{currentStepInfo.title}</h4>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{currentStepInfo.desc}</p>
+
+            {/* Stepper Progress Bar (Horizontal on all devices) */}
+            <div className="relative pt-1 pb-1">
+              <div className="grid grid-cols-4 gap-2 relative z-10">
+                {STATUS_STEPS.map((step, idx) => {
+                  const isPast = idx < currentStepIndex
+                  const isCurrent = idx === currentStepIndex
+
+                  return (
+                    <div key={step.key} className="flex flex-col items-center text-center">
+                      {/* Bar Indicator */}
+                      <div
+                        className={cn(
+                          "h-1.5 w-full rounded-full transition-all duration-300 mb-2.5",
+                          isPast
+                            ? "bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.3)]"
+                            : isCurrent
+                            ? "bg-sky-500 shadow-[0_0_10px_rgba(14,165,233,0.5)] animate-pulse"
+                            : "bg-slate-200 dark:bg-white/[0.08]"
+                        )}
+                      />
+                      <span
+                        className={cn(
+                          "text-[10px] sm:text-xs font-semibold tracking-tight transition-colors line-clamp-1",
+                          isPast
+                            ? "text-emerald-600 dark:text-emerald-400"
+                            : isCurrent
+                            ? "text-slate-900 dark:text-white font-bold"
+                            : "text-slate-400 dark:text-slate-500"
+                        )}
+                      >
+                        {step.shortTitle}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Active Step Description Card */}
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/[0.06] flex items-start gap-3">
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold",
+                  data.status === "COMPLETED"
+                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                    : "bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20"
+                )}
+              >
+                {data.status === "COMPLETED" ? <Check size={16} /> : currentStepIndex + 1}
+              </div>
+              <div className="space-y-0.5 min-w-0">
+                <h4 className="text-xs font-bold text-slate-900 dark:text-white">{currentStepInfo.title}</h4>
+                <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">{currentStepInfo.desc}</p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Multi-Channel Customer Contact Hub */}
         <div className="p-5 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-3.5 transition-colors">
