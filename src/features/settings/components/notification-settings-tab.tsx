@@ -58,7 +58,9 @@ export function NotificationSettingsTab() {
   const draggedIndexRef = React.useRef<number | null>(null)
   const initialOrderRef = React.useRef<string[]>([])
   const channelPriorityRef = React.useRef(settings.channelPriority)
-  channelPriorityRef.current = settings.channelPriority
+  React.useEffect(() => {
+    channelPriorityRef.current = settings.channelPriority
+  }, [settings.channelPriority])
   const [mounted, setMounted] = React.useState(false)
 
   // 6563 ETK Commercial Communication State
@@ -562,7 +564,12 @@ export function NotificationSettingsTab() {
                   <button
                     key={ch.id}
                     type="button"
-                    onClick={() => setSettings({ ...settings, singleChannel: ch.id as any })}
+                    onClick={() =>
+                      setSettings({
+                        ...settings,
+                        singleChannel: ch.id as NotificationSettingsData["singleChannel"],
+                      })
+                    }
                     className={cn(
                       "p-3.5 rounded-2xl border text-left transition-all cursor-pointer",
                       isSelected

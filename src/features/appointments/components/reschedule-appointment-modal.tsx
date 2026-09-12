@@ -9,9 +9,7 @@ import {
   MessageSquare,
   AlertCircle,
   Clock,
-  Sparkles,
   X,
-  Calendar,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Appointment } from "../types"

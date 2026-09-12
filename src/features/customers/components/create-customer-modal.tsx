@@ -121,6 +121,9 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
 
   const customerType = watch("customerType")
   const plateValue = watch("plate")
+  const selectedCity = watch("city") || ""
+  const selectedDistrict = watch("district") || ""
+  const availableDistricts = React.useMemo(() => getDistrictsForProvince(selectedCity), [selectedCity])
 
   React.useEffect(() => {
     setMounted(true)
@@ -142,10 +145,6 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue("phone", formatSmartPhone(e.target.value), { shouldValidate: true })
   }
-
-  const selectedCity = watch("city") || ""
-  const selectedDistrict = watch("district") || ""
-  const availableDistricts = React.useMemo(() => getDistrictsForProvince(selectedCity), [selectedCity])
 
   const handleCityChange = (city: string) => {
     setValue("city", city, { shouldValidate: true })

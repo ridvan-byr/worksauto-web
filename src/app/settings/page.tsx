@@ -31,6 +31,9 @@ import { StaffTab } from "@/features/settings/components/staff-tab"
 import { WorkshopBaysTab } from "@/features/settings/components/workshop-bays-tab"
 import { NotificationSettingsTab } from "@/features/settings/components/notification-settings-tab"
 
+type SettingsTab = "profile" | "services" | "staff" | "bays" | "notifications"
+const VALID_TABS: readonly SettingsTab[] = ["profile", "services", "staff", "bays", "notifications"] as const
+
 export default function SettingsPage() {
   const { user } = useAuth()
   const userRole = (user?.role || "").toUpperCase()
@@ -54,9 +57,6 @@ export default function SettingsPage() {
   const createBayMutation = useCreateWorkshopBay()
   const updateBayMutation = useUpdateWorkshopBay()
   const deleteBayMutation = useDeleteWorkshopBay()
-
-  type SettingsTab = "profile" | "services" | "staff" | "bays" | "notifications"
-  const VALID_TABS: SettingsTab[] = ["profile", "services", "staff", "bays", "notifications"]
 
   // Tab State
   const [activeTab, setActiveTabState] = React.useState<SettingsTab>("profile")

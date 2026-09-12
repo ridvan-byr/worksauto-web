@@ -99,4 +99,12 @@ describe("Turkish GSM Phone Utils", () => {
       expect(normalizeTurkishGsm("+905321234567")).toBe("+905321234567")
     })
   })
+
+  describe("formatTurkishGsmDisplay", () => {
+    it("should format raw phone to 05XX XXX XX XX for display", () => {
+      expect(formatTurkishGsmDisplay("5321234567")).toBe("0532 123 45 67")
+      expect(formatTurkishGsmDisplay("05321234567")).toBe("0532 123 45 67")
+      expect(formatTurkishGsmDisplay("+491701234567")).toBe("+491701234567")
+    })
+  })
 })

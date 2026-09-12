@@ -35,7 +35,7 @@ import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-mo
 import { KvkkConsentBadge } from "@/features/customers/components/kvkk-consent-badge"
 import { InvoiceDetailModal } from "@/features/billing/components/invoice-detail-modal"
 import { CariHistoryModal } from "@/features/billing/components/cari-history-modal"
-import { Invoice, CurrentAccount } from "@/features/billing/types"
+import { Invoice } from "@/features/billing/types"
 import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/vehicle-formatters"
 import { cn } from "@/lib/utils"
 

@@ -19,7 +19,7 @@ const PRIORITY_WEIGHT: Record<string, number> = {
 
 const STORAGE_KEY = "worksauto_work_orders_sequence"
 
-export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanBoardProps) {
+export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorderOrders }: KanbanBoardProps) {
   const [dragOverColumn, setDragOverColumn] = React.useState<WorkOrderStatus | null>(null)
 
   // Live Drag State (tracks active dragged order, its origin status and slot index)
@@ -220,11 +220,14 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
 
   // Column references kept current for zero-latency live drag updates
   const pendingOrdersRef = React.useRef(pendingOrders)
-  pendingOrdersRef.current = pendingOrders
   const inProgressOrdersRef = React.useRef(inProgressOrders)
-  inProgressOrdersRef.current = inProgressOrders
   const completedOrdersRef = React.useRef(completedOrders)
-  completedOrdersRef.current = completedOrders
+
+  React.useEffect(() => {
+    pendingOrdersRef.current = pendingOrders
+    inProgressOrdersRef.current = inProgressOrders
+    completedOrdersRef.current = completedOrders
+  }, [pendingOrders, inProgressOrders, completedOrders])
 
   // Live Reorder while dragging over slots within the SAME column
   const handleLiveSlotReorder = React.useCallback(

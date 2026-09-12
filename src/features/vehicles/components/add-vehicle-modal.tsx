@@ -18,7 +18,6 @@ import {
   Building2,
   Search,
   ChevronDown,
-  Check,
   PlusCircle,
   AlertCircle,
 } from "lucide-react"

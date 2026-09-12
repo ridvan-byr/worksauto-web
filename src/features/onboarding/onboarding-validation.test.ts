@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { isValidTurkishGsm, formatTurkishGsmInput } from "@/lib/phone-utils"
+import { isValidTurkishGsm } from "@/lib/phone-utils"
 import { filterPersonNameInput, validatePersonName } from "@/lib/name-utils"
 
 describe("Onboarding Formats & Validation Rules", () => {

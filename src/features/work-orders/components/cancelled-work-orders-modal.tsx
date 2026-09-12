@@ -3,11 +3,10 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
-import { X, XCircle, ArrowUpRight, Wrench, RefreshCw, Calendar, User, Phone, CheckCircle2 } from "lucide-react"
+import { X, XCircle, ArrowUpRight, RefreshCw, User, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { WorkOrder, WorkOrderStatus } from "../types"
-import { cn } from "@/lib/utils"
 
 interface CancelledWorkOrdersModalProps {
   isOpen: boolean
