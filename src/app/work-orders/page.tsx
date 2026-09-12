@@ -141,6 +141,7 @@ export default function WorkOrdersPage() {
   const [timeframeFilter, setTimeframeFilter] = React.useState<"active_48h" | "today" | "week" | "all">("active_48h")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
+  const [cloneInitialData, setCloneInitialData] = React.useState<any>(null)
   const [isCancelledModalOpen, setIsCancelledModalOpen] = React.useState(false)
   const [listInitialFilter, setListInitialFilter] = React.useState<string>("all")
 
@@ -183,6 +184,21 @@ export default function WorkOrdersPage() {
   const handleCreatedOrder = (newOrder: WorkOrder) => {
     const mapped = mapApiWorkOrderToWorkOrder(newOrder)
     setOrders((prev) => [mapped, ...prev.filter((o) => o.id !== mapped.id)])
+    setCloneInitialData(null)
+  }
+
+  const handleCloneCancelledOrder = (order: WorkOrder) => {
+    setCloneInitialData({
+      customerId: order.customerId,
+      vehicleId: order.vehicleId,
+      assignedLift: order.assignedLift || "",
+      assignedMechanic: order.assignedMechanic || "",
+      priority: order.priority || "NORMAL",
+      serviceName: "Hızlı Arıza Tespiti & Genel Kontrol",
+      laborPrice: 750,
+      initialNote: `İptal edilen #${order.workOrderNumber} numaralı iş emrinden kopyalanarak başlatıldı.`,
+    })
+    setIsCreateModalOpen(true)
   }
 
   // Dynamic distinct technician list for filtering (excludes administrative roles without mechanic profile)
@@ -472,7 +488,7 @@ export default function WorkOrdersPage() {
         isOpen={isCancelledModalOpen}
         onClose={() => setIsCancelledModalOpen(false)}
         orders={cancelledOrdersList}
-        onStatusChange={handleStatusChange}
+        onCloneAsNew={handleCloneCancelledOrder}
         onSwitchToList={() => {
           setIsCancelledModalOpen(false)
           setListInitialFilter("CANCELLED")
@@ -483,8 +499,12 @@ export default function WorkOrdersPage() {
       {/* Create Modal */}
       <CreateWorkOrderModal
         isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
+        onClose={() => {
+          setIsCreateModalOpen(false)
+          setCloneInitialData(null)
+        }}
         onCreated={handleCreatedOrder}
+        initialData={cloneInitialData}
       />
     </div>
   )

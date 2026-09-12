@@ -28,9 +28,15 @@ interface CreateWorkOrderModalProps {
   isOpen: boolean
   onClose: () => void
   onCreated: (order: WorkOrder) => void
+  initialData?: Partial<CreateWorkOrderModalValues> | null
 }
 
-export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkOrderModalProps) {
+export function CreateWorkOrderModal({
+  isOpen,
+  onClose,
+  onCreated,
+  initialData,
+}: CreateWorkOrderModalProps) {
   const router = useRouter()
   const [mounted, setMounted] = React.useState(false)
   const [step, setStep] = React.useState<1 | 2>(1)
@@ -124,6 +130,23 @@ export function CreateWorkOrderModal({ isOpen, onClose, onCreated }: CreateWorkO
   React.useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Auto-populate when cloning or passing initialData
+  React.useEffect(() => {
+    if (isOpen && initialData) {
+      reset({
+        customerId: initialData.customerId || "",
+        vehicleId: initialData.vehicleId || "",
+        assignedLift: initialData.assignedLift || "",
+        assignedMechanic: initialData.assignedMechanic || "",
+        priority: initialData.priority || "NORMAL",
+        serviceName: initialData.serviceName || "Hızlı Arıza Tespiti & Genel Kontrol",
+        laborPrice: initialData.laborPrice || 750,
+        initialNote: initialData.initialNote || "",
+      })
+      setStep(1)
+    }
+  }, [isOpen, initialData, reset])
 
   // Sync vehicle when customer changes
   React.useEffect(() => {

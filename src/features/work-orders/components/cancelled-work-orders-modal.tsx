@@ -3,7 +3,7 @@
 import * as React from "react"
 import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
-import { X, XCircle, ArrowUpRight, RefreshCw, User, CheckCircle2 } from "lucide-react"
+import { X, XCircle, ArrowUpRight, PlusCircle, FileText, User, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { WorkOrder, WorkOrderStatus } from "../types"
@@ -12,7 +12,8 @@ interface CancelledWorkOrdersModalProps {
   isOpen: boolean
   onClose: () => void
   orders: WorkOrder[]
-  onStatusChange: (id: string, newStatus: WorkOrderStatus) => void
+  onStatusChange?: (id: string, newStatus: WorkOrderStatus) => void
+  onCloneAsNew?: (order: WorkOrder) => void
   onSwitchToList: () => void
 }
 
@@ -20,7 +21,7 @@ export function CancelledWorkOrdersModal({
   isOpen,
   onClose,
   orders,
-  onStatusChange,
+  onCloneAsNew,
   onSwitchToList,
 }: CancelledWorkOrdersModalProps) {
   const [mounted, setMounted] = React.useState(false)
@@ -147,22 +148,23 @@ export function CancelledWorkOrdersModal({
                         onClose()
                         router.push(`/work-orders/${order.id}`)
                       }}
-                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1 cursor-pointer"
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                      title="İş emrinin geçmişini ve detaylarını incele"
                     >
+                      <FileText size={13} />
                       <span>İncele</span>
-                      <ArrowUpRight size={12} />
                     </button>
                     <button
                       type="button"
                       onClick={() => {
-                        onStatusChange(order.id, "IN_PROGRESS")
                         onClose()
+                        onCloneAsNew?.(order)
                       }}
-                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-sky-500 hover:bg-sky-600 text-white transition-all flex items-center gap-1 cursor-pointer shadow-xs shadow-sky-500/20"
-                      title="İşi tekrar lifte / işleme geri al"
+                      className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white transition-all flex items-center gap-1.5 cursor-pointer shadow-xs shadow-sky-600/20"
+                      title="Bu aracın müşteri ve işlem bilgilerini kullanarak yeni ve temiz bir iş emri başlat"
                     >
-                      <RefreshCw size={12} />
-                      <span>İşleme Geri Al</span>
+                      <PlusCircle size={13} />
+                      <span>Yeni İş Emri Aç</span>
                     </button>
                   </div>
                 </div>
