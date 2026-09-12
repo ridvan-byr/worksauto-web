@@ -112,14 +112,12 @@ export default function PublicInvoicePaymentPage() {
           <AlertCircle size={32} />
         </div>
         <h1 className="text-xl font-bold text-slate-100 mb-2">Ödeme Başlatılamadı</h1>
-        <p className="text-xs text-slate-400 max-w-sm text-center mb-6">
+        <p className="text-xs text-slate-400 max-w-sm text-center mb-3 leading-relaxed">
           {error || "Bu fatura için ödenecek aktif bir bakiye bulunmuyor."}
         </p>
-        <Link href="/">
-          <Button variant="outline" className="text-xs border-slate-700 text-slate-300">
-            Ana Sayfaya Dön
-          </Button>
-        </Link>
+        <p className="text-[11px] text-slate-500 max-w-xs text-center leading-relaxed">
+          Lütfen size iletilen güncel fatura bağlantısını kontrol ediniz ya da doğrudan servis muhasebesi ile iletişime geçiniz.
+        </p>
       </div>
     )
   }
