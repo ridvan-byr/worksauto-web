@@ -37,12 +37,12 @@ export function WorkOrderCard({ order, onStatusChange }: WorkOrderCardProps) {
         e.dataTransfer.effectAllowed = "move"
       }}
       onDragEnd={() => setIsDragging(false)}
-      className={`p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md hover:border-sky-500/40 transition-all cursor-grab active:cursor-grabbing space-y-3 group select-none ${
+      className={`p-4 sm:p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md hover:border-sky-500/40 transition-all cursor-grab active:cursor-grabbing space-y-3.5 group select-none ${
         isDragging ? "opacity-40 scale-95 border-sky-400" : ""
       }`}
     >
       {/* Top Header: Plate & WO Number */}
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 pt-0.5">
         <PlateBadge plate={order.plate} size="sm" />
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">

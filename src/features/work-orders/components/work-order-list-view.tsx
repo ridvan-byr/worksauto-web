@@ -10,12 +10,19 @@ import { cn } from "@/lib/utils"
 
 interface WorkOrderListViewProps {
   orders: WorkOrder[]
+  initialStatusFilter?: string
 }
 
-export function WorkOrderListView({ orders }: WorkOrderListViewProps) {
+export function WorkOrderListView({ orders, initialStatusFilter }: WorkOrderListViewProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = React.useState("")
-  const [statusFilter, setStatusFilter] = React.useState<string>("all")
+  const [statusFilter, setStatusFilter] = React.useState<string>(initialStatusFilter || "all")
+
+  React.useEffect(() => {
+    if (initialStatusFilter) {
+      setStatusFilter(initialStatusFilter)
+    }
+  }, [initialStatusFilter])
 
   const filtered = React.useMemo(() => {
     return orders.filter((o) => {

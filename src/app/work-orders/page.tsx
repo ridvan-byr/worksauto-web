@@ -14,12 +14,14 @@ import {
   Clock,
   Filter,
   Search,
+  XCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkOrder, WorkOrderStatus, WorkOrderPriority, WorkOrderNote, WorkOrderPhoto } from "@/features/work-orders/types"
 import { KanbanBoard } from "@/features/work-orders/components/kanban-board"
 import { WorkOrderListView } from "@/features/work-orders/components/work-order-list-view"
 import { CreateWorkOrderModal } from "@/features/work-orders/components/create-work-order-modal"
+import { CancelledWorkOrdersModal } from "@/features/work-orders/components/cancelled-work-orders-modal"
 import { cn } from "@/lib/utils"
 
 interface ApiWorkOrderInput {
@@ -137,6 +139,8 @@ export default function WorkOrdersPage() {
   const [selectedStaffFilter, setSelectedStaffFilter] = React.useState<string>("all")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
+  const [isCancelledModalOpen, setIsCancelledModalOpen] = React.useState(false)
+  const [listInitialFilter, setListInitialFilter] = React.useState<string>("all")
 
   const { data: apiOrders } = useWorkOrders()
   const { data: staffMembers = [] } = useStaff()
@@ -236,6 +240,10 @@ export default function WorkOrdersPage() {
   const inProgressCount = orders.filter((o) => o.status === "IN_PROGRESS").length
   const pendingCount = orders.filter((o) => o.status === "PENDING").length
   const completedCount = orders.filter((o) => o.status === "COMPLETED").length
+  const cancelledOrdersList = React.useMemo(() => {
+    return orders.filter((o) => o.status === "CANCELLED")
+  }, [orders])
+  const cancelledCount = cancelledOrdersList.length
   const totalWOCount = orders.length
 
   return (
@@ -344,35 +352,53 @@ export default function WorkOrdersPage() {
           </div>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-          <button
-            type="button"
-            onClick={() => setViewMode("kanban")}
-            className={cn(
-              "py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
-              viewMode === "kanban"
-                ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-            )}
-          >
-            <LayoutGrid size={13} />
-            <span>Atölye Panosu (Kanban)</span>
-          </button>
+        {/* Action Controls: Cancelled Orders Button & View Toggle */}
+        <div className="flex flex-wrap items-center gap-2">
+          {cancelledCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsCancelledModalOpen(true)}
+              className="h-9 px-3 rounded-xl border border-rose-200/90 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs"
+              title="İptal edilen iş emirlerini görüntüle"
+            >
+              <XCircle size={14} />
+              <span>İptal Edilenler ({cancelledCount})</span>
+            </button>
+          )}
 
-          <button
-            type="button"
-            onClick={() => setViewMode("list")}
-            className={cn(
-              "py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
-              viewMode === "list"
-                ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
-            )}
-          >
-            <List size={13} />
-            <span>Liste Tablosu</span>
-          </button>
+          {/* View Toggle */}
+          <div className="flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <button
+              type="button"
+              onClick={() => setViewMode("kanban")}
+              className={cn(
+                "py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
+                viewMode === "kanban"
+                  ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              )}
+            >
+              <LayoutGrid size={13} />
+              <span>Atölye Panosu (Kanban)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setListInitialFilter("all")
+                setViewMode("list")
+              }}
+              className={cn(
+                "py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
+                viewMode === "list"
+                  ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              )}
+            >
+              <List size={13} />
+              <span>Liste Tablosu</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -380,8 +406,21 @@ export default function WorkOrdersPage() {
       {viewMode === "kanban" ? (
         <KanbanBoard orders={displayedOrders} onStatusChange={handleStatusChange} />
       ) : (
-        <WorkOrderListView orders={displayedOrders} />
+        <WorkOrderListView orders={displayedOrders} initialStatusFilter={listInitialFilter} />
       )}
+
+      {/* Cancelled Work Orders Modal */}
+      <CancelledWorkOrdersModal
+        isOpen={isCancelledModalOpen}
+        onClose={() => setIsCancelledModalOpen(false)}
+        orders={cancelledOrdersList}
+        onStatusChange={handleStatusChange}
+        onSwitchToList={() => {
+          setIsCancelledModalOpen(false)
+          setListInitialFilter("CANCELLED")
+          setViewMode("list")
+        }}
+      />
 
       {/* Create Modal */}
       <CreateWorkOrderModal
