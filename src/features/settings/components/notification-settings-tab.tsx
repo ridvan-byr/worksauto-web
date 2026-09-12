@@ -55,6 +55,10 @@ export function NotificationSettingsTab() {
   const [isSaving, setIsSaving] = React.useState(false)
   const [showQrModal, setShowQrModal] = React.useState(false)
   const [draggedIndex, setDraggedIndex] = React.useState<number | null>(null)
+  const draggedIndexRef = React.useRef<number | null>(null)
+  const initialOrderRef = React.useRef<string[]>([])
+  const channelPriorityRef = React.useRef(settings.channelPriority)
+  channelPriorityRef.current = settings.channelPriority
   const [mounted, setMounted] = React.useState(false)
 
   // 6563 ETK Commercial Communication State
@@ -141,6 +145,31 @@ export function NotificationSettingsTab() {
 
     setSettings({ ...settings, channelPriority: newPriority })
     toast.info(`İletişim sırası güncellendi: ${newPriority.join(" ➔ ")}`)
+  }
+
+  const handleLiveReorder = (targetIdx: number) => {
+    const currentDragged = draggedIndexRef.current
+    if (currentDragged === null || currentDragged === targetIdx) return
+
+    setSettings((prev) => {
+      const updated = [...prev.channelPriority]
+      const [removed] = updated.splice(currentDragged, 1)
+      updated.splice(targetIdx, 0, removed)
+      return { ...prev, channelPriority: updated }
+    })
+
+    draggedIndexRef.current = targetIdx
+    setDraggedIndex(targetIdx)
+  }
+
+  const handleDragEnd = () => {
+    draggedIndexRef.current = null
+    setDraggedIndex(null)
+    const current = channelPriorityRef.current
+    const initial = initialOrderRef.current
+    if (initial.length > 0 && initial.join(",") !== current.join(",")) {
+      toast.info(`İletişim sırası güncellendi: ${current.join(" ➔ ")}`)
+    }
   }
 
   if (isLoading) {
@@ -295,7 +324,7 @@ export function NotificationSettingsTab() {
               )}
             >
               <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-bold">⚡ Öncelik Sırasına Göre (Fallback)</span>
+                <span className="text-xs font-bold">Öncelik Sırasına Göre (Fallback)</span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-semibold">Önerilen</span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
@@ -313,7 +342,7 @@ export function NotificationSettingsTab() {
                   : "border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
               )}
             >
-              <div className="text-xs font-bold mb-1.5">📢 Çoklu Gönderim (Broadcast)</div>
+              <div className="text-xs font-bold mb-1.5">Çoklu Gönderim (Broadcast)</div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
                 Seçili tüm aktif kanallardan aynı anda müşteriye iletilir. Acil durumlar ve yüksek görünürlük içindir.
               </p>
@@ -329,7 +358,7 @@ export function NotificationSettingsTab() {
                   : "border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50"
               )}
             >
-              <div className="text-xs font-bold mb-1.5">🎯 Yalnızca Tek Kanal</div>
+              <div className="text-xs font-bold mb-1.5">Yalnızca Tek Kanal</div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-normal">
                 Diğer kanallara asla bakmadan yalnızca belirlenen tek kanalı kullanır.
               </p>
@@ -372,29 +401,32 @@ export function NotificationSettingsTab() {
                     key={channel}
                     draggable
                     onDragStart={(e) => {
+                      draggedIndexRef.current = idx
                       setDraggedIndex(idx)
+                      initialOrderRef.current = [...settings.channelPriority]
                       e.dataTransfer.effectAllowed = "move"
+                      e.dataTransfer.setData("text/plain", `${idx}`)
+                    }}
+                    onDragEnter={(e) => {
+                      e.preventDefault()
+                      handleLiveReorder(idx)
                     }}
                     onDragOver={(e) => {
                       e.preventDefault()
                       e.dataTransfer.dropEffect = "move"
+                      handleLiveReorder(idx)
                     }}
+                    onDragEnd={handleDragEnd}
                     onDrop={(e) => {
                       e.preventDefault()
-                      if (draggedIndex === null || draggedIndex === idx) return
-                      const updated = [...settings.channelPriority]
-                      const [removed] = updated.splice(draggedIndex, 1)
-                      updated.splice(idx, 0, removed)
-                      setSettings({ ...settings, channelPriority: updated })
-                      setDraggedIndex(null)
-                      toast.info(`İletişim sırası güncellendi: ${updated.join(" ➔ ")}`)
+                      handleDragEnd()
                     }}
                     className={cn(
-                      "flex items-center justify-between p-3.5 rounded-2xl border transition-all select-none",
+                      "flex items-center justify-between p-3.5 rounded-2xl border transition-all duration-150 select-none cursor-grab active:cursor-grabbing",
                       isFirst
                         ? "border-emerald-500/40 bg-emerald-500/5 dark:bg-emerald-500/10 shadow-xs"
                         : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700",
-                      draggedIndex === idx && "opacity-40 scale-98 border-dashed border-sky-500"
+                      draggedIndex === idx && "opacity-60 scale-[0.99] border-dashed border-sky-500 bg-sky-500/10 shadow-md ring-2 ring-sky-500/30"
                     )}
                   >
                     <div className="flex items-center gap-3.5">
@@ -414,11 +446,22 @@ export function NotificationSettingsTab() {
 
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                            {channel === "WHATSAPP" && "🟢 WhatsApp Servis Mesajı"}
-                            {channel === "SMS" && "📱 SMS (Kısa Mesaj)"}
-                            {channel === "EMAIL" && "🔵 E-Posta"}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            {channel === "WHATSAPP" && (
+                              <MessageSquare size={14} className="text-emerald-500 shrink-0" />
+                            )}
+                            {channel === "SMS" && (
+                              <Smartphone size={14} className="text-sky-500 shrink-0" />
+                            )}
+                            {channel === "EMAIL" && (
+                              <Mail size={14} className="text-indigo-500 shrink-0" />
+                            )}
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                              {channel === "WHATSAPP" && "WhatsApp Servis Mesajı"}
+                              {channel === "SMS" && "SMS (Kısa Mesaj)"}
+                              {channel === "EMAIL" && "E-Posta"}
+                            </span>
+                          </div>
                           <span
                             className={cn(
                               "text-[10px] px-2 py-0.5 rounded-full font-semibold",
@@ -491,11 +534,30 @@ export function NotificationSettingsTab() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               {[
-                { id: "WHATSAPP", label: "🟢 WhatsApp", sub: "Yalnızca WhatsApp üzerinden" },
-                { id: "SMS", label: "📱 SMS", sub: "Yalnızca Kısa Mesaj üzerinden" },
-                { id: "EMAIL", label: "🔵 E-Posta", sub: "Yalnızca E-Posta üzerinden" },
+                {
+                  id: "WHATSAPP",
+                  label: "WhatsApp",
+                  sub: "Yalnızca WhatsApp üzerinden",
+                  icon: MessageSquare,
+                  color: "text-emerald-500",
+                },
+                {
+                  id: "SMS",
+                  label: "SMS",
+                  sub: "Yalnızca Kısa Mesaj üzerinden",
+                  icon: Smartphone,
+                  color: "text-sky-500",
+                },
+                {
+                  id: "EMAIL",
+                  label: "E-Posta",
+                  sub: "Yalnızca E-Posta üzerinden",
+                  icon: Mail,
+                  color: "text-indigo-500",
+                },
               ].map((ch) => {
                 const isSelected = settings.singleChannel === ch.id
+                const Icon = ch.icon
                 return (
                   <button
                     key={ch.id}
@@ -508,7 +570,10 @@ export function NotificationSettingsTab() {
                         : "border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300"
                     )}
                   >
-                    <p className="text-xs font-bold">{ch.label}</p>
+                    <div className="flex items-center gap-1.5">
+                      <Icon size={14} className={ch.color} />
+                      <p className="text-xs font-bold">{ch.label}</p>
+                    </div>
                     <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">{ch.sub}</p>
                   </button>
                 )

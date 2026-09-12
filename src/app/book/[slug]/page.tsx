@@ -15,6 +15,7 @@ import { BrandLogo } from "@/components/shared/brand-logo"
 import { Button } from "@/components/ui/button"
 import { apiClient } from "@/lib/api-client"
 import { toast } from "@/components/ui/sonner"
+import { formatSmartPhone, formatSmartPlate } from "@/lib/input-formatters"
 
 interface PublicService {
   id: string
@@ -112,20 +113,9 @@ export default function PublicBookingPage() {
     }
   }, [slug])
 
-  // Phone input formatting
+  // Phone input formatting (Smart formatting for TR and international)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "")
-    if (raw.length === 0) {
-      setPhone("")
-      return
-    }
-    const formatted = raw.startsWith("0") ? raw.slice(0, 11) : "0" + raw.slice(0, 10)
-    let res = "0"
-    if (formatted.length > 1) res += " (" + formatted.slice(1, 4)
-    if (formatted.length >= 4) res += ") " + formatted.slice(4, 7)
-    if (formatted.length >= 7) res += " " + formatted.slice(7, 9)
-    if (formatted.length >= 9) res += " " + formatted.slice(9, 11)
-    setPhone(res)
+    setPhone(formatSmartPhone(e.target.value))
   }
 
   const selectedService = services.find((s) => s.id === selectedServiceId) || services[0] || FALLBACK_SERVICES[0]
@@ -156,10 +146,14 @@ export default function PublicBookingPage() {
       }
       const endTimeDate = new Date(startTimeDate.getTime() + durationMin * 60 * 1000)
 
+      const normalizedPhone = phone.trim().startsWith("+")
+        ? "+" + phone.trim().slice(1).replace(/\D/g, "")
+        : phone.replace(/\D/g, "")
+
       await apiClient.post(`/appointments/public/${slug}`, {
         customerName: name.trim(),
-        customerPhone: phone.replace(/\D/g, ""),
-        plate: plate.toUpperCase().replace(/\s/g, ""),
+        customerPhone: normalizedPhone,
+        plate: plate.toUpperCase().trim(),
         brandModel: brandModel.trim() || undefined,
         serviceId: selectedServiceId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selectedServiceId)
           ? selectedServiceId
@@ -295,10 +289,10 @@ export default function PublicBookingPage() {
                 </label>
                 <input
                   type="tel"
-                  placeholder="0 (5XX) XXX XX XX"
+                  placeholder="05XX XXX XX XX veya +90..."
                   value={phone}
                   onChange={handlePhoneChange}
-                  maxLength={17}
+                  maxLength={20}
                   className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
                   required
                 />
@@ -313,9 +307,9 @@ export default function PublicBookingPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="34 ABC 123"
+                  placeholder="34 ABC 123 veya M-AB 1234"
                   value={plate}
-                  onChange={(e) => setPlate(e.target.value.toUpperCase())}
+                  onChange={(e) => setPlate(formatSmartPlate(e.target.value))}
                   className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-sky-500"
                   required
                 />

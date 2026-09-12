@@ -13,7 +13,7 @@ import {
   useAdminHealth,
   CreateTenantInput,
 } from "@/features/admin/api/use-admin"
-import { Building2, ShieldCheck, ShieldAlert } from "lucide-react"
+import { Building2, ShieldCheck } from "lucide-react"
 import { AdminStatsGrid } from "@/features/admin/components/admin-stats-grid"
 import { TenantsTable } from "@/features/admin/components/tenants-table"
 import { TenantDetailModal } from "@/features/admin/components/tenant-detail-modal"
@@ -172,7 +172,7 @@ export default function AdminDashboardPage() {
           onClick={() => setActiveTab("tenants")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === "tenants"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+              ? "bg-sky-600 text-white shadow-md shadow-sky-600/20"
               : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
           }`}
         >
@@ -188,7 +188,7 @@ export default function AdminDashboardPage() {
           onClick={() => setActiveTab("admins")}
           className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === "admins"
-              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+              ? "bg-sky-600 text-white shadow-md shadow-sky-600/20"
               : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"
           }`}
         >
@@ -230,35 +230,24 @@ export default function AdminDashboardPage() {
       {activeTab === "admins" && <AdminUsersTab />}
 
       {/* 4. Platform Güvenlik & Denetim İzi (Her zaman altta) */}
-      <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
-        <div className="mb-4">
-          <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-            <ShieldAlert size={16} className="text-indigo-500" />
-            Platform Güvenlik & Denetim İzi
-          </h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-            Sistem genelinde gerçekleşen tüm lisanslama, yönetici ve güvenlik hareketlerinin değişmez kayıtları.
-          </p>
-        </div>
-        <AdminAuditLogs
-          logs={auditLogs}
-          meta={auditMeta}
-          isLoading={isAuditLoading}
-          isFetching={isAuditFetching}
-          currentPage={auditPage}
-          onPageChange={(p) => setAuditPage(p)}
-          actionFilter={auditActionFilter}
-          onActionFilterChange={(action) => {
-            setAuditActionFilter(action)
-            setAuditPage(1)
-          }}
-          searchQuery={auditSearchQuery}
-          onSearchChange={(search) => {
-            setAuditSearchQuery(search)
-            setAuditPage(1)
-          }}
-        />
-      </div>
+      <AdminAuditLogs
+        logs={auditLogs}
+        meta={auditMeta}
+        isLoading={isAuditLoading}
+        isFetching={isAuditFetching}
+        currentPage={auditPage}
+        onPageChange={(p) => setAuditPage(p)}
+        actionFilter={auditActionFilter}
+        onActionFilterChange={(action) => {
+          setAuditActionFilter(action)
+          setAuditPage(1)
+        }}
+        searchQuery={auditSearchQuery}
+        onSearchChange={(search) => {
+          setAuditSearchQuery(search)
+          setAuditPage(1)
+        }}
+      />
 
       {/* Modals */}
       <TenantDetailModal

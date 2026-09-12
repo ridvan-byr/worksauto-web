@@ -38,9 +38,17 @@ describe("Turkish GSM Phone Utils", () => {
       expect(isValidTurkishGsm("02161234567")).toBe(false)
     })
 
+    it("should accept valid international phone numbers starting with +", () => {
+      expect(isValidTurkishGsm("+491701234567")).toBe(true)
+      expect(isValidTurkishGsm("+49 170 123 4567")).toBe(true)
+      expect(isValidTurkishGsm("+14155552671")).toBe(true)
+      expect(isValidTurkishGsm("+33612345678")).toBe(true)
+    })
+
     it("should reject too short or too long numbers", () => {
       expect(isValidTurkishGsm("053212345")).toBe(false)
       expect(isValidTurkishGsm("0532123456789")).toBe(false)
+      expect(isValidTurkishGsm("+12")).toBe(false)
       expect(isValidTurkishGsm("")).toBe(false)
       expect(isValidTurkishGsm(null)).toBe(false)
       expect(isValidTurkishGsm(undefined)).toBe(false)
@@ -63,6 +71,7 @@ describe("Turkish GSM Phone Utils", () => {
       expect(getTurkishGsmError("0532 123 45 67")).toBeNull()
       expect(getTurkishGsmError("5321234567")).toBeNull()
       expect(getTurkishGsmError("+905321234567")).toBeNull()
+      expect(getTurkishGsmError("+49 170 123 4567")).toBeNull()
     })
   })
 

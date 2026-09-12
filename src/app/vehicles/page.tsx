@@ -22,12 +22,14 @@ import {
   Info,
   ChevronDown,
   Check,
+  Plus,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
 import { ExcelExportModal } from "@/features/import-export/components/excel-export-modal"
 import { EditVehicleModal } from "@/features/vehicles/components/edit-vehicle-modal"
+import { AddVehicleModal } from "@/features/vehicles/components/add-vehicle-modal"
 import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
 import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/vehicle-formatters"
 import { cn } from "@/lib/utils"
@@ -39,6 +41,7 @@ export default function VehiclesPage() {
   const [brandFilter, setBrandFilter] = React.useState<string>("all")
   const [vehicleToDelete, setVehicleToDelete] = React.useState<VehicleRecord | null>(null)
   const [vehicleToEdit, setVehicleToEdit] = React.useState<VehicleRecord | null>(null)
+  const [isAddModalOpen, setIsAddModalOpen] = React.useState(false)
   const [isImportModalOpen, setIsImportModalOpen] = React.useState(false)
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
 
@@ -197,6 +200,15 @@ export default function VehiclesPage() {
             <Users size={15} />
             <span>Müşteri Listesine Git</span>
           </Link>
+
+          <Button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="h-10 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-sky-600/20 cursor-pointer transition-all"
+          >
+            <Plus size={16} />
+            <span>Yeni Araç Ekle</span>
+          </Button>
         </div>
       </div>
 
@@ -383,7 +395,22 @@ export default function VehiclesPage() {
                     <div className="max-w-xs mx-auto space-y-2">
                       <Car size={32} className="mx-auto text-slate-300 dark:text-slate-600" />
                       <p className="font-bold text-slate-600 dark:text-slate-300">Araç Bulunamadı</p>
-                      <p className="text-[11px]">Arama kriterlerinize uygun araç kaydı bulunamadı.</p>
+                      <p className="text-[11px]">
+                        {searchQuery || brandFilter !== "all"
+                          ? "Arama kriterlerinize uygun araç kaydı bulunamadı."
+                          : "Henüz kayıtlı bir araç bulunmuyor."}
+                      </p>
+                      {!searchQuery && brandFilter === "all" && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          onClick={() => setIsAddModalOpen(true)}
+                          className="mt-2 h-8 px-3 text-xs bg-sky-600 hover:bg-sky-500 text-white gap-1.5 cursor-pointer shadow-xs"
+                        >
+                          <Plus size={13} />
+                          <span>İlk Aracı Ekle</span>
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -557,6 +584,12 @@ export default function VehiclesPage() {
           onClose={() => setVehicleToEdit(null)}
         />
       )}
+
+      {/* Add Vehicle Modal */}
+      <AddVehicleModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+      />
     </div>
   )
 }

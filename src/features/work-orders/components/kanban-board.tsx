@@ -22,6 +22,13 @@ const STORAGE_KEY = "worksauto_work_orders_sequence"
 export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanBoardProps) {
   const [dragOverColumn, setDragOverColumn] = React.useState<WorkOrderStatus | null>(null)
 
+  // Live Drag State (tracks active dragged order, its origin status and slot index)
+  const [activeDraggedId, setActiveDraggedId] = React.useState<string | null>(null)
+  const [activeDraggedStatus, setActiveDraggedStatus] = React.useState<WorkOrderStatus | null>(null)
+  const activeDraggedIdRef = React.useRef<string | null>(null)
+  const activeDraggedStatusRef = React.useRef<WorkOrderStatus | null>(null)
+  const activeDraggedIdxRef = React.useRef<number | null>(null)
+
   // Custom Sequence of Order IDs (persisted in localStorage)
   const [customOrderIds, setCustomOrderIds] = React.useState<string[]>(() => {
     if (typeof window === "undefined") return []
@@ -59,7 +66,27 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
 
   // Helper to check if the current drag event is actually a Work Order
   const isWorkOrderDrag = (e: React.DragEvent) => {
-    return e.dataTransfer.types.includes("application/work-order-id")
+    return (
+      e.dataTransfer.types.includes("application/work-order-id") ||
+      Boolean(activeDraggedIdRef.current)
+    )
+  }
+
+  const handleCardDragStart = (id: string, status: WorkOrderStatus, idx: number) => {
+    activeDraggedIdRef.current = id
+    activeDraggedStatusRef.current = status
+    activeDraggedIdxRef.current = idx
+    setActiveDraggedId(id)
+    setActiveDraggedStatus(status)
+  }
+
+  const handleCardDragEnd = () => {
+    activeDraggedIdRef.current = null
+    activeDraggedStatusRef.current = null
+    activeDraggedIdxRef.current = null
+    setActiveDraggedId(null)
+    setActiveDraggedStatus(null)
+    setDragOverColumn(null)
   }
 
   // Generic Reorder Function
@@ -90,7 +117,7 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
     [orders]
   )
 
-  // Move up/down within a specific column
+  // Move up/down within a specific column (buttons)
   const handleMoveWithinColumn = (
     orderId: string,
     direction: "up" | "down",
@@ -121,21 +148,22 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
     }
 
     reorderTwoOrders(draggedId, targetId, position)
+    handleCardDragEnd()
   }
 
   // Handle Drop on Empty Column Area
   const handleDropToColumn = (e: React.DragEvent, targetStatus: WorkOrderStatus) => {
     e.preventDefault()
     setDragOverColumn(null)
-    if (!isWorkOrderDrag(e)) return
-
-    const id = e.dataTransfer.getData("application/work-order-id")
+    const id =
+      e.dataTransfer.getData("application/work-order-id") || activeDraggedIdRef.current
     if (id) {
       const draggedOrder = orders.find((o) => o.id === id)
       if (draggedOrder && draggedOrder.status !== targetStatus) {
         onStatusChange(id, targetStatus)
       }
     }
+    handleCardDragEnd()
   }
 
   // Helper sorter respecting customOrderIds
@@ -190,6 +218,70 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
     })
   }, [orders, sortByCustomOrder])
 
+  // Column references kept current for zero-latency live drag updates
+  const pendingOrdersRef = React.useRef(pendingOrders)
+  pendingOrdersRef.current = pendingOrders
+  const inProgressOrdersRef = React.useRef(inProgressOrders)
+  inProgressOrdersRef.current = inProgressOrders
+  const completedOrdersRef = React.useRef(completedOrders)
+  completedOrdersRef.current = completedOrders
+
+  // Live Reorder while dragging over slots within the SAME column
+  const handleLiveSlotReorder = React.useCallback(
+    (columnStatus: WorkOrderStatus, targetIdx: number) => {
+      const currentStatus = activeDraggedStatusRef.current
+      const currentIdx = activeDraggedIdxRef.current
+      const draggedId = activeDraggedIdRef.current
+
+      if (
+        !draggedId ||
+        currentIdx === null ||
+        currentStatus !== columnStatus ||
+        currentIdx === targetIdx
+      ) {
+        return
+      }
+
+      const columnOrders =
+        columnStatus === "PENDING"
+          ? pendingOrdersRef.current
+          : columnStatus === "IN_PROGRESS"
+          ? inProgressOrdersRef.current
+          : completedOrdersRef.current
+
+      if (targetIdx < 0 || targetIdx >= columnOrders.length) return
+      const targetOrder = columnOrders[targetIdx]
+      if (!targetOrder || targetOrder.id === draggedId) return
+
+      setCustomOrderIds((prev) => {
+        const master = [...prev]
+        orders.forEach((o) => {
+          if (!master.includes(o.id)) master.push(o.id)
+        })
+
+        const fromPos = master.indexOf(draggedId)
+        if (fromPos === -1) return prev
+        master.splice(fromPos, 1)
+
+        const toPos = master.indexOf(targetOrder.id)
+        if (toPos === -1) return prev
+
+        const insertPos = currentIdx < targetIdx ? toPos + 1 : toPos
+        master.splice(insertPos, 0, draggedId)
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(master))
+        } catch {
+          // ignore
+        }
+        return master
+      })
+
+      activeDraggedIdxRef.current = targetIdx
+    },
+    [orders]
+  )
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
@@ -230,7 +322,7 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
 
           {dragOverColumn === "PENDING" && (
             <div className="p-2.5 rounded-xl border border-dashed border-amber-400 bg-amber-500/20 text-center text-xs font-bold text-amber-800 dark:text-amber-200 animate-pulse">
-              🎯 Bekleme Sırasına Almak İçin Buraya Bırakın
+              Bekleme Sırasına Almak İçin Buraya Bırakın
             </div>
           )}
 
@@ -245,11 +337,18 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
                 <WorkOrderCard
                   key={order.id}
                   order={order}
+                  index={idx}
+                  columnStatus="PENDING"
+                  activeDraggedId={activeDraggedId}
+                  activeDraggedStatus={activeDraggedStatus}
                   onStatusChange={onStatusChange}
                   isFirst={idx === 0}
                   isLast={idx === pendingOrders.length - 1}
                   onMoveUp={() => handleMoveWithinColumn(order.id, "up", pendingOrders)}
                   onMoveDown={() => handleMoveWithinColumn(order.id, "down", pendingOrders)}
+                  onDragStartCard={handleCardDragStart}
+                  onDragEndCard={handleCardDragEnd}
+                  onCardDragOverSlot={handleLiveSlotReorder}
                   onCardDrop={handleCardDrop}
                 />
               ))
@@ -294,7 +393,7 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
 
           {dragOverColumn === "IN_PROGRESS" && (
             <div className="p-2.5 rounded-xl border border-dashed border-sky-400 bg-sky-500/25 text-center text-xs font-bold text-sky-800 dark:text-sky-200 animate-pulse">
-              🎯 Lifte / İşleme Almak İçin Buraya Bırakın
+              Lifte / İşleme Almak İçin Buraya Bırakın
             </div>
           )}
 
@@ -309,11 +408,18 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
                 <WorkOrderCard
                   key={order.id}
                   order={order}
+                  index={idx}
+                  columnStatus="IN_PROGRESS"
+                  activeDraggedId={activeDraggedId}
+                  activeDraggedStatus={activeDraggedStatus}
                   onStatusChange={onStatusChange}
                   isFirst={idx === 0}
                   isLast={idx === inProgressOrders.length - 1}
                   onMoveUp={() => handleMoveWithinColumn(order.id, "up", inProgressOrders)}
                   onMoveDown={() => handleMoveWithinColumn(order.id, "down", inProgressOrders)}
+                  onDragStartCard={handleCardDragStart}
+                  onDragEndCard={handleCardDragEnd}
+                  onCardDragOverSlot={handleLiveSlotReorder}
                   onCardDrop={handleCardDrop}
                 />
               ))
@@ -358,7 +464,7 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
 
           {dragOverColumn === "COMPLETED" && (
             <div className="p-2.5 rounded-xl border border-dashed border-emerald-400 bg-emerald-500/25 text-center text-xs font-bold text-emerald-800 dark:text-emerald-200 animate-pulse">
-              🎯 İşlemi Tamamlamak İçin Buraya Bırakın
+              İşlemi Tamamlamak İçin Buraya Bırakın
             </div>
           )}
 
@@ -373,11 +479,18 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders }: KanbanB
                 <WorkOrderCard
                   key={order.id}
                   order={order}
+                  index={idx}
+                  columnStatus="COMPLETED"
+                  activeDraggedId={activeDraggedId}
+                  activeDraggedStatus={activeDraggedStatus}
                   onStatusChange={onStatusChange}
                   isFirst={idx === 0}
                   isLast={idx === completedOrders.length - 1}
                   onMoveUp={() => handleMoveWithinColumn(order.id, "up", completedOrders)}
                   onMoveDown={() => handleMoveWithinColumn(order.id, "down", completedOrders)}
+                  onDragStartCard={handleCardDragStart}
+                  onDragEndCard={handleCardDragEnd}
+                  onCardDragOverSlot={handleLiveSlotReorder}
                   onCardDrop={handleCardDrop}
                 />
               ))

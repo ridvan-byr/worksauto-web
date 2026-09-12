@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { TenantSettings } from "@/features/settings/api/use-settings"
 import { TURKEY_PROVINCES, getDistrictsForProvince } from "@/lib/turkey-locations"
 import { SearchableSelect } from "@/components/ui/searchable-select"
+import { formatSmartPhone, formatTaxNumber } from "@/lib/input-formatters"
 
 interface TenantProfileTabProps {
   initialData?: TenantSettings
@@ -132,9 +133,9 @@ export function TenantProfileTab({
               <input
                 type="text"
                 value={phone}
-                onChange={(e) => setPhone(e.target.value)}
+                onChange={(e) => setPhone(formatSmartPhone(e.target.value))}
                 className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500"
-                placeholder="Örn: 0212 555 01 23"
+                placeholder="Örn: 0212 555 01 23 veya 0532..."
               />
             </div>
 
@@ -234,10 +235,11 @@ export function TenantProfileTab({
               </label>
               <input
                 type="text"
+                maxLength={10}
                 value={taxNumber}
-                onChange={(e) => setTaxNumber(e.target.value)}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500"
-                placeholder="1234567890"
+                onChange={(e) => setTaxNumber(formatTaxNumber(e.target.value, "vkn"))}
+                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500 font-mono"
+                placeholder="10 Haneli VKN"
               />
             </div>
           </div>

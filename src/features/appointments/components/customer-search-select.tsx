@@ -231,11 +231,11 @@ export function CustomerSearchSelect({
                       : `${selectedCustomer.name} ${selectedCustomer.surname || ""}`.trim()}
                   </p>
                   {selectedCustomer.isLead ? (
-                    <span className="text-[10px] font-bold px-2 py-0.2 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 flex items-center gap-1">
+                    <span className="inline-flex items-center justify-center px-2.5 h-[18px] rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0 leading-none pt-[0.5px]">
                       Potansiyel Müşteri
                     </span>
                   ) : (
-                    <span className="text-[10px] font-semibold px-2 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <span className="inline-flex items-center justify-center px-2.5 h-[18px] rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 leading-none pt-[0.5px]">
                       Kayıtlı Müşteri
                     </span>
                   )}

@@ -14,6 +14,13 @@ export function isValidTurkishGsm(phone: string | null | undefined): boolean {
   if (!phone) return false
   const digits = phone.replace(/\D/g, "")
 
+  // Uluslararası (+ ile başlayan) format desteği
+  if (phone.trim().startsWith("+")) {
+    const digits = phone.replace(/\D/g, "")
+    // Minimum 8, maksimum 15 hane (ITU-T E.164 standardı)
+    return digits.length >= 8 && digits.length <= 15
+  }
+
   // 10 hane: 5XXXXXXXXX
   if (digits.length === 10 && digits.startsWith("5")) return true
   // 11 hane: 05XXXXXXXXX
@@ -31,6 +38,18 @@ export function isValidTurkishGsm(phone: string | null | undefined): boolean {
 export function getTurkishGsmError(phone: string | null | undefined): string | null {
   if (!phone || !phone.trim()) {
     return "Cep telefonu numarası zorunludur."
+  }
+
+  const trimmed = phone.trim()
+  if (trimmed.startsWith("+")) {
+    const digits = trimmed.replace(/\D/g, "")
+    if (digits.length < 8) {
+      return `Uluslararası telefon numarası eksik (${8 - digits.length} hane daha giriniz).`
+    }
+    if (digits.length > 15) {
+      return "Uluslararası telefon numarası en fazla 15 haneli olabilir."
+    }
+    return null
   }
 
   const digits = phone.replace(/\D/g, "")
@@ -63,6 +82,16 @@ export function getTurkishGsmError(phone: string | null | undefined): string | n
  */
 export function formatTurkishGsmInput(value: string): string {
   if (!value) return ""
+
+  // Eğer kullanıcı Türkiye koduyla (+90) yapıştırdıysa 0 formatına çevir
+  if (value.startsWith("+90")) {
+    const rest = value.slice(3).replace(/\D/g, "")
+    value = "0" + rest
+  } else if (value.startsWith("+")) {
+    // Diğer uluslararası (+ ile başlayan) numara desteği
+    const raw = "+" + value.slice(1).replace(/[^\d\s]/g, "")
+    return raw.slice(0, 18)
+  }
 
   // Sadece rakamları al
   let digits = value.replace(/\D/g, "")
@@ -97,6 +126,8 @@ export function formatTurkishGsmInput(value: string): string {
  */
 export function formatTurkishGsmDisplay(phone: string | null | undefined): string {
   if (!phone) return ""
+  if (phone.trim().startsWith("+")) return phone.trim()
+
   let digits = phone.replace(/\D/g, "")
   if (digits.startsWith("90")) digits = digits.slice(2)
   if (!digits.startsWith("0")) digits = "0" + digits

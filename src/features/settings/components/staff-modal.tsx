@@ -7,10 +7,10 @@ import { Button } from "@/components/ui/button"
 import { DEFAULT_LIFTS } from "@/lib/workshop-constants"
 import { StaffRecord, useWorkshopBays } from "@/features/settings/api/use-settings"
 import {
-  formatTurkishGsmInput,
   formatTurkishGsmDisplay,
   getTurkishGsmError,
 } from "@/lib/phone-utils"
+import { formatSmartPhone } from "@/lib/input-formatters"
 import {
   filterPersonNameInput,
   validatePersonName,
@@ -200,11 +200,11 @@ export function StaffModal({
                 required
                 value={phone}
                 onChange={(e) => {
-                  setPhone(formatTurkishGsmInput(e.target.value))
+                  setPhone(formatSmartPhone(e.target.value))
                   if (phoneError) setPhoneError(null)
                 }}
                 className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono"
-                placeholder="05XX XXX XX XX"
+                placeholder="05XX XXX XX XX veya +90..."
               />
               {phoneError && (
                 <p className="text-[11px] text-rose-500">{phoneError}</p>

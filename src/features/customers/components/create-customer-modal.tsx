@@ -18,7 +18,12 @@ import { PlateBadge } from "./plate-badge"
 import { cn } from "@/lib/utils"
 import { TURKEY_PROVINCES, getDistrictsForProvince } from "@/lib/turkey-locations"
 import { SearchableSelect } from "@/components/ui/searchable-select"
-
+import {
+  formatSmartPlate,
+  formatSmartPhone,
+  formatKilometer,
+  formatTaxNumber,
+} from "@/lib/input-formatters"
 
 import { useForm, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -133,20 +138,9 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
 
   if (!isOpen || !mounted) return null
 
-  // Phone Formatter
+  // Phone Formatter (Smart TR + Uluslararası hat desteği)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "")
-    if (raw.length === 0) {
-      setValue("phone", "", { shouldValidate: true })
-      return
-    }
-    const formatted = raw.startsWith("0") ? raw.slice(0, 11) : "0" + raw.slice(0, 10)
-    let res = "0"
-    if (formatted.length > 1) res += " (" + formatted.slice(1, 4)
-    if (formatted.length >= 4) res += ") " + formatted.slice(4, 7)
-    if (formatted.length >= 7) res += " " + formatted.slice(7, 9)
-    if (formatted.length >= 9) res += " " + formatted.slice(9, 11)
-    setValue("phone", res, { shouldValidate: true })
+    setValue("phone", formatSmartPhone(e.target.value), { shouldValidate: true })
   }
 
   const selectedCity = watch("city") || ""
@@ -333,7 +327,11 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                         placeholder="10 veya 11 haneli"
                         maxLength={11}
                         {...register("taxNumber", {
-                          onChange: (e) => setValue("taxNumber", e.target.value.replace(/\D/g, '')),
+                          onChange: (e) =>
+                            setValue(
+                              "taxNumber",
+                              formatTaxNumber(e.target.value, customerType === "corporate" ? "vkn" : "tckn")
+                            ),
                         })}
                         className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
                       />
@@ -488,9 +486,9 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                 </label>
                 <input
                   type="text"
-                  placeholder="34 ABC 123"
+                  placeholder="34 ABC 123 veya M-AB 1234"
                   value={watch("plate")}
-                  onChange={(e) => setValue("plate", e.target.value.toUpperCase(), { shouldValidate: true })}
+                  onChange={(e) => setValue("plate", formatSmartPlate(e.target.value), { shouldValidate: true })}
                   className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-mono font-bold tracking-wider uppercase focus:outline-none focus:ring-2 focus:ring-sky-500"
                   autoFocus
                 />
@@ -538,9 +536,12 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Mevcut KM</label>
                 <input
-                  type="number"
-                  min={0}
-                  {...register("kilometer", { valueAsNumber: true })}
+                  type="text"
+                  value={formatKilometer(watch("kilometer")).formatted}
+                  onChange={(e) =>
+                    setValue("kilometer", formatKilometer(e.target.value).raw, { shouldValidate: true })
+                  }
+                  placeholder="Örn: 45.000"
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
                 {errors.kilometer && <p className="text-[10px] text-rose-500">{errors.kilometer.message}</p>}

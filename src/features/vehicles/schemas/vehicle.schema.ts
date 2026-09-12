@@ -32,3 +32,9 @@ export const editVehicleSchema = z.object({
 });
 
 export type EditVehicleFormValues = z.infer<typeof editVehicleSchema>;
+
+export const createVehicleSchema = editVehicleSchema.extend({
+  customerId: z.string().min(1, 'Lütfen araca ait bir müşteri seçin.'),
+});
+
+export type CreateVehicleFormValues = z.infer<typeof createVehicleSchema>;

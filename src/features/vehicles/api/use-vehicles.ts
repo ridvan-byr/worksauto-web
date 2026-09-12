@@ -39,6 +39,8 @@ export interface CreateVehicleInput {
   model?: string;
   year?: number;
   vin?: string;
+  color?: string;
+  engineNo?: string;
   currentKm?: number;
   fuelType?: string;
   transmission?: string;

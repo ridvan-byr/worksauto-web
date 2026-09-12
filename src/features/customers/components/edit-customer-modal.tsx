@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Customer } from "../types"
 import { useUpdateCustomer } from "../api/use-customers"
 import { cn } from "@/lib/utils"
+import { formatSmartPhone, formatTaxNumber } from "@/lib/input-formatters"
 
 interface EditCustomerModalProps {
   isOpen: boolean
@@ -82,20 +83,9 @@ export function EditCustomerModal({
 
   if (!isOpen || !mounted) return null
 
-  // Phone Formatter
+  // Phone Formatter (Smart TR + Uluslararası hat desteği)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.replace(/\D/g, "")
-    if (raw.length === 0) {
-      setPhone("")
-      return
-    }
-    const formatted = raw.startsWith("0") ? raw.slice(0, 11) : "0" + raw.slice(0, 10)
-    let res = "0"
-    if (formatted.length > 1) res += " (" + formatted.slice(1, 4)
-    if (formatted.length >= 4) res += ") " + formatted.slice(4, 7)
-    if (formatted.length >= 7) res += " " + formatted.slice(7, 9)
-    if (formatted.length >= 9) res += " " + formatted.slice(9, 11)
-    setPhone(res)
+    setPhone(formatSmartPhone(e.target.value))
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -258,7 +248,7 @@ export function EditCustomerModal({
                       placeholder="10 Haneli VKN"
                       maxLength={10}
                       value={taxNumber}
-                      onChange={(e) => setTaxNumber(e.target.value.replace(/\D/g, ""))}
+                      onChange={(e) => setTaxNumber(formatTaxNumber(e.target.value, "vkn"))}
                       className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
                     />
                     {errors.taxNumber && (

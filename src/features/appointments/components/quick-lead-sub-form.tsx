@@ -7,6 +7,7 @@ import { UserPlus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { quickLeadSchema, QuickLeadValues } from "../schemas/appointment.schema"
 import { useQuickLeadCustomer, type QuickLeadResponse } from "@/features/customers/api/use-customers"
+import { formatSmartPlate, formatSmartPhone } from "@/lib/input-formatters"
 
 interface QuickLeadSubFormProps {
   onSuccess: (customer: QuickLeadResponse["customer"], vehicle: QuickLeadResponse["vehicle"]) => void
@@ -106,8 +107,11 @@ export function QuickLeadSubForm({
             </label>
             <input
               type="tel"
-              placeholder="05XX XXX XX XX"
+              placeholder="05XX XXX XX XX veya +49..."
               {...register("phone")}
+              onChange={(e) =>
+                setValue("phone", formatSmartPhone(e.target.value), { shouldValidate: true })
+              }
               className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
             {errors.phone && (
@@ -122,9 +126,11 @@ export function QuickLeadSubForm({
             </label>
             <input
               type="text"
-              placeholder="34 ABC 123"
+              placeholder="34 ABC 123 veya M-AB 1234"
               {...register("plate")}
-              onChange={(e) => setValue("plate", e.target.value.toUpperCase())}
+              onChange={(e) =>
+                setValue("plate", formatSmartPlate(e.target.value), { shouldValidate: true })
+              }
               className="w-full h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono font-bold uppercase focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
             {errors.plate && (

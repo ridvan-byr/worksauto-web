@@ -17,26 +17,45 @@ import { cn } from "@/lib/utils"
 
 interface WorkOrderCardProps {
   order: WorkOrder
+  index: number
+  columnStatus: WorkOrderStatus
+  activeDraggedId?: string | null
+  activeDraggedStatus?: WorkOrderStatus | null
   onStatusChange: (id: string, newStatus: WorkOrderStatus) => void
   onMoveUp?: () => void
   onMoveDown?: () => void
   isFirst?: boolean
   isLast?: boolean
+  onDragStartCard?: (id: string, status: WorkOrderStatus, index: number) => void
+  onDragEndCard?: () => void
+  onCardDragOverSlot?: (columnStatus: WorkOrderStatus, index: number) => void
   onCardDrop?: (draggedId: string, targetId: string, position: "before" | "after") => void
 }
 
 export function WorkOrderCard({
   order,
+  index,
+  columnStatus,
+  activeDraggedId,
+  activeDraggedStatus,
   onStatusChange,
   onMoveUp,
   onMoveDown,
   isFirst = false,
   isLast = false,
+  onDragStartCard,
+  onDragEndCard,
+  onCardDragOverSlot,
   onCardDrop,
 }: WorkOrderCardProps) {
   const router = useRouter()
   const [isDragging, setIsDragging] = React.useState(false)
   const [dropPosition, setDropPosition] = React.useState<"before" | "after" | null>(null)
+
+  const isCurrentDragged = activeDraggedId === order.id || isDragging
+  const isDifferentColumnDrag = Boolean(
+    activeDraggedStatus && activeDraggedStatus !== columnStatus
+  )
 
   const handleCardClick = () => {
     router.push(`/work-orders/${order.id}`)
@@ -48,6 +67,7 @@ export function WorkOrderCard({
       draggable={order.status !== "CANCELLED"}
       onDragStart={(e) => {
         setIsDragging(true)
+        onDragStartCard?.(order.id, order.status, index)
         e.dataTransfer.setData("application/work-order-id", order.id)
         e.dataTransfer.setData("application/work-order-status", order.status)
         e.dataTransfer.setData("text/plain", order.id)
@@ -60,6 +80,7 @@ export function WorkOrderCard({
       onDragEnd={() => {
         setIsDragging(false)
         setDropPosition(null)
+        onDragEndCard?.()
       }}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes("application/work-order-id")) return
@@ -67,11 +88,26 @@ export function WorkOrderCard({
         e.stopPropagation()
         e.dataTransfer.dropEffect = "move"
 
-        const rect = e.currentTarget.getBoundingClientRect()
-        const midY = rect.top + rect.height / 2
-        const pos = e.clientY < midY ? "before" : "after"
-        if (dropPosition !== pos) {
-          setDropPosition(pos)
+        if (isDifferentColumnDrag) {
+          const rect = e.currentTarget.getBoundingClientRect()
+          const midY = rect.top + rect.height / 2
+          const pos = e.clientY < midY ? "before" : "after"
+          if (dropPosition !== pos) {
+            setDropPosition(pos)
+          }
+        } else {
+          // Same column: active live preview & shifting
+          if (dropPosition !== null) setDropPosition(null)
+          onCardDragOverSlot?.(columnStatus, index)
+        }
+      }}
+      onDragEnter={(e) => {
+        if (!e.dataTransfer.types.includes("application/work-order-id")) return
+        e.preventDefault()
+        e.stopPropagation()
+
+        if (!isDifferentColumnDrag) {
+          onCardDragOverSlot?.(columnStatus, index)
         }
       }}
       onDragLeave={(e) => {
@@ -80,9 +116,11 @@ export function WorkOrderCard({
         }
       }}
       onDrop={(e) => {
-        const draggedId = e.dataTransfer.getData("application/work-order-id")
+        const draggedId =
+          e.dataTransfer.getData("application/work-order-id") || activeDraggedId
         if (!draggedId || draggedId === order.id) {
           setDropPosition(null)
+          onDragEndCard?.()
           return
         }
         e.preventDefault()
@@ -90,10 +128,12 @@ export function WorkOrderCard({
         const pos = dropPosition || "after"
         setDropPosition(null)
         onCardDrop?.(draggedId, order.id, pos)
+        onDragEndCard?.()
       }}
       className={cn(
-        "p-4 sm:p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md hover:border-sky-500/40 transition-all cursor-grab active:cursor-grabbing space-y-3.5 group select-none relative",
-        isDragging && "opacity-40 scale-95 border-sky-400 ring-2 ring-sky-400/40"
+        "p-4 sm:p-4.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs hover:shadow-md hover:border-sky-500/40 transition-all duration-150 cursor-grab active:cursor-grabbing space-y-3.5 group select-none relative",
+        isCurrentDragged &&
+          "opacity-60 scale-[0.99] border-dashed border-sky-500 bg-sky-500/10 shadow-md ring-2 ring-sky-500/30"
       )}
     >
       {/* Drop Insertion Line Indicator */}
@@ -106,7 +146,13 @@ export function WorkOrderCard({
 
       {/* Top Header: Plate, WO Number & Reorder Actions */}
       <div className="flex items-center justify-between gap-2 pt-0.5">
-        <PlateBadge plate={order.plate} size="sm" />
+        <div className="flex items-center gap-1.5">
+          <GripVertical
+            size={15}
+            className="text-slate-300 dark:text-slate-600 group-hover:text-slate-500 dark:group-hover:text-slate-400 transition-colors shrink-0 cursor-grab active:cursor-grabbing"
+          />
+          <PlateBadge plate={order.plate} size="sm" />
+        </div>
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
             {order.workOrderNumber}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Vehicle } from "../types"
 import { PlateBadge } from "./plate-badge"
 import { useCreateVehicle } from "@/features/vehicles/api/use-vehicles"
+import { formatSmartPlate, formatKilometer } from "@/lib/input-formatters"
 
 interface AddVehicleModalProps {
   isOpen: boolean
@@ -155,9 +156,9 @@ export function AddVehicleModal({
               </label>
               <input
                 type="text"
-                placeholder="34 ABC 123"
+                placeholder="34 ABC 123 veya M-AB 1234"
                 value={plate}
-                onChange={(e) => setPlate(e.target.value.toUpperCase())}
+                onChange={(e) => setPlate(formatSmartPlate(e.target.value))}
                 className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-mono font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-sky-500"
                 autoFocus
               />
@@ -203,10 +204,10 @@ export function AddVehicleModal({
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Mevcut KM</label>
                 <input
-                  type="number"
-                  min={0}
-                  value={kilometer}
-                  onChange={(e) => setKilometer(e.target.value === "" ? "" : Number(e.target.value))}
+                  type="text"
+                  placeholder="Örn: 50.000"
+                  value={formatKilometer(kilometer).formatted}
+                  onChange={(e) => setKilometer(formatKilometer(e.target.value).raw)}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
                 {errors.kilometer && <p className="text-[10px] text-rose-500">{errors.kilometer}</p>}

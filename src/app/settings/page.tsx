@@ -55,13 +55,57 @@ export default function SettingsPage() {
   const updateBayMutation = useUpdateWorkshopBay()
   const deleteBayMutation = useDeleteWorkshopBay()
 
+  type SettingsTab = "profile" | "services" | "staff" | "bays" | "notifications"
+  const VALID_TABS: SettingsTab[] = ["profile", "services", "staff", "bays", "notifications"]
+
   // Tab State
-  const [activeTab, setActiveTab] = React.useState<"profile" | "services" | "staff" | "bays" | "notifications">("profile")
+  const [activeTab, setActiveTabState] = React.useState<SettingsTab>("profile")
   const [saveSuccess, setSaveSuccess] = React.useState(false)
 
   // Local soft-delete tracking
   const [deletedServiceIds, setDeletedServiceIds] = React.useState<string[]>([])
   const [deletedStaffIds, setDeletedStaffIds] = React.useState<string[]>([])
+
+  // Sayfa yenilendiğinde veya URL'de tab parametresi olduğunda aktif sekmeyi koru
+  React.useEffect(() => {
+    if (typeof window === "undefined") return
+    const params = new URLSearchParams(window.location.search)
+    const tabParam = params.get("tab") as SettingsTab | null
+
+    if (tabParam && VALID_TABS.includes(tabParam)) {
+      setActiveTabState(tabParam)
+      localStorage.setItem("worksauto_settings_active_tab", tabParam)
+    } else {
+      const savedTab = localStorage.getItem("worksauto_settings_active_tab") as SettingsTab | null
+      if (savedTab && VALID_TABS.includes(savedTab)) {
+        setActiveTabState(savedTab)
+        const url = new URL(window.location.href)
+        url.searchParams.set("tab", savedTab)
+        window.history.replaceState({}, "", url.toString())
+      }
+    }
+
+    const handlePopState = () => {
+      const currentParams = new URLSearchParams(window.location.search)
+      const currentTab = currentParams.get("tab") as SettingsTab | null
+      if (currentTab && VALID_TABS.includes(currentTab)) {
+        setActiveTabState(currentTab)
+      }
+    }
+
+    window.addEventListener("popstate", handlePopState)
+    return () => window.removeEventListener("popstate", handlePopState)
+  }, [])
+
+  const setActiveTab = React.useCallback((tab: SettingsTab) => {
+    setActiveTabState(tab)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("worksauto_settings_active_tab", tab)
+      const url = new URL(window.location.href)
+      url.searchParams.set("tab", tab)
+      window.history.replaceState({}, "", url.toString())
+    }
+  }, [])
 
   if (!isOwner) {
     return (

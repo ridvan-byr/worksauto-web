@@ -198,14 +198,14 @@ export function getActionBadge(action: string) {
       )
     case "appointment.created":
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/30">
           <Calendar size={12} />
           <span>Randevu Oluşturuldu</span>
         </span>
       )
     case "appointment.status_changed":
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
           <Clock size={12} />
           <span>Randevu Durumu Değişti</span>
         </span>
@@ -283,7 +283,7 @@ export function getActionBadge(action: string) {
       )
     case "staff.updated":
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
           <Users size={12} />
           <span>Personel Güncellendi</span>
         </span>
@@ -339,7 +339,7 @@ export function getActionBadge(action: string) {
       )
     case "appointment.rescheduled":
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/30">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30">
           <RefreshCw size={12} />
           <span>Randevu Ertelendi</span>
         </span>
@@ -413,15 +413,15 @@ export function AdminAuditLogs({
   const [selectedLog, setSelectedLog] = React.useState<AuditLogEntry | null>(null)
 
   return (
-    <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-800/80">
+    <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-slate-800">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="space-y-0.5">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2">
-            <Shield size={16} className="text-sky-600 dark:text-sky-400" />
-            <span>Platform & Güvenlik Olay Günlüğü (Audit Log)</span>
-          </h3>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
-            Servis lisansları, yönetici müdahaleleri ve giriş logları. Servis içi operasyonlar kiracının kendi denetim izinde tutulur.
+          <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Shield size={16} className="text-sky-500" />
+            <span>Platform Güvenlik & Denetim İzi (Audit Log)</span>
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Sistem genelinde gerçekleşen tüm lisanslama, yönetici ve güvenlik hareketlerinin değişmez kayıtları.
           </p>
         </div>
 

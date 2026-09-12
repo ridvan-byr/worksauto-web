@@ -106,7 +106,7 @@ export function AdminUsersTab() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <ShieldCheck className="text-indigo-600 dark:text-indigo-400" size={20} />
+            <ShieldCheck className="text-sky-600 dark:text-sky-400" size={20} />
             <span>Platform Yöneticileri (Super Admin Ekibi)</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -125,7 +125,7 @@ export function AdminUsersTab() {
               placeholder="Yönetici ara (Ad, E-Posta)..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              className="w-full h-9 pl-9 pr-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
 
@@ -134,7 +134,7 @@ export function AdminUsersTab() {
               setCreateError(null)
               setIsCreateModalOpen(true)
             }}
-            className="h-9 px-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-600/20 cursor-pointer"
+            className="h-9 px-3.5 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-sky-600/20 cursor-pointer"
           >
             <Plus size={15} />
             <span>Yeni Yönetici Ekle</span>
@@ -182,7 +182,7 @@ export function AdminUsersTab() {
                     >
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold flex items-center justify-center shrink-0">
+                          <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold flex items-center justify-center shrink-0">
                             {admin.name[0]}
                             {admin.surname ? admin.surname[0] : ""}
                           </div>
@@ -192,7 +192,7 @@ export function AdminUsersTab() {
                                 {admin.name} {admin.surname || ""}
                               </span>
                               {isMe && (
-                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-sky-500/15 text-sky-600 dark:text-sky-400 border border-sky-500/20">
                                   Siz
                                 </span>
                               )}
@@ -216,7 +216,7 @@ export function AdminUsersTab() {
                       </td>
 
                       <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-[11px] border border-indigo-500/20">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-500/10 text-sky-600 dark:text-sky-400 font-bold text-[11px] border border-sky-500/20">
                           <ShieldCheck size={12} />
                           SUPER_ADMIN
                         </span>
@@ -382,7 +382,7 @@ export function AdminUsersTab() {
                 className={`rounded-xl text-xs font-semibold text-white ${
                   confirmState.action === "DELETE"
                     ? "bg-rose-600 hover:bg-rose-700"
-                    : "bg-indigo-600 hover:bg-indigo-700"
+                    : "bg-sky-600 hover:bg-sky-700"
                 }`}
               >
                 {confirmState.action === "DELETE" ? "Evet, Sil" : "Evet, Onayla"}

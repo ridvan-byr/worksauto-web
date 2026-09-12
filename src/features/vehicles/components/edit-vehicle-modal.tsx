@@ -19,6 +19,11 @@ import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { useUpdateVehicle, type VehicleRecord } from "../api/use-vehicles"
 import {
+  formatSmartPlate,
+  formatKilometer,
+  formatVinNumber,
+} from "@/lib/input-formatters"
+import {
   editVehicleSchema,
   EditVehicleFormValues,
 } from "../schemas/vehicle.schema"
@@ -241,9 +246,9 @@ export function EditVehicleModal({
               </label>
               <input
                 type="text"
-                placeholder="34 ABC 123"
-                {...register("plate")}
-                onChange={(e) => setValue("plate", e.target.value.toUpperCase())}
+                placeholder="34 ABC 123 veya M-AB 1234"
+                value={watch("plate")}
+                onChange={(e) => setValue("plate", formatSmartPlate(e.target.value), { shouldValidate: true })}
                 className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-sm font-mono font-bold uppercase tracking-wider focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
               {errors.plate && <p className="text-[10px] text-rose-500">{errors.plate.message}</p>}
@@ -301,9 +306,12 @@ export function EditVehicleModal({
                   <span>Güncel Kilometre (KM)</span>
                 </label>
                 <input
-                  type="number"
-                  min={0}
-                  {...register("kilometer", { valueAsNumber: true })}
+                  type="text"
+                  placeholder="Örn: 50.000"
+                  value={formatKilometer(watch("kilometer")).formatted}
+                  onChange={(e) =>
+                    setValue("kilometer", formatKilometer(e.target.value).raw, { shouldValidate: true })
+                  }
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
                 {errors.kilometer && (
@@ -360,8 +368,8 @@ export function EditVehicleModal({
                   type="text"
                   placeholder="17 Haneli Şasi No"
                   maxLength={17}
-                  {...register("vin")}
-                  onChange={(e) => setValue("vin", e.target.value.toUpperCase())}
+                  value={watch("vin") || ""}
+                  onChange={(e) => setValue("vin", formatVinNumber(e.target.value), { shouldValidate: true })}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono uppercase focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
                 {errors.vin && <p className="text-[10px] text-rose-500">{errors.vin.message}</p>}

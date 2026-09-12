@@ -217,7 +217,7 @@ export function AuditDetailModal({
                       <ArrowRight size={12} className="text-slate-400" />
                     )}
                     {Boolean(after.role) && (
-                      <span className="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono text-[10px] font-bold">
+                      <span className="px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-mono text-[10px] font-bold">
                         {formatRoleName(String(after.role))}
                       </span>
                     )}
