@@ -154,12 +154,12 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
     }
   }, [isOpen])
 
-  if (!isOpen || !mounted) return null
-
   const phoneValue = watch("phone")
+
 
   // Check phone for deleted customer
   React.useEffect(() => {
+    if (!isOpen) return
     const raw = phoneValue?.replace(/[\s()-]/g, "") || ""
     if (raw.length >= 10) {
       setIsCheckingPhone(true)
@@ -181,10 +181,11 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
     } else {
       setDeletedCustomerFound(null)
     }
-  }, [phoneValue])
+  }, [phoneValue, isOpen])
 
   // Check plate for existing/other owner
   React.useEffect(() => {
+    if (!isOpen) return
     const raw = plateValue?.replace(/[\s-]/g, "") || ""
     if (raw.length >= 5) {
       setIsCheckingPlate(true)
@@ -206,7 +207,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
     } else {
       setExistingVehicleFound(null)
     }
-  }, [plateValue])
+  }, [plateValue, isOpen])
+
+  if (!isOpen || !mounted) return null
+
 
   const handleRestoreDeletedCustomer = async () => {
     if (!deletedCustomerFound?.id) return
