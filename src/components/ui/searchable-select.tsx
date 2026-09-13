@@ -30,7 +30,7 @@ export function SearchableSelect({
   error = false,
   className,
   id,
-  direction = "auto",
+  direction = "bottom",
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const [placement, setPlacement] = React.useState<"bottom" | "top">("bottom")
@@ -67,35 +67,13 @@ export function SearchableSelect({
     }
   }, [isOpen])
 
-  // Calculate dynamic placement (flip upwards if insufficient space below)
+  // Placement: opens downwards by default
   React.useEffect(() => {
     if (isOpen) {
       if (direction === "top") {
         setPlacement("top")
-      } else if (direction === "bottom") {
+      } else {
         setPlacement("bottom")
-      } else if (containerRef.current) {
-        const rect = containerRef.current.getBoundingClientRect()
-        let spaceBelow = window.innerHeight - rect.bottom
-        let spaceAbove = rect.top
-
-        // Also check if constrained by an enclosing modal or dialog
-        const modalOrScrollParent = containerRef.current.closest<HTMLElement>(
-          "[role='dialog'], .overflow-hidden, .overflow-y-auto, .overflow-auto, .fixed"
-        )
-        if (modalOrScrollParent) {
-          const parentRect = modalOrScrollParent.getBoundingClientRect()
-          const modalSpaceBelow = parentRect.bottom - rect.bottom
-          const modalSpaceAbove = rect.top - parentRect.top
-          spaceBelow = Math.min(spaceBelow, modalSpaceBelow)
-          spaceAbove = Math.min(spaceAbove, modalSpaceAbove)
-        }
-
-        if (spaceBelow < 260 && spaceAbove > 160) {
-          setPlacement("top")
-        } else {
-          setPlacement("bottom")
-        }
       }
     }
   }, [isOpen, direction])
@@ -132,7 +110,7 @@ export function SearchableSelect({
   return (
     <div
       ref={containerRef}
-      className={cn("relative w-full", className)}
+      className={cn("relative w-full", isOpen && "z-40", className)}
       onKeyDown={handleKeyDown}
     >
       {/* Trigger Button */}
