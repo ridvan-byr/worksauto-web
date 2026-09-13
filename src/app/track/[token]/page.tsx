@@ -21,6 +21,7 @@ import {
   Car,
   MapPin,
   XCircle,
+  Clock,
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -30,14 +31,19 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 interface TrackingData {
+  expired?: boolean
+  expiredDays?: number
+  expiredReason?: string
+  message?: string
+  isArchiveMode?: boolean
   workOrderNumber: string
   status: "QUEUE" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED"
-  createdAt: string
+  createdAt?: string
   completedAt?: string | null
-  initialKm: number
+  initialKm?: number
   fuelLevel?: string | null
-  assignedLift: string
-  mechanicName: string
+  assignedLift?: string
+  mechanicName?: string
   customer: {
     name: string
     phone: string
@@ -47,12 +53,12 @@ interface TrackingData {
     brand: string
     model: string
     year?: number | null
-    kilometer: number
+    kilometer?: number
     color?: string | null
   }
-  services: Array<{ id: string; name: string; completed: boolean }>
-  parts: Array<{ id: string; name: string; quantity: number }>
-  photos: Array<{
+  services?: Array<{ id: string; name: string; completed: boolean }>
+  parts?: Array<{ id: string; name: string; quantity: number }>
+  photos?: Array<{
     id: string
     url: string
     display_url?: string
@@ -198,6 +204,135 @@ export default function PublicVehicleTrackPage() {
     )
   }
 
+  if (data.expired) {
+    const cleanPhone = data.tenant?.phone ? data.tenant.phone.replace(/\D/g, "") : ""
+    const isCompleted = data.status === "COMPLETED"
+
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100 flex flex-col justify-between selection:bg-sky-500 selection:text-white transition-colors duration-200">
+        {/* Subtle Ambient Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-72 bg-radial from-amber-500/5 dark:from-amber-500/10 via-transparent to-transparent pointer-events-none -z-0" />
+
+        {/* Top Sticky Header */}
+        <header className="sticky top-0 z-30 bg-white/80 dark:bg-[#070b12]/85 backdrop-blur-xl border-b border-slate-200/80 dark:border-white/[0.08] px-4 sm:px-6 py-3 transition-colors">
+          <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0">
+              <BrandLogo clickable={false} className="w-28 sm:w-32 h-7 shrink-0" />
+              <div className="h-4 w-px bg-slate-200 dark:bg-white/10 shrink-0 hidden xs:block" />
+              <h2 className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate">
+                {data.tenant?.title || "WorksAuto Servis"}
+              </h2>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content */}
+        <main className="flex-1 max-w-xl w-full mx-auto px-4 sm:px-6 py-10 flex flex-col justify-center relative z-10">
+          <div className="p-6 sm:p-8 rounded-3xl bg-white dark:bg-[#0b101b]/95 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-lg dark:shadow-2xl space-y-6 text-center">
+            {/* Status Icon Badge */}
+            <div className="w-16 h-16 rounded-2xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center mx-auto shadow-sm">
+              {isCompleted ? <Clock size={32} /> : <XCircle size={32} />}
+            </div>
+
+            {/* Title & Explanation */}
+            <div className="space-y-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30">
+                {isCompleted ? "Servis Süresi Arşivlendi" : "Takip Bağlantısı Kapandı"}
+              </span>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
+                {isCompleted
+                  ? "Canlı Takip Bağlantısının Süresi Doldu"
+                  : "İş Emri Takip Bağlantısı Kapatıldı"}
+              </h1>
+              <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed max-w-md mx-auto">
+                {data.message ||
+                  (isCompleted
+                    ? "Bu araca ait servis işlemleri tamamlanmış olup, güvenlik ve KVKK gizlilik politikaları gereğince canlı takip bağlantısı 7 günlük arşiv süresinin ardından erişime kapatılmıştır."
+                    : "Bu iş emri iptal edilmiş olup takip bağlantısı erişime kapatılmıştır.")}
+              </p>
+            </div>
+
+            {/* Vehicle & Work Order Identity Mini-Card */}
+            <div className="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.03] border border-slate-200/70 dark:border-white/[0.06] flex items-center justify-between text-left">
+              <div className="flex items-center gap-3 min-w-0">
+                <PlateBadge plate={data.vehicle.plate} size="md" />
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {data.vehicle.brand} {data.vehicle.model}
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    Müşteri: {data.customer.name}
+                  </div>
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <span className="font-mono text-[11px] font-semibold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/20 px-2 py-0.5 rounded-md">
+                  {data.workOrderNumber}
+                </span>
+              </div>
+            </div>
+
+            {/* Information Notice */}
+            <div className="p-3.5 rounded-xl bg-slate-100/80 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.05] text-[11px] text-slate-500 dark:text-slate-400 text-left space-y-1">
+              <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <ShieldCheck size={14} className="text-sky-500" />
+                Geçmiş Servis Kaydı & Fatura Talepleri
+              </div>
+              <p>
+                Yapılan işlemlerin detaylı dökümü, e-fatura veya garanti kapsamı bilgileri atölye yönetim sistemimizde güvenle saklanmaktadır. Bilgi veya belge talepleriniz için servis danışmanınız ile irtibata geçebilirsiniz.
+              </p>
+            </div>
+
+            {/* Workshop Action Buttons */}
+            {data.tenant && (
+              <div className="space-y-3 pt-2">
+                <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                  {data.tenant.title}
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {data.tenant.phone && (
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="w-full h-11 text-xs font-semibold gap-2 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/5"
+                    >
+                      <a href={`tel:${cleanPhone}`}>
+                        <Phone size={15} className="text-sky-500" />
+                        Servisi Ara
+                      </a>
+                    </Button>
+                  )}
+                  {cleanPhone && (
+                    <Button
+                      asChild
+                      className="w-full h-11 text-xs font-semibold gap-2 bg-[#25D366] hover:bg-[#20bd5a] text-white shadow-sm"
+                    >
+                      <a
+                        href={`https://wa.me/90${cleanPhone.replace(/^0/, "")}?text=${encodeURIComponent(
+                          `Merhaba ${data.tenant.title}, ${data.workOrderNumber} numaralı (${data.vehicle.plate}) servis kaydım hakkında bilgi almak istiyorum.`
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <WhatsAppIcon size={16} />
+                        WhatsApp ile Yaz
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="py-4 text-center text-[11px] text-slate-500 border-t border-slate-200/60 dark:border-white/[0.05]">
+          WorksAuto Dijital Servis Yönetim Altyapısı
+        </footer>
+      </div>
+    )
+  }
+
   // Calculate current progress step (3-Step Lifecycle: QUEUE -> IN_PROGRESS -> COMPLETED)
   let currentStepIndex = 0
   if (data.status === "QUEUE") currentStepIndex = 0
@@ -293,7 +428,7 @@ export default function PublicVehicleTrackPage() {
           <div className="flex flex-wrap items-center gap-2 pt-4 mt-4 border-t border-slate-100 dark:border-white/[0.06] text-[11px] text-slate-600 dark:text-slate-400">
             <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] px-2.5 py-1 rounded-lg">
               <Gauge size={12} className="text-sky-500 dark:text-sky-400" />
-              <span>{data.vehicle.kilometer > 0 ? `${data.vehicle.kilometer.toLocaleString("tr-TR")} KM` : "Giriş KM Belirtilmedi"}</span>
+              <span>{(data.vehicle.kilometer ?? 0) > 0 ? `${(data.vehicle.kilometer ?? 0).toLocaleString("tr-TR")} KM` : "Giriş KM Belirtilmedi"}</span>
             </span>
             {data.fuelLevel && (
               <span className="flex items-center gap-1.5 bg-slate-100 dark:bg-white/[0.03] border border-slate-200/80 dark:border-white/[0.06] px-2.5 py-1 rounded-lg">
@@ -313,6 +448,23 @@ export default function PublicVehicleTrackPage() {
             </span>
           </div>
         </div>
+
+        {/* Archival Notice for Completed Orders (7 Days Retention) */}
+        {data.status === "COMPLETED" && (
+          <div className="p-4 rounded-2xl bg-emerald-50/90 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-900 dark:text-emerald-300 flex items-start gap-3 shadow-xs">
+            <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+              <CheckCircle2 size={18} />
+            </div>
+            <div className="space-y-0.5 text-xs">
+              <div className="font-bold text-emerald-950 dark:text-emerald-200">
+                Servis Süreci Tamamlandı & Teslimata Hazır
+              </div>
+              <p className="text-emerald-800/80 dark:text-emerald-300/80 leading-relaxed text-[11px]">
+                Aracınıza ait tüm bakım ve onarım işlemleri tamamlanmıştır. Güvenlik ve KVKK gizlilik standartları gereği bu canlı takip bağlantısı, işlem detaylarını ve onarım fotoğraflarını inceleyebilmeniz için teslimat tarihinden itibaren <strong>7 gün</strong> boyunca açık kalacak, ardından otomatik olarak erişime kapatılacaktır.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Status Section: Stepper Timeline or Cancellation Notice */}
         {data.status === "CANCELLED" ? (
@@ -517,74 +669,81 @@ export default function PublicVehicleTrackPage() {
         )}
 
         {/* Bento Grid: Services & Parts */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Services Box */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
-                <Wrench size={13} className="text-sky-500 dark:text-sky-400" />
-                <span>Yapılan İşlemler</span>
-              </h3>
-              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06]">
-                {data.services.length}
-              </span>
-            </div>
+        {(() => {
+          const servicesList = data.services || []
+          const partsList = data.parts || []
 
-            {data.services.length > 0 ? (
-              <ul className="space-y-2 text-xs">
-                {data.services.map((s) => (
-                  <li
-                    key={s.id}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04] text-slate-800 dark:text-slate-200"
-                  >
-                    <span className="truncate pr-2 font-medium">{s.name}</span>
-                    <span className="shrink-0 flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 size={12} />
-                      <span>Tamamlandı</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                Henüz planlanan işlem eklenmedi.
+          return (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Services Box */}
+              <div className="p-5 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-3 transition-colors">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+                    <Wrench size={13} className="text-sky-500 dark:text-sky-400" />
+                    <span>Yapılan İşlemler</span>
+                  </h3>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06]">
+                    {servicesList.length}
+                  </span>
+                </div>
+
+                {servicesList.length > 0 ? (
+                  <ul className="space-y-2 text-xs">
+                    {servicesList.map((s) => (
+                      <li
+                        key={s.id}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04] text-slate-800 dark:text-slate-200"
+                      >
+                        <span className="truncate pr-2 font-medium">{s.name}</span>
+                        <span className="shrink-0 flex items-center gap-1 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 size={12} />
+                          <span>Tamamlandı</span>
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                    Henüz planlanan işlem eklenmedi.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
 
-          {/* Parts Box */}
-          <div className="p-5 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-3 transition-colors">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
-                <Car size={13} className="text-sky-500 dark:text-sky-400" />
-                <span>Değişen Parçalar</span>
-              </h3>
-              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06]">
-                {data.parts.length}
-              </span>
-            </div>
+              {/* Parts Box */}
+              <div className="p-5 rounded-2xl bg-white dark:bg-[#0b101b]/90 border border-slate-200/80 dark:border-white/[0.08] backdrop-blur-md shadow-xs dark:shadow-xl space-y-3 transition-colors">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-800 dark:text-slate-300 flex items-center gap-1.5">
+                    <Car size={13} className="text-sky-500 dark:text-sky-400" />
+                    <span>Değişen Parçalar</span>
+                  </h3>
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/[0.04] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-white/[0.06]">
+                    {partsList.length}
+                  </span>
+                </div>
 
-            {data.parts.length > 0 ? (
-              <ul className="space-y-2 text-xs">
-                {data.parts.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04] text-slate-800 dark:text-slate-200"
-                  >
-                    <span className="truncate pr-2 font-medium">{p.name}</span>
-                    <span className="shrink-0 text-[11px] font-mono text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded bg-slate-100 dark:bg-white/[0.04]">
-                      {p.quantity} Adet
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
-                Parça sarfiyatı bulunmuyor.
+                {partsList.length > 0 ? (
+                  <ul className="space-y-2 text-xs">
+                    {partsList.map((p) => (
+                      <li
+                        key={p.id}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/[0.04] text-slate-800 dark:text-slate-200"
+                      >
+                        <span className="truncate pr-2 font-medium">{p.name}</span>
+                        <span className="shrink-0 text-[11px] font-mono text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded bg-slate-100 dark:bg-white/[0.04]">
+                          {p.quantity} Adet
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="py-6 text-center text-xs text-slate-400 dark:text-slate-500">
+                    Parça sarfiyatı bulunmuyor.
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          )
+        })()}
 
         {/* Photos Section (If photos exist) */}
         {data.photos && data.photos.length > 0 && (

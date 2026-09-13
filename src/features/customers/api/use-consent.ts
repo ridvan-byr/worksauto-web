@@ -68,11 +68,15 @@ export interface DirectConsentDto {
   policyVersion?: string;
 }
 
-export function useCustomerConsents(customerId?: string) {
+export function useCustomerConsents(
+  customerId?: string,
+  options?: { refetchInterval?: number | false }
+) {
   return useQuery<CustomerConsentSummary>({
     queryKey: ['customer-consents', customerId],
     queryFn: () => apiClient.get<CustomerConsentSummary>(`/customers/${customerId}/consents`),
     enabled: !!customerId,
+    refetchInterval: options?.refetchInterval,
   });
 }
 

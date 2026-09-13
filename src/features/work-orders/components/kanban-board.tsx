@@ -151,8 +151,8 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
     handleCardDragEnd()
   }
 
-  // Handle Drop on Empty Column Area
-  const handleDropToColumn = (e: React.DragEvent, targetStatus: WorkOrderStatus) => {
+  // Handle Drop on Empty Column Area or Bottom Drop Zone
+  const handleDropToColumn = (e: React.DragEvent, targetStatus: WorkOrderStatus, appendToEnd?: boolean) => {
     e.preventDefault()
     setDragOverColumn(null)
     const id =
@@ -161,6 +161,19 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
       const draggedOrder = orders.find((o) => o.id === id)
       if (draggedOrder && draggedOrder.status !== targetStatus) {
         onStatusChange(id, targetStatus)
+      }
+      // If dropping at the bottom, reorder to be after the last card in the target column
+      if (appendToEnd) {
+        const columnOrders =
+          targetStatus === "PENDING"
+            ? pendingOrdersRef.current
+            : targetStatus === "IN_PROGRESS"
+            ? inProgressOrdersRef.current
+            : completedOrdersRef.current
+        const lastOrder = columnOrders.filter((o) => o.id !== id).at(-1)
+        if (lastOrder) {
+          reorderTwoOrders(id, lastOrder.id, "after")
+        }
       }
     }
     handleCardDragEnd()
@@ -229,21 +242,17 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
     completedOrdersRef.current = completedOrders
   }, [pendingOrders, inProgressOrders, completedOrders])
 
-  // Live Reorder while dragging over slots within the SAME column
+  // Live Reorder while dragging over slots — works BOTH within the same column AND across columns
   const handleLiveSlotReorder = React.useCallback(
     (columnStatus: WorkOrderStatus, targetIdx: number) => {
       const currentStatus = activeDraggedStatusRef.current
       const currentIdx = activeDraggedIdxRef.current
       const draggedId = activeDraggedIdRef.current
 
-      if (
-        !draggedId ||
-        currentIdx === null ||
-        currentStatus !== columnStatus ||
-        currentIdx === targetIdx
-      ) {
-        return
-      }
+      if (!draggedId || currentIdx === null) return
+
+      // Same column same index — nothing to do
+      if (currentStatus === columnStatus && currentIdx === targetIdx) return
 
       const columnOrders =
         columnStatus === "PENDING"
@@ -255,6 +264,12 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
       if (targetIdx < 0 || targetIdx >= columnOrders.length) return
       const targetOrder = columnOrders[targetIdx]
       if (!targetOrder || targetOrder.id === draggedId) return
+
+      // Cross-column drag: trigger status change immediately for live preview
+      if (currentStatus !== columnStatus) {
+        onStatusChange(draggedId, columnStatus)
+        activeDraggedStatusRef.current = columnStatus
+      }
 
       setCustomOrderIds((prev) => {
         const master = [...prev]
@@ -269,7 +284,7 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
         const toPos = master.indexOf(targetOrder.id)
         if (toPos === -1) return prev
 
-        const insertPos = currentIdx < targetIdx ? toPos + 1 : toPos
+        const insertPos = currentStatus === columnStatus && currentIdx < targetIdx ? toPos + 1 : toPos
         master.splice(insertPos, 0, draggedId)
 
         try {
@@ -281,13 +296,15 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
       })
 
       activeDraggedIdxRef.current = targetIdx
+      // Update status ref so subsequent moves within this column work correctly
+      activeDraggedStatusRef.current = columnStatus
     },
-    [orders]
+    [orders, onStatusChange]
   )
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5 items-stretch">
         {/* COLUMN 1: PENDING */}
         <div
           onDragOver={(e) => {
@@ -305,13 +322,13 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
             }
           }}
           onDrop={(e) => handleDropToColumn(e, "PENDING")}
-          className={`rounded-3xl border p-4 sm:p-4.5 space-y-3.5 transition-all ${
+          className={`rounded-3xl border p-4 sm:p-4.5 flex flex-col transition-all h-[calc(100vh-270px)] min-h-[580px] ${
             dragOverColumn === "PENDING"
               ? "bg-amber-500/15 border-amber-400 ring-2 ring-amber-400/60 shadow-lg scale-[1.01]"
               : "bg-slate-100/70 dark:bg-slate-900/50 border-slate-200/80 dark:border-slate-800/80"
           }`}
         >
-          <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/70 dark:border-slate-800/70">
+          <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/70 dark:border-slate-800/70 shrink-0">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
@@ -324,14 +341,14 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
           </div>
 
           {dragOverColumn === "PENDING" && (
-            <div className="p-2.5 rounded-xl border border-dashed border-amber-400 bg-amber-500/20 text-center text-xs font-bold text-amber-800 dark:text-amber-200 animate-pulse">
+            <div className="p-2.5 rounded-xl border border-dashed border-amber-400 bg-amber-500/20 text-center text-xs font-bold text-amber-800 dark:text-amber-200 animate-pulse shrink-0">
               Bekleme Sırasına Almak İçin Buraya Bırakın
             </div>
           )}
 
-          <div className="space-y-3.5 pt-2 min-h-[340px]">
+          <div className="space-y-3.5 pt-2 flex-1 overflow-y-auto pr-1 min-h-0 flex flex-col scrollbar-thin">
             {pendingOrders.length === 0 ? (
-              <div className="h-40 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-slate-400 text-xs">
+              <div className="h-40 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-slate-400 text-xs shrink-0">
                 <Clock size={20} className="mb-1 text-slate-300" />
                 <span>Bekleyen araç bulunmuyor</span>
               </div>
@@ -356,6 +373,22 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
                 />
               ))
             )}
+            {/* Bottom drop zone — allows dropping at the end of the column and fills remaining height */}
+            <div
+              className={`flex-1 min-h-[80px] rounded-2xl transition-all ${
+                dragOverColumn === "PENDING" ? "border-2 border-dashed border-amber-400/50 bg-amber-500/5" : ""
+              }`}
+              onDragOver={(e) => {
+                if (!isWorkOrderDrag(e)) return
+                e.preventDefault()
+                e.stopPropagation()
+                e.dataTransfer.dropEffect = "move"
+              }}
+              onDrop={(e) => {
+                e.stopPropagation()
+                handleDropToColumn(e, "PENDING", true)
+              }}
+            />
           </div>
         </div>
 
@@ -376,13 +409,13 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
             }
           }}
           onDrop={(e) => handleDropToColumn(e, "IN_PROGRESS")}
-          className={`rounded-3xl border p-4 sm:p-4.5 space-y-3.5 transition-all ${
+          className={`rounded-3xl border p-4 sm:p-4.5 flex flex-col transition-all h-[calc(100vh-270px)] min-h-[580px] ${
             dragOverColumn === "IN_PROGRESS"
               ? "bg-sky-500/20 border-sky-400 ring-2 ring-sky-400/60 shadow-lg scale-[1.01]"
               : "bg-sky-500/[0.04] dark:bg-sky-500/[0.03] border-sky-500/20"
           }`}
         >
-          <div className="flex items-center justify-between pb-2.5 border-b border-sky-500/20">
+          <div className="flex items-center justify-between pb-2.5 border-b border-sky-500/20 shrink-0">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-sky-900 dark:text-sky-200">
@@ -395,14 +428,14 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
           </div>
 
           {dragOverColumn === "IN_PROGRESS" && (
-            <div className="p-2.5 rounded-xl border border-dashed border-sky-400 bg-sky-500/25 text-center text-xs font-bold text-sky-800 dark:text-sky-200 animate-pulse">
+            <div className="p-2.5 rounded-xl border border-dashed border-sky-400 bg-sky-500/25 text-center text-xs font-bold text-sky-800 dark:text-sky-200 animate-pulse shrink-0">
               Lifte / İşleme Almak İçin Buraya Bırakın
             </div>
           )}
 
-          <div className="space-y-3.5 pt-2 min-h-[340px]">
+          <div className="space-y-3.5 pt-2 flex-1 overflow-y-auto pr-1 min-h-0 flex flex-col scrollbar-thin">
             {inProgressOrders.length === 0 ? (
-              <div className="h-40 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-sky-200 dark:border-sky-900/50 rounded-2xl text-slate-400 text-xs">
+              <div className="h-40 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-sky-200 dark:border-sky-900/50 rounded-2xl text-slate-400 text-xs shrink-0">
                 <Wrench size={20} className="mb-1 text-sky-400/50" />
                 <span>Şu an liftte olan araç yok</span>
               </div>
@@ -427,6 +460,22 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
                 />
               ))
             )}
+            {/* Bottom drop zone — allows dropping at the end of the column and fills remaining height */}
+            <div
+              className={`flex-1 min-h-[80px] rounded-2xl transition-all ${
+                dragOverColumn === "IN_PROGRESS" ? "border-2 border-dashed border-sky-400/50 bg-sky-500/5" : ""
+              }`}
+              onDragOver={(e) => {
+                if (!isWorkOrderDrag(e)) return
+                e.preventDefault()
+                e.stopPropagation()
+                e.dataTransfer.dropEffect = "move"
+              }}
+              onDrop={(e) => {
+                e.stopPropagation()
+                handleDropToColumn(e, "IN_PROGRESS", true)
+              }}
+            />
           </div>
         </div>
 
@@ -447,13 +496,13 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
             }
           }}
           onDrop={(e) => handleDropToColumn(e, "COMPLETED")}
-          className={`rounded-3xl border p-4 sm:p-4.5 space-y-3.5 transition-all ${
+          className={`rounded-3xl border p-4 sm:p-4.5 flex flex-col transition-all h-[calc(100vh-270px)] min-h-[580px] ${
             dragOverColumn === "COMPLETED"
               ? "bg-emerald-500/20 border-emerald-400 ring-2 ring-emerald-400/60 shadow-lg scale-[1.01]"
               : "bg-emerald-500/[0.04] dark:bg-emerald-500/[0.03] border-emerald-500/20"
           }`}
         >
-          <div className="flex items-center justify-between pb-2.5 border-b border-emerald-500/20">
+          <div className="flex items-center justify-between pb-2.5 border-b border-emerald-500/20 shrink-0">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
               <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-200">
@@ -466,14 +515,14 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
           </div>
 
           {dragOverColumn === "COMPLETED" && (
-            <div className="p-2.5 rounded-xl border border-dashed border-emerald-400 bg-emerald-500/25 text-center text-xs font-bold text-emerald-800 dark:text-emerald-200 animate-pulse">
+            <div className="p-2.5 rounded-xl border border-dashed border-emerald-400 bg-emerald-500/25 text-center text-xs font-bold text-emerald-800 dark:text-emerald-200 animate-pulse shrink-0">
               İşlemi Tamamlamak İçin Buraya Bırakın
             </div>
           )}
 
-          <div className="space-y-3.5 pt-2 min-h-[340px]">
+          <div className="space-y-3.5 pt-2 flex-1 overflow-y-auto pr-1 min-h-0 flex flex-col scrollbar-thin">
             {completedOrders.length === 0 ? (
-              <div className="h-40 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-emerald-200 dark:border-emerald-900/50 rounded-2xl text-slate-400 text-xs">
+              <div className="h-40 flex flex-col items-center justify-center text-center p-4 border-2 border-dashed border-emerald-200 dark:border-emerald-900/50 rounded-2xl text-slate-400 text-xs shrink-0">
                 <CheckCircle2 size={20} className="mb-1 text-emerald-400/50" />
                 <span>Teslime hazır araç yok</span>
               </div>
@@ -498,6 +547,22 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
                 />
               ))
             )}
+            {/* Bottom drop zone — allows dropping at the end of the column and fills remaining height */}
+            <div
+              className={`flex-1 min-h-[80px] rounded-2xl transition-all ${
+                dragOverColumn === "COMPLETED" ? "border-2 border-dashed border-emerald-400/50 bg-emerald-500/5" : ""
+              }`}
+              onDragOver={(e) => {
+                if (!isWorkOrderDrag(e)) return
+                e.preventDefault()
+                e.stopPropagation()
+                e.dataTransfer.dropEffect = "move"
+              }}
+              onDrop={(e) => {
+                e.stopPropagation()
+                handleDropToColumn(e, "COMPLETED", true)
+              }}
+            />
           </div>
         </div>
       </div>

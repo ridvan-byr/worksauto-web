@@ -265,6 +265,12 @@ export default function WorkOrdersPage() {
       }
 
       // 3. Timeframe / Lifecycle Retention Filter (Only applies when NOT actively searching)
+      // Unbilled explicit filter: Only show orders waiting for an invoice
+      if (timeframeFilter === "unbilled") {
+        const hasActiveInvoice = o.invoice && o.invoice.status !== "CANCELLED"
+        return o.status === "COMPLETED" && !hasActiveInvoice
+      }
+
       // Active queue / in-progress orders always stay on board regardless of age
       if (o.status === "PENDING" || o.status === "IN_PROGRESS") {
         return true
@@ -272,12 +278,6 @@ export default function WorkOrdersPage() {
 
       const orderTime = new Date(o.completedAt || o.updatedAt || o.createdAt).getTime()
       const diffHours = (now - orderTime) / (1000 * 60 * 60)
-
-      // Unbilled explicit filter
-      if (timeframeFilter === "unbilled") {
-        const hasActiveInvoice = o.invoice && o.invoice.status !== "CANCELLED"
-        return o.status === "COMPLETED" && !hasActiveInvoice
-      }
 
       if (timeframeFilter === "active_48h") {
         if (o.status === "COMPLETED") {
@@ -397,14 +397,15 @@ export default function WorkOrdersPage() {
       </div>
 
       {/* Control Bar: Live Search, Staff Filter & Kanban/List Toggle */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
-        <div className="flex flex-1 flex-col sm:flex-row items-stretch sm:items-center gap-3">
+      <div className="flex items-center justify-between gap-3 p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-x-auto scrollbar-thin">
+        {/* Left: Search, Staff Filter & Alert Buttons - single line, never wraps */}
+        <div className="flex items-center gap-2.5 shrink-0 flex-nowrap">
           {/* Live Search Bar */}
-          <div className="relative flex-1 max-w-sm">
+          <div className="relative w-44 sm:w-52 md:w-60 shrink-0">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
             <input
               type="text"
-              placeholder="Plaka, iş emri no veya müşteri ara..."
+              placeholder="Plaka, iş emri veya müşteri..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-9 pl-9 pr-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
@@ -412,13 +413,13 @@ export default function WorkOrdersPage() {
           </div>
 
           {/* Staff Filter */}
-          <div className="flex items-center gap-2 text-xs text-slate-500 shrink-0">
-            <Filter size={14} />
-            <span className="font-medium shrink-0">Usta:</span>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 shrink-0">
+            <Filter size={13} className="text-slate-400 shrink-0" />
+            <span className="font-medium shrink-0 hidden lg:inline">Usta:</span>
             <select
               value={selectedStaffFilter}
               onChange={(e) => setSelectedStaffFilter(e.target.value)}
-              className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+              className="h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
             >
               <option value="all">Tüm Personel / Ustalar</option>
               <option value="unassigned">Atanmamış Araçlar</option>
@@ -430,14 +431,50 @@ export default function WorkOrdersPage() {
             </select>
           </div>
 
+          {(unbilledCount > 0 || cancelledCount > 0) && (
+            <div className="w-px h-5 bg-slate-200 dark:bg-slate-800 shrink-0 mx-0.5" />
+          )}
+
+          {unbilledCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setTimeframeFilter((prev) => (prev === "unbilled" ? "active_48h" : "unbilled"))}
+              className={cn(
+                "h-8.5 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap shadow-2xs",
+                timeframeFilter === "unbilled"
+                  ? "border-amber-400 bg-amber-500 text-white shadow-amber-500/20"
+                  : "border-amber-200/90 dark:border-amber-900/50 bg-amber-50/70 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400"
+              )}
+              title="Faturası henüz kesilmemiş tamamlanan iş emirlerini filtrele"
+            >
+              <AlertCircle size={13} />
+              <span>Fatura Bekleyen ({unbilledCount})</span>
+            </button>
+          )}
+
+          {cancelledCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setIsCancelledModalOpen(true)}
+              className="h-8.5 px-3 rounded-xl border border-rose-200/90 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 whitespace-nowrap shadow-2xs"
+              title="İptal edilen iş emirlerini görüntüle"
+            >
+              <XCircle size={13} />
+              <span>İptal Edilenler ({cancelledCount})</span>
+            </button>
+          )}
+        </div>
+
+        {/* Right: Görünüm Dropdown & View Toggle — always pinned right, single line */}
+        <div className="flex items-center gap-2 shrink-0 flex-nowrap">
           {/* Timeframe & Archival Retention Filter */}
-          <div className="flex items-center gap-2 text-xs text-slate-500 shrink-0">
-            <Archive size={14} />
-            <span className="font-medium shrink-0">Görünüm:</span>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 shrink-0">
+            <Archive size={13} className="text-slate-400 shrink-0" />
+            <span className="font-medium shrink-0 hidden xl:inline">Görünüm:</span>
             <select
               value={timeframeFilter}
               onChange={(e) => setTimeframeFilter(e.target.value as "active_48h" | "unbilled" | "today" | "week" | "all")}
-              className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+              className="h-9 px-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
               title="Atölye aktif panosu tamamlanan işleri 48 saat, iptalleri 24 saat gösterir"
             >
               <option value="active_48h">Aktif Atölye (Son 48s)</option>
@@ -449,53 +486,21 @@ export default function WorkOrdersPage() {
               <option value="all">Tüm Arşiv (Geçmiş Dahil)</option>
             </select>
           </div>
-        </div>
 
-        {/* Action Controls: Unbilled Alert, Cancelled Orders Button & View Toggle */}
-        <div className="flex flex-wrap items-center gap-2">
-          {unbilledCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setTimeframeFilter((prev) => (prev === "unbilled" ? "active_48h" : "unbilled"))}
-              className={cn(
-                "h-9 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs",
-                timeframeFilter === "unbilled"
-                  ? "border-amber-400 bg-amber-500 text-white shadow-amber-500/20"
-                  : "border-amber-200/90 dark:border-amber-900/50 bg-amber-50/70 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400"
-              )}
-              title="Faturası henüz kesilmemiş tamamlanan iş emirlerini filtrele"
-            >
-              <AlertCircle size={14} />
-              <span>Fatura Bekleyen ({unbilledCount})</span>
-            </button>
-          )}
-
-          {cancelledCount > 0 && (
-            <button
-              type="button"
-              onClick={() => setIsCancelledModalOpen(true)}
-              className="h-9 px-3 rounded-xl border border-rose-200/90 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs"
-              title="İptal edilen iş emirlerini görüntüle"
-            >
-              <XCircle size={14} />
-              <span>İptal Edilenler ({cancelledCount})</span>
-            </button>
-          )}
-
-          {/* View Toggle */}
-          <div className="flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          {/* View Toggle - Icon only to save space and eliminate scroll */}
+          <div className="flex rounded-xl p-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shrink-0">
             <button
               type="button"
               onClick={() => setViewMode("kanban")}
+              title="Kanban Görünümü"
               className={cn(
-                "py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
+                "w-8 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer",
                 viewMode === "kanban"
                   ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               )}
             >
-              <LayoutGrid size={13} />
-              <span>Atölye Panosu (Kanban)</span>
+              <LayoutGrid size={15} />
             </button>
 
             <button
@@ -504,15 +509,15 @@ export default function WorkOrdersPage() {
                 setListInitialFilter("all")
                 setViewMode("list")
               }}
+              title="Liste Görünümü"
               className={cn(
-                "py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer",
+                "w-8 h-7 rounded-lg flex items-center justify-center transition-all cursor-pointer",
                 viewMode === "list"
                   ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs"
-                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900"
+                  : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
               )}
             >
-              <List size={13} />
-              <span>Liste Tablosu</span>
+              <List size={15} />
             </button>
           </div>
         </div>

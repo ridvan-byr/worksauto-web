@@ -11,6 +11,7 @@ import {
   ChevronUp,
   ChevronDown,
   AlertCircle,
+  RotateCcw,
 } from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -89,27 +90,16 @@ export function WorkOrderCard({
         e.stopPropagation()
         e.dataTransfer.dropEffect = "move"
 
-        if (isDifferentColumnDrag) {
-          const rect = e.currentTarget.getBoundingClientRect()
-          const midY = rect.top + rect.height / 2
-          const pos = e.clientY < midY ? "before" : "after"
-          if (dropPosition !== pos) {
-            setDropPosition(pos)
-          }
-        } else {
-          // Same column: active live preview & shifting
-          if (dropPosition !== null) setDropPosition(null)
-          onCardDragOverSlot?.(columnStatus, index)
-        }
+        // Use live slot reorder for both same-column and cross-column drags
+        if (dropPosition !== null) setDropPosition(null)
+        onCardDragOverSlot?.(columnStatus, index)
       }}
       onDragEnter={(e) => {
         if (!e.dataTransfer.types.includes("application/work-order-id")) return
         e.preventDefault()
         e.stopPropagation()
 
-        if (!isDifferentColumnDrag) {
-          onCardDragOverSlot?.(columnStatus, index)
-        }
+        onCardDragOverSlot?.(columnStatus, index)
       }}
       onDragLeave={(e) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node)) {
@@ -250,80 +240,87 @@ export function WorkOrderCard({
       </div>
 
       {/* Bottom Footer: Total, Indicators & Quick Status Button */}
-      <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60">
-        <div>
-          <span className="text-[10px] text-slate-400 block">Genel Toplam (KDV Dahil)</span>
-          <span className="text-xs font-bold font-mono text-slate-900 dark:text-slate-100">
-            {order.grandTotal.toLocaleString("tr-TR")} ₺
-          </span>
-        </div>
+      <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0 shrink-0">
+            <span className="text-[9px] uppercase tracking-wider font-medium text-slate-400 block">Toplam (KDV Dahil)</span>
+            <span className="text-xs font-bold font-mono text-slate-900 dark:text-slate-100">
+              {order.grandTotal.toLocaleString("tr-TR")} ₺
+            </span>
+          </div>
 
-        <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-          {order.status === "PENDING" && (
-            <button
-              type="button"
-              onClick={() => onStatusChange(order.id, "IN_PROGRESS")}
-              className="h-7 px-2.5 rounded-lg bg-sky-500 text-white hover:bg-sky-600 text-[10px] font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
-              title="Aracı Lifte Al"
-            >
-              <Play size={10} fill="currentColor" />
-              <span>Lifte Al</span>
-            </button>
-          )}
-
-          {order.status === "IN_PROGRESS" && (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={() => onStatusChange(order.id, "PENDING")}
-                className="h-7 px-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] font-semibold transition-colors cursor-pointer"
-                title="Yanlışlıkla alındıysa sıraya geri al"
-              >
-                ↩ Sıraya Al
-              </button>
-              <button
-                type="button"
-                onClick={() => onStatusChange(order.id, "COMPLETED")}
-                className="h-7 px-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 text-[10px] font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
-                title="İşi Bitir"
-              >
-                <CheckCircle2 size={11} />
-                <span>Tamamla</span>
-              </button>
-            </div>
-          )}
-
-          {order.status === "COMPLETED" && (
-            <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0 flex-nowrap" onClick={(e) => e.stopPropagation()}>
+            {order.status === "PENDING" && (
               <button
                 type="button"
                 onClick={() => onStatusChange(order.id, "IN_PROGRESS")}
-                className="h-7 px-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 text-[10px] font-semibold transition-colors cursor-pointer"
-                title="İşi yeniden lifte geri al"
+                className="h-8 px-3 rounded-xl bg-sky-500 text-white hover:bg-sky-600 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer whitespace-nowrap"
+                title="Aracı Lifte Al"
               >
-                ↩ Lifte Geri Al
+                <Play size={11} fill="currentColor" />
+                <span>Lifte Al</span>
               </button>
-              {order.invoice && order.invoice.status !== "CANCELLED" ? (
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
-                  <CheckCircle2 size={11} />
+            )}
+
+            {order.status === "IN_PROGRESS" && (
+              <div className="flex items-center gap-1.5 flex-nowrap">
+                <button
+                  type="button"
+                  onClick={() => onStatusChange(order.id, "PENDING")}
+                  className="h-8 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-semibold transition-colors cursor-pointer whitespace-nowrap"
+                  title="Yanlışlıkla alındıysa sıraya geri al"
+                >
+                  ↩ Sıraya Al
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onStatusChange(order.id, "COMPLETED")}
+                  className="h-8 px-3 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer whitespace-nowrap"
+                  title="İşi Bitir"
+                >
+                  <CheckCircle2 size={12} />
+                  <span>Tamamla</span>
+                </button>
+              </div>
+            )}
+
+            {order.status === "COMPLETED" && (
+              order.invoice && order.invoice.status !== "CANCELLED" ? (
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-xl border border-emerald-200 dark:border-emerald-800/40 whitespace-nowrap shrink-0">
+                  <CheckCircle2 size={12} />
                   <span>Faturalandı</span>
                 </span>
               ) : (
-                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/40" title="İş bitti fakat henüz fatura kesilmedi">
-                  <AlertCircle size={11} />
+                <span className="text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-xl border border-amber-200 dark:border-amber-800/40 whitespace-nowrap shrink-0" title="İş bitti fakat henüz fatura kesilmedi">
+                  <AlertCircle size={12} />
                   <span>Fatura Kesilmedi</span>
                 </span>
-              )}
-            </div>
-          )}
+              )
+            )}
 
-          {order.status === "CANCELLED" && (
-            <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
-              <XCircle size={12} />
-              <span>İptal Edildi</span>
-            </span>
-          )}
+            {order.status === "CANCELLED" && (
+              <span className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1 whitespace-nowrap">
+                <XCircle size={13} />
+                <span>İptal Edildi</span>
+              </span>
+            )}
+          </div>
         </div>
+
+        {/* Dedicated row for Lifte Geri Al in COMPLETED orders to prevent any horizontal overflow */}
+        {order.status === "COMPLETED" && (
+          <div className="pt-0.5" onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              onClick={() => onStatusChange(order.id, "IN_PROGRESS")}
+              className="w-full h-8 px-3 rounded-xl border border-slate-300/90 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-800/80 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:border-sky-300 dark:hover:border-sky-700 text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 text-xs font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer whitespace-nowrap shadow-2xs group"
+              title="İşi yeniden lifte geri al"
+            >
+              <RotateCcw size={12} className="text-slate-400 group-hover:text-sky-500 group-hover:-rotate-45 transition-transform" />
+              <span>Lifte Geri Al</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )
