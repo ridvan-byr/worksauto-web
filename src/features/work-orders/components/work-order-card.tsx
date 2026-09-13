@@ -39,7 +39,7 @@ export function WorkOrderCard({
   index,
   columnStatus,
   activeDraggedId,
-  activeDraggedStatus,
+  activeDraggedStatus: _activeDraggedStatus,
   onStatusChange,
   onMoveUp,
   onMoveDown,
@@ -55,9 +55,6 @@ export function WorkOrderCard({
   const [dropPosition, setDropPosition] = React.useState<"before" | "after" | null>(null)
 
   const isCurrentDragged = activeDraggedId === order.id || isDragging
-  const isDifferentColumnDrag = Boolean(
-    activeDraggedStatus && activeDraggedStatus !== columnStatus
-  )
 
   const handleCardClick = () => {
     router.push(`/work-orders/${order.id}`)

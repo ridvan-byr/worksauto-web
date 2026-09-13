@@ -155,7 +155,7 @@ export async function checkCustomerPhone(phone: string) {
   return apiClient.get<{
     exists: boolean;
     isDeleted: boolean;
-    customer?: any;
+    customer?: Customer;
   }>('/customers/check-phone', { params: { phone } });
 }
 

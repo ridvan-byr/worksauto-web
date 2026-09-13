@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   RotateCcw,
   AlertTriangle,
-  Info,
   Loader2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -30,7 +29,6 @@ import {
 } from "@/lib/input-formatters"
 import { checkCustomerPhone, useRestoreCustomer } from "../api/use-customers"
 import { checkVehiclePlate } from "@/features/vehicles/api/use-vehicles"
-import { toast } from "@/components/ui/sonner"
 
 import { useForm, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -91,12 +89,26 @@ const fullCustomerFormSchema = z.object({
 
 type FullCustomerFormValues = z.infer<typeof fullCustomerFormSchema>;
 
+interface ExistingVehicleCheckResult {
+  exists: boolean
+  vehicleId?: string
+  plate?: string
+  brand?: string
+  model?: string
+  year?: number
+  customerId?: string
+  ownerName?: string
+  ownerPhone?: string
+  isVehicleDeleted?: boolean
+  isCustomerDeleted?: boolean
+}
+
 export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustomerModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const [currentStep, setCurrentStep] = React.useState<1 | 2>(1)
-  const [deletedCustomerFound, setDeletedCustomerFound] = React.useState<any | null>(null)
+  const [deletedCustomerFound, setDeletedCustomerFound] = React.useState<Customer | null>(null)
   const [isCheckingPhone, setIsCheckingPhone] = React.useState(false)
-  const [existingVehicleFound, setExistingVehicleFound] = React.useState<any | null>(null)
+  const [existingVehicleFound, setExistingVehicleFound] = React.useState<ExistingVehicleCheckResult | null>(null)
   const [isCheckingPlate, setIsCheckingPlate] = React.useState(false)
   const [transferConfirmed, setTransferConfirmed] = React.useState(false)
 
@@ -454,8 +466,9 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                    Telefon Numarası <span className="text-rose-500">*</span>
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                    <span>Telefon Numarası <span className="text-rose-500">*</span></span>
+                    {isCheckingPhone && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
                   </label>
                   <input
                     type="tel"
@@ -602,8 +615,9 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
 
             <div className="grid grid-cols-2 gap-2.5">
               <div className="col-span-2 space-y-1">
-                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                  Plaka <span className="text-rose-500">*</span>
+                <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>Plaka <span className="text-rose-500">*</span></span>
+                  {isCheckingPlate && <Loader2 className="w-3 h-3 animate-spin text-slate-400" />}
                 </label>
                 <input
                   type="text"

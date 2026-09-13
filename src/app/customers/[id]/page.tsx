@@ -53,6 +53,91 @@ export const formatDateDisplay = (val?: string | null) => {
   }
 }
 
+interface ApiVehicleItem {
+  id: string
+  tenantId?: string
+  plate: string
+  brand: string
+  model: string
+  year?: number
+  kilometer?: number
+  currentKm?: number
+  fuelType?: string
+  transmission?: string
+  lastServiceDate?: string
+  vin?: string
+}
+
+interface ApiAppointmentItem {
+  id: string
+  slotStartTime?: string
+  slotDate?: string
+  date?: string
+  time?: string
+  status?: "CONFIRMED" | "COMPLETED" | "CANCELLED" | "PENDING"
+  serviceName?: string
+  service?: { name?: string }
+  plate?: string
+  vehicle?: { plate?: string }
+  assignedMechanic?: { user?: { name: string; surname?: string } }
+  technicianName?: string
+}
+
+interface ApiWorkOrderItem {
+  id: string
+  workOrderNumber?: string
+  orderNumber?: string
+  createdAt?: string
+  date?: string
+  status?: string
+  grandTotal?: number | string
+  totalAmount?: number | string
+  initialKm?: number | string
+  kilometers?: number | string
+  plate?: string
+  vehicle?: { plate?: string }
+  assignedMechanic?: { user?: { name: string; surname?: string } }
+  technician?: string
+  itemsSummary?: string
+  items?: Array<{ name: string; itemType?: string }>
+}
+
+interface ApiInvoiceItem {
+  id: string
+  invoiceNumber?: string
+  issueDate?: string
+  date?: string
+  dueDate?: string
+  plate?: string
+  grandTotal?: number | string
+  totalAmount?: number | string
+  paidAmount?: number | string
+  status?: string
+  workOrder?: { vehicle?: { plate?: string } }
+}
+
+interface ApiMovementItem {
+  id: string
+  date?: string
+  createdAt?: string
+  debit?: number | string
+  credit?: number | string
+  type?: string
+  amount?: number | string
+  balanceAfter?: number | string
+  description?: string
+  documentNo?: string
+  referenceNo?: string
+}
+
+interface CustomerWithRelations extends Omit<Customer, "vehicles" | "appointments" | "workOrders" | "invoices" | "movements"> {
+  vehicles?: ApiVehicleItem[]
+  appointments?: ApiAppointmentItem[]
+  workOrders?: ApiWorkOrderItem[]
+  invoices?: ApiInvoiceItem[]
+  movements?: ApiMovementItem[]
+}
+
 export default function CustomerDetailPage() {
   const params = useParams()
   const router = useRouter()
@@ -81,6 +166,7 @@ export default function CustomerDetailPage() {
   // Load customer data with live API sync and mock fallback
   React.useEffect(() => {
     if (apiCustomer) {
+      const detail = apiCustomer as unknown as CustomerWithRelations
       setCustomer({
         id: apiCustomer.id,
         tenantId: apiCustomer.tenantId || 'ten_1',
@@ -93,7 +179,7 @@ export default function CustomerDetailPage() {
         taxNumber: apiCustomer.taxNumber,
         taxOffice: apiCustomer.taxOffice,
         balance: apiCustomer.currentAccount ? Number(apiCustomer.currentAccount.balance) : 0,
-        vehicles: (apiCustomer.vehicles || []).map((v: any) => ({
+        vehicles: (detail.vehicles || []).map((v) => ({
           id: v.id,
           tenantId: v.tenantId || 'ten_1',
           customerId: apiCustomer.id,
@@ -109,8 +195,9 @@ export default function CustomerDetailPage() {
             : undefined,
           vin: v.vin,
         })),
-        appointments: (apiCustomer.appointments || []).map((app: any) => {
-          const slotDateObj = app.slotStartTime || app.slotDate ? new Date(app.slotStartTime || app.slotDate) : null
+        appointments: (detail.appointments || []).map((app) => {
+          const slotDateVal = app.slotStartTime || app.slotDate
+          const slotDateObj = slotDateVal ? new Date(slotDateVal) : null
           const dateStr = slotDateObj ? slotDateObj.toLocaleDateString('tr-TR') : (app.date || '-')
           const timeStr = slotDateObj ? slotDateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : (app.time || '10:00')
           const techName = app.assignedMechanic?.user
@@ -127,9 +214,9 @@ export default function CustomerDetailPage() {
             technicianName: techName,
           }
         }),
-        workOrders: (apiCustomer.workOrders || []).map((w: any) => {
+        workOrders: (detail.workOrders || []).map((w) => {
           const itemsSummary = (w.items && w.items.length > 0)
-            ? w.items.map((i: any) => i.name).join(', ')
+            ? w.items.map((i) => i.name).join(', ')
             : (w.itemsSummary || 'Genel Bakım & Kontrol')
           const techName = w.assignedMechanic?.user
             ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname || ''}`.trim()
@@ -148,7 +235,7 @@ export default function CustomerDetailPage() {
             technician: techName,
           }
         }),
-        invoices: (apiCustomer.invoices || []).map((inv: any) => {
+        invoices: (detail.invoices || []).map((inv) => {
           const dateStr = inv.issueDate ? new Date(inv.issueDate).toLocaleDateString('tr-TR') : (inv.date || '-')
           const dueDateStr = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('tr-TR') : (inv.dueDate || '-')
           const plate = inv.workOrder?.vehicle?.plate || inv.plate || '-'
@@ -164,7 +251,7 @@ export default function CustomerDetailPage() {
             status: (inv.status === 'PAID' ? 'PAID' : inv.status === 'PARTIALLY_PAID' ? 'PARTIAL' : 'UNPAID') as 'PAID' | 'PARTIAL' | 'UNPAID',
           }
         }),
-        movements: ((apiCustomer.currentAccount?.movements || apiCustomer.movements || []) as any[]).map((m: any) => {
+        movements: ((apiCustomer.currentAccount?.movements || detail.movements || []) as ApiMovementItem[]).map((m) => {
           const dateStr = m.date
             ? new Date(m.date).toLocaleDateString('tr-TR')
             : (m.createdAt ? new Date(m.createdAt).toLocaleDateString('tr-TR') : '-')

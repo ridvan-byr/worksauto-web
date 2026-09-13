@@ -6,10 +6,8 @@ import QRCode from "qrcode"
 import {
   ShieldCheck,
   ShieldAlert,
-  Send,
   Copy,
   Check,
-  MessageCircle,
   FileCheck,
   Sparkles,
   ExternalLink,
@@ -17,7 +15,6 @@ import {
   RefreshCw,
   Clock,
   CheckCircle2,
-  Share2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"

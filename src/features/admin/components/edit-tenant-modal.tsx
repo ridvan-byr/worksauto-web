@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, Building2, AlertCircle, CheckCircle2, Save, Loader2 } from "lucide-react"
+import { X, Building2, AlertCircle, Save, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import type { AdminTenantDetail, UpdateTenantAdminInput } from "../api/use-admin"
