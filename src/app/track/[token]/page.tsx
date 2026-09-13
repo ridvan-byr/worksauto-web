@@ -20,12 +20,12 @@ import {
   Check,
   Car,
   MapPin,
-  MessageCircle,
   XCircle,
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { BrandLogo } from "@/components/shared/brand-logo"
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -91,12 +91,6 @@ const STATUS_STEPS = [
     title: "İşleme Alındı / Bakımda",
     shortTitle: "Bakımda",
     desc: "Ustanız işlemler, diagnostik testler ve parça değişimlerine aktif olarak devam ediyor.",
-  },
-  {
-    key: "QUALITY_CHECK",
-    title: "Kalite & Test Kontrolü",
-    shortTitle: "Son Kontrol",
-    desc: "Son güvenlik kontrolleri, sıvı seviyeleri ve yol testi denetimi yapılıyor.",
   },
   {
     key: "COMPLETED",
@@ -202,11 +196,11 @@ export default function PublicVehicleTrackPage() {
     )
   }
 
-  // Calculate current progress step
+  // Calculate current progress step (3-Step Lifecycle: QUEUE -> IN_PROGRESS -> COMPLETED)
   let currentStepIndex = 0
   if (data.status === "QUEUE") currentStepIndex = 0
   else if (data.status === "IN_PROGRESS") currentStepIndex = 1
-  else if (data.status === "COMPLETED") currentStepIndex = 3
+  else if (data.status === "COMPLETED") currentStepIndex = 2
 
   const currentStepInfo = STATUS_STEPS[currentStepIndex] || STATUS_STEPS[0]
   const cleanPhone = data.tenant?.phone ? data.tenant.phone.replace(/\D/g, "") : ""
@@ -345,13 +339,13 @@ export default function PublicVehicleTrackPage() {
                 </h3>
               </div>
               <span className="text-[11px] text-slate-500 font-mono">
-                Aşama {currentStepIndex + 1} / 4
+                Aşama {currentStepIndex + 1} / {STATUS_STEPS.length}
               </span>
             </div>
 
             {/* Stepper Progress Bar (Horizontal on all devices) */}
             <div className="relative pt-1 pb-1">
-              <div className="grid grid-cols-4 gap-2 relative z-10">
+              <div className="grid grid-cols-3 gap-2.5 sm:gap-3 relative z-10">
                 {STATUS_STEPS.map((step, idx) => {
                   const isPast = idx < currentStepIndex
                   const isCurrent = idx === currentStepIndex
@@ -434,7 +428,7 @@ export default function PublicVehicleTrackPage() {
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 hover:bg-emerald-100 dark:hover:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 text-xs font-semibold transition-all active:scale-98"
               >
-                <MessageCircle size={15} />
+                <WhatsAppIcon size={15} />
                 <span>WhatsApp'tan Yaz</span>
               </a>
             ) : null}
