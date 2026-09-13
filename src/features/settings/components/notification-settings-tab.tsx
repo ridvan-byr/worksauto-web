@@ -77,14 +77,14 @@ export function NotificationSettingsTab() {
   // Live WhatsApp Gateway State
   const [waConnected, setWaConnected] = React.useState<boolean>(false)
   const [waJid, setWaJid] = React.useState<string | null>(null)
-  const [, setWaDisplayName] = React.useState<string | null>(null)
+  const [waDisplayName, setWaDisplayName] = React.useState<string | null>(null)
   const [, setIsCheckingWa] = React.useState<boolean>(false)
   const [isDisconnectingWa, setIsDisconnectingWa] = React.useState<boolean>(false)
 
   // QR Modal State
   const [qrLoading, setQrLoading] = React.useState<boolean>(false)
   const [qrImageSrc, setQrImageSrc] = React.useState<string | null>(null)
-  const [qrSecondsLeft, setQrSecondsLeft] = React.useState<number>(30)
+  const [qrSecondsLeft, setQrSecondsLeft] = React.useState<number>(90)
   const [qrError, setQrError] = React.useState<string | null>(null)
 
   // Test Message State
@@ -124,7 +124,7 @@ export function NotificationSettingsTab() {
       }>("/notifications/whatsapp/qr")
       if (res.success && (res.qrBase64 || res.qrLink)) {
         setQrImageSrc(res.qrBase64 || res.qrLink || null)
-        setQrSecondsLeft(res.qrDuration || 30)
+        setQrSecondsLeft(Math.max(res.qrDuration || 90, 90))
       } else {
         setQrError(res.error || "QR kod üretilemedi.")
       }
@@ -135,7 +135,12 @@ export function NotificationSettingsTab() {
     }
   }, [])
 
-  const handleOpenQrModal = () => {
+  const handleOpenQrModal = async () => {
+    const current = await checkWhatsAppStatus()
+    if (current?.connected) {
+      toast.success("WhatsApp hattınız zaten bağlı durumda!")
+      return
+    }
     setShowQrModal(true)
     fetchQrCode()
   }
@@ -200,7 +205,7 @@ export function NotificationSettingsTab() {
       setQrSecondsLeft((prev) => {
         if (prev <= 1) {
           fetchQrCode()
-          return 30
+          return 90
         }
         return prev - 1
       })
@@ -391,7 +396,7 @@ export function NotificationSettingsTab() {
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
-                  <span>Bağlı {waJid ? `(+${waJid.split('@')[0]})` : ''}</span>
+                  <span>Bağlı {waDisplayName ? `${waDisplayName} ` : ''}{waJid ? `(+${waJid.split('@')[0]})` : ''}</span>
                 </div>
               ) : (
                 <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
