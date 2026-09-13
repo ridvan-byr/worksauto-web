@@ -121,9 +121,10 @@ export default function CustomersPage() {
         })
       }
       await queryClient.invalidateQueries({ queryKey: ['customers'] })
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Customer creation API error:', e)
-      toast.error(e?.response?.data?.message || e?.message || 'Müşteri kaydedilirken bir hata oluştu.')
+      const err = e as { response?: { data?: { message?: string } }; message?: string }
+      toast.error(err?.response?.data?.message || err?.message || 'Müşteri kaydedilirken bir hata oluştu.')
     }
   }
 
