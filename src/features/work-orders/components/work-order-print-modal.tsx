@@ -131,7 +131,7 @@ export function WorkOrderPrintModal({ isOpen, order, onClose }: WorkOrderPrintMo
                     </span>
                   </div>
                   <p className="text-slate-500 text-[11px]">
-                    {order.year} Model • {order.kilometer.toLocaleString("tr-TR")} KM
+                    {order.year} Model • {(order.kilometer || order.initialKm || order.vehicle?.currentKm || 0).toLocaleString("tr-TR")} KM
                   </p>
                   {order.vin && (
                     <p className="text-slate-500 text-[10px] font-mono mt-0.5">
