@@ -10,6 +10,8 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
+  ReceiptText,
+  AlertCircle,
 } from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -302,10 +304,17 @@ export function WorkOrderCard({
               >
                 ↩ Lifte Geri Al
               </button>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <CheckCircle2 size={12} />
-                <span>Bitti</span>
-              </span>
+              {order.invoice && order.invoice.status !== "CANCELLED" ? (
+                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800/40">
+                  <CheckCircle2 size={11} />
+                  <span>Faturalandı</span>
+                </span>
+              ) : (
+                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1 bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/40" title="İş bitti fakat henüz fatura kesilmedi">
+                  <AlertCircle size={11} />
+                  <span>Fatura Kesilmedi</span>
+                </span>
+              )}
             </div>
           )}
 

@@ -129,7 +129,11 @@ export default function PublicVehicleTrackPage() {
       } catch (err: any) {
         console.warn("Public track API error:", err)
         if (showLoading) {
-          setError("İş emri bulunamadı veya bağlantı süresi dolmuş.")
+          if (err?.status === 429 || err?.message?.includes("ThrottlerException")) {
+            setError("Kısa sürede çok fazla istek gönderildi. Lütfen birkaç saniye bekleyip tekrar deneyiniz.")
+          } else {
+            setError("Belirtilen takip koduyla eşleşen aktif bir servis iş emri bulunamadı.")
+          }
         }
       } finally {
         if (showLoading) setLoading(false)
@@ -143,7 +147,7 @@ export default function PublicVehicleTrackPage() {
     fetchTrackingData(true)
   }, [fetchTrackingData])
 
-  // Realtime Live Synchronization: Poll every 10 seconds while tab is active
+  // Realtime Live Synchronization: Poll every 15 seconds while tab is active
   React.useEffect(() => {
     if (!token) return
 
@@ -151,7 +155,7 @@ export default function PublicVehicleTrackPage() {
       if (typeof document !== "undefined" && !document.hidden) {
         fetchTrackingData(false)
       }
-    }, 10000)
+    }, 15000)
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {

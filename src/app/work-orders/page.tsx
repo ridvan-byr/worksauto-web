@@ -16,6 +16,8 @@ import {
   Search,
   XCircle,
   Archive,
+  AlertCircle,
+  ReceiptText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkOrder, WorkOrderStatus, WorkOrderPriority, WorkOrderNote, WorkOrderPhoto } from "@/features/work-orders/types"
@@ -60,6 +62,7 @@ interface ApiWorkOrderInput {
   items?: Array<Record<string, unknown>>
   notes?: WorkOrderNote[]
   photos?: WorkOrderPhoto[]
+  invoice?: Record<string, unknown> | null
 }
 
 function mapApiWorkOrderToWorkOrder(input: unknown): WorkOrder {
@@ -131,6 +134,7 @@ function mapApiWorkOrderToWorkOrder(input: unknown): WorkOrder {
       uploadedAt: p.uploadedAt || new Date().toISOString(),
       type: (p.type || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
     })),
+    invoice: (w.invoice as any) || null,
   }
 }
 
@@ -138,7 +142,7 @@ export default function WorkOrdersPage() {
   const [orders, setOrders] = React.useState<WorkOrder[]>([])
   const [viewMode, setViewMode] = React.useState<"kanban" | "list">("kanban")
   const [selectedStaffFilter, setSelectedStaffFilter] = React.useState<string>("all")
-  const [timeframeFilter, setTimeframeFilter] = React.useState<"active_48h" | "today" | "week" | "all">("active_48h")
+  const [timeframeFilter, setTimeframeFilter] = React.useState<"active_48h" | "unbilled" | "today" | "week" | "all">("active_48h")
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
   const [cloneInitialData, setCloneInitialData] = React.useState<Partial<CreateWorkOrderModalValues> | null>(null)
@@ -269,8 +273,19 @@ export default function WorkOrdersPage() {
       const orderTime = new Date(o.completedAt || o.updatedAt || o.createdAt).getTime()
       const diffHours = (now - orderTime) / (1000 * 60 * 60)
 
+      // Unbilled explicit filter
+      if (timeframeFilter === "unbilled") {
+        const hasActiveInvoice = o.invoice && o.invoice.status !== "CANCELLED"
+        return o.status === "COMPLETED" && !hasActiveInvoice
+      }
+
       if (timeframeFilter === "active_48h") {
-        if (o.status === "COMPLETED") return diffHours <= 48
+        if (o.status === "COMPLETED") {
+          // GÜVENCE: Faturası kesilmemiş hiçbir tamamlanan iş emri 48 saat dolmuş olsa dahi panodan asla kaybolamaz!
+          const hasActiveInvoice = o.invoice && o.invoice.status !== "CANCELLED"
+          if (!hasActiveInvoice) return true
+          return diffHours <= 48
+        }
         if (o.status === "CANCELLED") return diffHours <= 24
         return true
       } else if (timeframeFilter === "today") {
@@ -288,6 +303,11 @@ export default function WorkOrdersPage() {
   const inProgressCount = orders.filter((o) => o.status === "IN_PROGRESS").length
   const pendingCount = orders.filter((o) => o.status === "PENDING").length
   const completedCount = displayedOrders.filter((o) => o.status === "COMPLETED").length
+  const unbilledCount = React.useMemo(() => {
+    return orders.filter(
+      (o) => o.status === "COMPLETED" && (!o.invoice || o.invoice.status === "CANCELLED")
+    ).length
+  }, [orders])
   const cancelledOrdersList = React.useMemo(() => {
     const isSearching = Boolean(searchQuery.trim())
     const now = Date.now()
@@ -416,11 +436,14 @@ export default function WorkOrdersPage() {
             <span className="font-medium shrink-0">Görünüm:</span>
             <select
               value={timeframeFilter}
-              onChange={(e) => setTimeframeFilter(e.target.value as "active_48h" | "today" | "week" | "all")}
+              onChange={(e) => setTimeframeFilter(e.target.value as "active_48h" | "unbilled" | "today" | "week" | "all")}
               className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-semibold text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
               title="Atölye aktif panosu tamamlanan işleri 48 saat, iptalleri 24 saat gösterir"
             >
               <option value="active_48h">Aktif Atölye (Son 48s)</option>
+              {unbilledCount > 0 && (
+                <option value="unbilled">⚠️ Fatura Bekleyenler ({unbilledCount})</option>
+              )}
               <option value="today">Sadece Bugün</option>
               <option value="week">Bu Hafta (Son 7 Gün)</option>
               <option value="all">Tüm Arşiv (Geçmiş Dahil)</option>
@@ -428,8 +451,25 @@ export default function WorkOrdersPage() {
           </div>
         </div>
 
-        {/* Action Controls: Cancelled Orders Button & View Toggle */}
+        {/* Action Controls: Unbilled Alert, Cancelled Orders Button & View Toggle */}
         <div className="flex flex-wrap items-center gap-2">
+          {unbilledCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setTimeframeFilter((prev) => (prev === "unbilled" ? "active_48h" : "unbilled"))}
+              className={cn(
+                "h-9 px-3 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shrink-0 shadow-2xs",
+                timeframeFilter === "unbilled"
+                  ? "border-amber-400 bg-amber-500 text-white shadow-amber-500/20"
+                  : "border-amber-200/90 dark:border-amber-900/50 bg-amber-50/70 dark:bg-amber-950/30 hover:bg-amber-100 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-400"
+              )}
+              title="Faturası henüz kesilmemiş tamamlanan iş emirlerini filtrele"
+            >
+              <AlertCircle size={14} />
+              <span>Fatura Bekleyen ({unbilledCount})</span>
+            </button>
+          )}
+
           {cancelledCount > 0 && (
             <button
               type="button"
