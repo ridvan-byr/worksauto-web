@@ -903,27 +903,27 @@ export function NotificationSettingsTab() {
 
             <div
               className={cn(
-                "w-12 h-12 rounded-2xl flex items-center justify-center mx-auto transition-all duration-500",
+                "w-11 h-11 rounded-xl flex items-center justify-center mx-auto transition-all duration-300",
                 isPairedSuccess
-                  ? "bg-emerald-500 text-white scale-110 shadow-lg shadow-emerald-500/30 rotate-[360deg]"
-                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
               )}
             >
               {isPairedSuccess ? (
-                <Check size={28} className="stroke-[3] animate-in zoom-in-50 duration-300" />
+                <Check size={20} className="stroke-[2.5]" />
               ) : (
-                <QrCode size={26} />
+                <QrCode size={20} />
               )}
             </div>
 
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                {isPairedSuccess ? "WhatsApp Başarıyla Eşleşti!" : "WhatsApp Servis Hattını Eşle"}
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 tracking-tight">
+                {isPairedSuccess ? "Hattınız Başarıyla Eşleştirildi" : "WhatsApp Servis Hattını Eşle"}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {isPairedSuccess
-                  ? "Cihazınız doğrulandı, yönlendiriliyorsunuz..."
-                  : "Telefonunuzdan WhatsApp > Bağlı Cihazlar > Cihaz Bağla seçeneğini açıp ekrandaki QR kodu okutunuz."}
+                  ? "Bağlantı doğrulandı, ayarlar güncelleniyor..."
+                  : "Telefonunuzdan WhatsApp > Bağlı Cihazlar > Cihaz Bağla ile QR kodu okutunuz."}
               </p>
             </div>
 
@@ -950,31 +950,34 @@ export function NotificationSettingsTab() {
                 </div>
               ) : qrImageSrc ? (
                 <div className="flex flex-col items-center">
-                  <div className="w-48 h-48 bg-white p-2 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center relative overflow-hidden">
+                  <div className="w-48 h-48 bg-white dark:bg-slate-950 p-2 rounded-xl border border-slate-200 dark:border-slate-800 shadow-inner flex items-center justify-center relative overflow-hidden">
                     <img
                       src={qrImageSrc}
                       alt="WhatsApp QR Code"
                       className={cn(
                         "w-full h-full object-contain transition-all duration-300",
-                        isPairedSuccess && "blur-xs scale-90 opacity-20"
+                        isPairedSuccess && "blur-[2px] opacity-15 scale-95"
                       )}
                     />
 
-                    {/* Animated Checkmark and Success Overlay */}
+                    {/* Sleek, Minimal Professional Success Overlay */}
                     {isPairedSuccess && (
-                      <div className="absolute inset-0 bg-emerald-600/95 backdrop-blur-xs flex flex-col items-center justify-center text-white p-4 animate-in zoom-in-75 fade-in duration-300">
-                        <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mb-2 animate-bounce shadow-md">
-                          <Check className="w-8 h-8 text-white stroke-[3]" />
+                      <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200 text-center">
+                        <div className="w-11 h-11 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center mb-2.5 text-emerald-600 dark:text-emerald-400">
+                          <Check className="w-5 h-5 stroke-[2.5]" />
                         </div>
-                        <span className="text-sm font-bold tracking-tight">Bağlantı Kuruldu!</span>
-                        <span className="text-[11px] text-emerald-100 mt-0.5 font-medium truncate max-w-[170px]">
-                          {waDisplayName || "Telefonunuz"} bağlandı
+                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[170px]">
+                          {waDisplayName || "WhatsApp Hattı"}
                         </span>
                         {waJid && (
-                          <span className="text-[10px] font-mono text-emerald-100 mt-1 bg-emerald-700/80 px-2.5 py-0.5 rounded-full shadow-inner">
+                          <span className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">
                             +{waJid.split('@')[0]}
                           </span>
                         )}
+                        <div className="flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-md bg-emerald-500/10 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                          <span>Çevrimiçi & Aktif</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -992,7 +995,7 @@ export function NotificationSettingsTab() {
 
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
               {isPairedSuccess
-                ? "Bağlantı başarılı! Panel otomatik güncelleniyor..."
+                ? "Bağlantı doğrulandı, panel güncelleniyor..."
                 : "Telefonunuz kodu okuttuğunda bu pencere otomatik olarak kapanacak ve hattınız aktifleşecektir."}
             </p>
 
