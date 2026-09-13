@@ -262,6 +262,8 @@ export interface TenantSettings {
   taxOffice?: string;
   taxNumber?: string;
   autoInvoiceOnComplete?: boolean;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export function useTenantSettings() {

@@ -66,6 +66,8 @@ interface TrackingData {
     address?: string
     city?: string
     district?: string
+    latitude?: number | null
+    longitude?: number | null
     logoUrl?: string
   }
   invoice?: {
@@ -445,11 +447,15 @@ export default function PublicVehicleTrackPage() {
             ) : null}
 
             {/* 3. Google Maps Navigation */}
-            {data.tenant?.address ? (
+            {data.tenant?.address || (data.tenant?.latitude && data.tenant?.longitude) ? (
               <a
-                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                  `${data.tenant.title} ${data.tenant.address || ""} ${data.tenant.city || ""}`
-                )}`}
+                href={
+                  data.tenant?.latitude && data.tenant?.longitude
+                    ? `https://www.google.com/maps/dir/?api=1&destination=${data.tenant.latitude},${data.tenant.longitude}`
+                    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        `${data.tenant.title} ${data.tenant.address || ""} ${data.tenant.city || ""}`
+                      )}`
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 px-3.5 py-2.5 rounded-xl bg-slate-100 dark:bg-white/[0.03] hover:bg-slate-200 dark:hover:bg-white/[0.06] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/[0.08] text-xs font-semibold transition-all active:scale-98"

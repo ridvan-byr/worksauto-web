@@ -16,6 +16,7 @@ export interface SearchableSelectProps {
   error?: boolean
   className?: string
   id?: string
+  direction?: "auto" | "top" | "bottom"
 }
 
 export function SearchableSelect({
@@ -29,8 +30,10 @@ export function SearchableSelect({
   error = false,
   className,
   id,
+  direction = "auto",
 }: SearchableSelectProps) {
   const [isOpen, setIsOpen] = React.useState(false)
+  const [placement, setPlacement] = React.useState<"bottom" | "top">("bottom")
   const [searchQuery, setSearchQuery] = React.useState("")
   const containerRef = React.useRef<HTMLDivElement>(null)
   const searchInputRef = React.useRef<HTMLInputElement>(null)
@@ -63,6 +66,39 @@ export function SearchableSelect({
       document.removeEventListener("mousedown", handleClickOutside)
     }
   }, [isOpen])
+
+  // Calculate dynamic placement (flip upwards if insufficient space below)
+  React.useEffect(() => {
+    if (isOpen) {
+      if (direction === "top") {
+        setPlacement("top")
+      } else if (direction === "bottom") {
+        setPlacement("bottom")
+      } else if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect()
+        let spaceBelow = window.innerHeight - rect.bottom
+        let spaceAbove = rect.top
+
+        // Also check if constrained by an enclosing modal or dialog
+        const modalOrScrollParent = containerRef.current.closest<HTMLElement>(
+          "[role='dialog'], .overflow-hidden, .overflow-y-auto, .overflow-auto, .fixed"
+        )
+        if (modalOrScrollParent) {
+          const parentRect = modalOrScrollParent.getBoundingClientRect()
+          const modalSpaceBelow = parentRect.bottom - rect.bottom
+          const modalSpaceAbove = rect.top - parentRect.top
+          spaceBelow = Math.min(spaceBelow, modalSpaceBelow)
+          spaceAbove = Math.min(spaceAbove, modalSpaceAbove)
+        }
+
+        if (spaceBelow < 260 && spaceAbove > 160) {
+          setPlacement("top")
+        } else {
+          setPlacement("bottom")
+        }
+      }
+    }
+  }, [isOpen, direction])
 
   // Focus search input when opened
   React.useEffect(() => {
@@ -145,7 +181,14 @@ export function SearchableSelect({
 
       {/* Dropdown Panel */}
       {isOpen && !disabled && (
-        <div className="absolute left-0 right-0 top-full mt-1.5 z-50 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div
+          className={cn(
+            "absolute left-0 right-0 z-50 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-2xl overflow-hidden duration-150",
+            placement === "top"
+              ? "bottom-full mb-1.5 animate-in fade-in slide-in-from-bottom-2"
+              : "top-full mt-1.5 animate-in fade-in slide-in-from-top-2"
+          )}
+        >
           {/* Search Header */}
           <div className="p-2 border-b border-slate-100 dark:border-slate-800/80 flex items-center gap-2 bg-slate-50/70 dark:bg-slate-950/40">
             <Search size={14} className="text-slate-400 ml-1 shrink-0" />

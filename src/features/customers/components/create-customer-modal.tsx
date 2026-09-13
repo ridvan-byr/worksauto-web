@@ -224,10 +224,10 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
 
   const modalContent = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl relative flex flex-col animate-in zoom-in-95 duration-200">
         
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="px-6 py-4 rounded-t-3xl border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center font-bold">
               {currentStep === 1 ? <UserPlus size={18} /> : <Car size={18} />}
@@ -411,6 +411,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                     placeholder="İl seçiniz..."
                     searchPlaceholder="81 il içinde ara..."
                     error={!!errors.city}
+                    direction="top"
                   />
                   {errors.city && <p className="text-[10px] text-rose-500">{errors.city.message}</p>}
                 </div>
@@ -432,6 +433,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                     placeholder={selectedCity ? "İlçe seçiniz..." : "Önce İl Seçiniz"}
                     searchPlaceholder={`${selectedCity || "İlçe"} ilçelerinde ara...`}
                     error={!!errors.district}
+                    direction="top"
                   />
                   {errors.district && <p className="text-[10px] text-rose-500">{errors.district.message}</p>}
                 </div>
