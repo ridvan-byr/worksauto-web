@@ -8,15 +8,19 @@ import {
   useAdminTenantDetail,
   useUpdateTenantStatus,
   useCreateTenant,
+  useUpdateTenant,
   useDeleteTenant,
   useAdminAuditLogs,
   useAdminHealth,
   CreateTenantInput,
+  UpdateTenantAdminInput,
+  AdminTenantDetail,
 } from "@/features/admin/api/use-admin"
 import { Building2, ShieldCheck } from "lucide-react"
 import { AdminStatsGrid } from "@/features/admin/components/admin-stats-grid"
 import { TenantsTable } from "@/features/admin/components/tenants-table"
 import { TenantDetailModal } from "@/features/admin/components/tenant-detail-modal"
+import { EditTenantModal } from "@/features/admin/components/edit-tenant-modal"
 import { TenantLicenseModal } from "@/features/admin/components/tenant-license-modal"
 import { TenantDeleteModal } from "@/features/admin/components/tenant-delete-modal"
 import { CreateTenantModal } from "@/features/admin/components/create-tenant-modal"
@@ -40,6 +44,7 @@ export default function AdminDashboardPage() {
 
   const updateStatusMutation = useUpdateTenantStatus()
   const createTenantMutation = useCreateTenant()
+  const updateTenantMutation = useUpdateTenant()
   const deleteTenantMutation = useDeleteTenant()
 
   // Selected Tenant for Drawer/Modal Inspection
@@ -47,6 +52,9 @@ export default function AdminDashboardPage() {
   const { data: selectedTenantDetail, isLoading: isDetailLoading } = useAdminTenantDetail(
     selectedTenantId || undefined
   )
+
+  // Edit Tenant Modal State
+  const [editingTenant, setEditingTenant] = React.useState<AdminTenantDetail | null>(null)
 
   // Create Tenant Modal State
   const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false)
@@ -134,6 +142,18 @@ export default function AdminDashboardPage() {
       const msg = err instanceof Error ? err.message : "Servis oluşturulurken bir hata meydana geldi."
       setCreateError(msg)
       toast.error(msg)
+    }
+  }
+
+  const handleEditSubmit = async (tenantId: string, formData: UpdateTenantAdminInput) => {
+    try {
+      await updateTenantMutation.mutateAsync({ id: tenantId, data: formData })
+      toast.success("Servis bilgileri başarıyla güncellendi.")
+      setEditingTenant(null)
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Servis güncellenirken hata oluştu."
+      toast.error(msg)
+      throw err
     }
   }
 
@@ -259,6 +279,15 @@ export default function AdminDashboardPage() {
           setDeleteError(null)
           setTenantToDelete(t)
         }}
+        onEdit={(tenant) => setEditingTenant(tenant)}
+      />
+
+      <EditTenantModal
+        isOpen={Boolean(editingTenant)}
+        tenant={editingTenant}
+        isLoading={updateTenantMutation.isPending}
+        onClose={() => setEditingTenant(null)}
+        onSubmit={handleEditSubmit}
       />
 
       <TenantLicenseModal

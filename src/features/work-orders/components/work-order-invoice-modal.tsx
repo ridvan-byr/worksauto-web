@@ -59,9 +59,9 @@ export function WorkOrderInvoiceModal({
     setMounted(true)
   }, [])
 
-  const subtotal = order.subtotal || Math.round((order.grandTotal || 0) / 1.2)
-  const kdvAmount = order.kdvAmount || Math.round((order.grandTotal || 0) - subtotal)
-  const grandTotal = order.grandTotal || 0
+  const subtotal = order.subtotal || Number(((order.grandTotal || 0) / 1.2).toFixed(2))
+  const kdvAmount = order.kdvAmount || Number(((order.grandTotal || 0) - subtotal).toFixed(2))
+  const grandTotal = Number((order.grandTotal || 0).toFixed(2))
 
   const offsetAdvance = React.useMemo(() => {
     if (!useAdvanceOffset || availableAdvance <= 0) return 0

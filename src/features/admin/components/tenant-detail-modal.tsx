@@ -2,9 +2,10 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, Trash2 } from "lucide-react"
+import { X, Trash2, Edit3 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { formatRole } from "@/lib/audit-formatters"
 import type { AdminTenantDetail } from "@/features/admin/api/use-admin"
 
 interface TenantDetailModalProps {
@@ -13,6 +14,7 @@ interface TenantDetailModalProps {
   isLoading: boolean
   onClose: () => void
   onDelete: (tenant: { id: string; title: string }) => void
+  onEdit?: (tenant: AdminTenantDetail) => void
 }
 
 export function TenantDetailModal({
@@ -21,6 +23,7 @@ export function TenantDetailModal({
   isLoading,
   onClose,
   onDelete,
+  onEdit,
 }: TenantDetailModalProps) {
   if (!tenantId || typeof document === "undefined") return null
 
@@ -123,16 +126,16 @@ export function TenantDetailModal({
                     </div>
                     <Badge
                       variant="outline"
-                      className="text-[10px] border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300"
+                      className="text-[10px] border-sky-500/30 bg-sky-500/10 text-sky-700 dark:text-sky-300 font-medium"
                     >
-                      {u.role}
+                      {formatRole(u.role)}
                     </Badge>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Footer: Delete Button on Left, Close on Right */}
+            {/* Footer: Delete on Left, Edit & Close on Right */}
             <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800">
               <Button
                 size="sm"
@@ -147,15 +150,29 @@ export function TenantDetailModal({
                 <span>Servisi Sil</span>
               </Button>
 
-              <Button
-                size="sm"
-                variant="outline"
-                type="button"
-                onClick={onClose}
-                className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
-              >
-                Kapat
-              </Button>
+              <div className="flex items-center gap-2">
+                {onEdit && (
+                  <Button
+                    size="sm"
+                    type="button"
+                    onClick={() => onEdit(tenantDetail)}
+                    className="bg-sky-600 hover:bg-sky-500 text-white text-xs gap-1.5 cursor-pointer shadow-md shadow-sky-600/20"
+                  >
+                    <Edit3 size={13} />
+                    <span>Bilgileri Düzenle</span>
+                  </Button>
+                )}
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  type="button"
+                  onClick={onClose}
+                  className="border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+                >
+                  Kapat
+                </Button>
+              </div>
             </div>
           </div>
         ) : null}

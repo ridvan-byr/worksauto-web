@@ -204,6 +204,18 @@ export interface CreateTenantInput {
   isActive?: boolean;
 }
 
+export interface UpdateTenantAdminInput {
+  title?: string;
+  legalName?: string;
+  phone?: string;
+  email?: string;
+  city?: string;
+  district?: string;
+  address?: string;
+  taxNumber?: string;
+  taxOffice?: string;
+}
+
 export function useCreateTenant() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -211,6 +223,19 @@ export function useCreateTenant() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-tenants'] });
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
+    },
+  });
+}
+
+export function useUpdateTenant() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: string; data: UpdateTenantAdminInput }) =>
+      apiClient.patch(`/admin/tenants/${id}`, data),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-tenants'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-tenant-detail', variables.id] });
       queryClient.invalidateQueries({ queryKey: ['admin-audit-logs'] });
     },
   });

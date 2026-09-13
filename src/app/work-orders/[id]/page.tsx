@@ -1374,15 +1374,15 @@ export default function WorkOrderDetailPage() {
                             type="button"
                             disabled={p.quantity <= 1 || updatingItemId === p.id}
                             onClick={() => handleUpdateQuantity(p.id, p.quantity - 1)}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
                             title="Adet Azalt (Stoğa iade et)"
                           >
-                            <Minus size={12} />
+                            <Minus size={14} />
                           </button>
 
-                          <div className="w-9 text-center font-mono font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center justify-center">
+                          <div className="w-10 text-center font-mono font-bold text-xs sm:text-xs text-slate-900 dark:text-slate-100 flex items-center justify-center">
                             {updatingItemId === p.id ? (
-                              <Loader2 size={13} className="animate-spin text-indigo-500" />
+                              <Loader2 size={14} className="animate-spin text-indigo-500" />
                             ) : (
                               <span>{p.quantity}</span>
                             )}
@@ -1392,10 +1392,10 @@ export default function WorkOrderDetailPage() {
                             type="button"
                             disabled={updatingItemId === p.id}
                             onClick={() => handleUpdateQuantity(p.id, p.quantity + 1)}
-                            className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
+                            className="w-9 h-9 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer transition-colors"
                             title="Adet Artır (Stoktan düş)"
                           >
-                            <Plus size={12} />
+                            <Plus size={14} />
                           </button>
                         </div>
                       ) : (

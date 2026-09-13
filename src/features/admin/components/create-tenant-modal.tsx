@@ -58,10 +58,14 @@ export function CreateTenantModal({
   }, [form.email])
 
   const isTaxNumberValid = React.useMemo(() => {
-    if (!form.taxNumber || form.taxNumber.trim().length === 0) return true
+    if (!form.taxNumber) return false
     const digits = form.taxNumber.replace(/\D/g, "")
     return digits.length === 10 || digits.length === 11
   }, [form.taxNumber])
+
+  const isTaxOfficeValid = React.useMemo(() => {
+    return Boolean(form.taxOffice && form.taxOffice.trim().length >= 2)
+  }, [form.taxOffice])
 
   const isFormValid =
     form.title.trim().length > 0 &&
@@ -69,7 +73,8 @@ export function CreateTenantModal({
     form.ownerSurname.trim().length > 0 &&
     isPhoneValid &&
     isEmailValid &&
-    isTaxNumberValid
+    isTaxNumberValid &&
+    isTaxOfficeValid
 
   if (!isOpen || typeof document === "undefined") return null
 
@@ -272,19 +277,20 @@ export function CreateTenantModal({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Vergi Dairesi (Opsiyonel)</label>
+              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Vergi Dairesi *</label>
               <input
                 type="text"
+                required
                 value={form.taxOffice || ""}
                 onChange={(e) => setForm({ ...form, taxOffice: e.target.value })}
-                placeholder="İkitelli VD"
+                placeholder="Örn: İkitelli VD veya Ostim VD"
                 className="w-full h-9 px-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
               />
             </div>
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Vergi No / TCKN (Opsiyonel)</label>
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Vergi No / TCKN *</label>
                 {form.taxNumber && (
                   <span className={cn("text-[10px] font-medium flex items-center gap-1", isTaxNumberValid ? "text-emerald-500" : "text-amber-500")}>
                     {isTaxNumberValid ? (
@@ -297,6 +303,7 @@ export function CreateTenantModal({
               </div>
               <input
                 type="text"
+                required
                 value={form.taxNumber || ""}
                 onChange={(e) => setForm({ ...form, taxNumber: formatTaxNumber(e.target.value) })}
                 placeholder="VKN (10 hane) veya TCKN (11 hane)"
