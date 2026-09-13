@@ -65,9 +65,11 @@ export interface Vehicle {
   inspectionValidUntil?: string | null
   insuranceValidUntil?: string | null
   lastServiceDate?: string
+  transferIfExists?: boolean
   createdAt?: string
   updatedAt?: string
 }
+
 
 export interface AppointmentSummary {
   id: string

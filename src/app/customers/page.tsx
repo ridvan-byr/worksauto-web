@@ -118,6 +118,7 @@ export default function CustomersPage() {
           currentKm: v.kilometer,
           fuelType: v.fuelType === "Benzin" ? "GASOLINE" : v.fuelType === "Dizel" ? "DIESEL" : v.fuelType === "LPG" ? "LPG" : v.fuelType === "Hibrit" ? "HYBRID" : "ELECTRIC",
           transmission: v.transmission === "Otomatik" ? "AUTOMATIC" : "MANUAL",
+          transferIfExists: v.transferIfExists,
         })
       }
       await queryClient.invalidateQueries({ queryKey: ['customers'] })

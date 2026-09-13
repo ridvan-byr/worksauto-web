@@ -11,7 +11,11 @@ import {
   CheckCircle2,
   ArrowRight,
   ArrowLeft,
-  } from "lucide-react"
+  RotateCcw,
+  AlertTriangle,
+  Info,
+  Loader2,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Customer, Vehicle } from "../types"
 import { PlateBadge } from "./plate-badge"
@@ -24,10 +28,14 @@ import {
   formatKilometer,
   formatTaxNumber,
 } from "@/lib/input-formatters"
+import { checkCustomerPhone, useRestoreCustomer } from "../api/use-customers"
+import { checkVehiclePlate } from "@/features/vehicles/api/use-vehicles"
+import { toast } from "@/components/ui/sonner"
 
 import { useForm, type Resolver } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+
 
 interface CreateCustomerModalProps {
   isOpen: boolean
@@ -86,6 +94,13 @@ type FullCustomerFormValues = z.infer<typeof fullCustomerFormSchema>;
 export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustomerModalProps) {
   const [mounted, setMounted] = React.useState(false)
   const [currentStep, setCurrentStep] = React.useState<1 | 2>(1)
+  const [deletedCustomerFound, setDeletedCustomerFound] = React.useState<any | null>(null)
+  const [isCheckingPhone, setIsCheckingPhone] = React.useState(false)
+  const [existingVehicleFound, setExistingVehicleFound] = React.useState<any | null>(null)
+  const [isCheckingPlate, setIsCheckingPlate] = React.useState(false)
+  const [transferConfirmed, setTransferConfirmed] = React.useState(false)
+
+  const restoreCustomerMutation = useRestoreCustomer()
 
   const {
     register,
@@ -141,6 +156,68 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
 
   if (!isOpen || !mounted) return null
 
+  const phoneValue = watch("phone")
+
+  // Check phone for deleted customer
+  React.useEffect(() => {
+    const raw = phoneValue?.replace(/[\s()-]/g, "") || ""
+    if (raw.length >= 10) {
+      setIsCheckingPhone(true)
+      const timer = setTimeout(async () => {
+        try {
+          const res = await checkCustomerPhone(raw)
+          if (res && res.isDeleted && res.customer) {
+            setDeletedCustomerFound(res.customer)
+          } else {
+            setDeletedCustomerFound(null)
+          }
+        } catch (e) {
+          console.error("Phone check error:", e)
+        } finally {
+          setIsCheckingPhone(false)
+        }
+      }, 500)
+      return () => clearTimeout(timer)
+    } else {
+      setDeletedCustomerFound(null)
+    }
+  }, [phoneValue])
+
+  // Check plate for existing/other owner
+  React.useEffect(() => {
+    const raw = plateValue?.replace(/[\s-]/g, "") || ""
+    if (raw.length >= 5) {
+      setIsCheckingPlate(true)
+      const timer = setTimeout(async () => {
+        try {
+          const res = await checkVehiclePlate(raw)
+          if (res && res.exists) {
+            setExistingVehicleFound(res)
+          } else {
+            setExistingVehicleFound(null)
+          }
+        } catch (e) {
+          console.error("Plate check error:", e)
+        } finally {
+          setIsCheckingPlate(false)
+        }
+      }, 500)
+      return () => clearTimeout(timer)
+    } else {
+      setExistingVehicleFound(null)
+    }
+  }, [plateValue])
+
+  const handleRestoreDeletedCustomer = async () => {
+    if (!deletedCustomerFound?.id) return
+    try {
+      await restoreCustomerMutation.mutateAsync(deletedCustomerFound.id)
+      onClose()
+    } catch (e) {
+      console.error("Restore error:", e)
+    }
+  }
+
   // Phone Formatter (Smart TR + Uluslararası hat desteği)
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue("phone", formatSmartPhone(e.target.value), { shouldValidate: true })
@@ -153,6 +230,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
       setValue("district", "", { shouldValidate: true })
     }
   }
+
 
   // Validate Step 1 before transitioning to Step 2
   const handleNextStep = async () => {
@@ -191,7 +269,9 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
       fuelType: data.fuelType,
       transmission: data.transmission,
       lastServiceDate: new Date().toISOString().split("T")[0],
+      transferIfExists: transferConfirmed,
     }
+
 
     const newCustomer: Customer = {
       id: newCustomerId,
@@ -384,6 +464,44 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   {errors.phone && <p className="text-[10px] text-rose-500">{errors.phone.message}</p>}
                 </div>
 
+                {deletedCustomerFound && (
+                  <div className="col-span-2 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-start gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+                        <AlertTriangle size={16} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="text-xs font-bold text-amber-900 dark:text-amber-100 flex items-center gap-1.5">
+                          <span>Bu Müşteri Daha Önce Arşivlenmiş</span>
+                        </h4>
+                        <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90 mt-0.5 leading-relaxed">
+                          <strong>{deletedCustomerFound.firstName} {deletedCustomerFound.lastName || deletedCustomerFound.companyTitle}</strong> adına kayıtlı arşivlenmiş bir kart bulundu. Sıfırdan mükerrer kayıt açmak yerine eski geçmişiyle birlikte geri yükleyebilirsiniz.
+                        </p>
+                        <div className="mt-2.5 flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={restoreCustomerMutation.isPending}
+                            onClick={handleRestoreDeletedCustomer}
+                            className="h-7 px-3 text-[11px] font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg gap-1 shadow-xs cursor-pointer"
+                          >
+                            {restoreCustomerMutation.isPending ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <RotateCcw size={12} />
+                            )}
+                            <span>Kartı ve Araçlarını Geri Yükle</span>
+                          </Button>
+                          <span className="text-[10px] text-amber-700/70 dark:text-amber-400/70">
+                            veya aşağıdan yeni müşteri olarak devam edin
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+
                 <div className="space-y-1">
                   <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                     E-Posta (İsteğe Bağlı)
@@ -492,7 +610,35 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   autoFocus
                 />
                 {errors.plate && <p className="text-[10px] text-rose-500">{errors.plate.message}</p>}
+
+                {existingVehicleFound && (
+                  <div className="mt-2 p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-200 animate-in fade-in duration-200">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle size={15} className="shrink-0 text-amber-600 dark:text-amber-400 mt-0.5" />
+                      <div className="space-y-1.5 text-xs">
+                        <p className="font-semibold text-amber-900 dark:text-amber-100">
+                          Bu plaka sistemde zaten kayıtlı ({existingVehicleFound.brand} {existingVehicleFound.model} - {existingVehicleFound.year})
+                        </p>
+                        <p className="text-[11px] text-amber-800/90 dark:text-amber-300/90">
+                          Mevcut Sahip: <strong>{existingVehicleFound.ownerName}</strong> {existingVehicleFound.isCustomerDeleted ? '(Arşivde)' : ''}
+                        </p>
+                        <label className="flex items-center gap-2 pt-1 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={transferConfirmed}
+                            onChange={(e) => setTransferConfirmed(e.target.checked)}
+                            className="w-4 h-4 rounded border-amber-400 text-sky-600 focus:ring-sky-500"
+                          />
+                          <span className="text-[11px] font-medium text-amber-950 dark:text-amber-100">
+                            Aracın sahipliğini bu müşteriye devret ve geçmiş servis kayıtlarını koru
+                          </span>
+                        </label>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+
 
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">

@@ -132,6 +132,33 @@ export function useDeleteCustomer() {
   });
 }
 
+export function useRestoreCustomer() {
+  const queryClient = useQueryClient();
+  return useMutation<Customer, Error, string>({
+    mutationFn: (id: string) => apiClient.post<Customer>(`/customers/${id}/restore`, {}),
+    onSuccess: (restored) => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      toast.success('Müşteri başarıyla geri yüklendi.', {
+        description: `${restored.name || restored.firstName || 'Müşteri'} ve kayıtlı araçları tekrar aktif.`,
+      });
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Müşteri geri yüklenirken bir hata oluştu.');
+    },
+  });
+}
+
+export async function checkCustomerPhone(phone: string) {
+  if (!phone || phone.trim().length < 7) return { exists: false, isDeleted: false };
+  return apiClient.get<{
+    exists: boolean;
+    isDeleted: boolean;
+    customer?: any;
+  }>('/customers/check-phone', { params: { phone } });
+}
+
 export function useAnonymizeCustomer() {
   const queryClient = useQueryClient();
   return useMutation<{ success: boolean }, Error, { id: string; legalRef: string }>({
@@ -146,6 +173,7 @@ export function useAnonymizeCustomer() {
     },
   });
 }
+
 
 export interface BatchImportCustomerItem {
   firstName?: string;

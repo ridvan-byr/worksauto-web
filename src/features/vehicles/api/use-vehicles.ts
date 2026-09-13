@@ -49,7 +49,9 @@ export interface CreateVehicleInput {
   transmission?: string;
   customerId: string;
   notes?: string;
+  transferIfExists?: boolean;
 }
+
 
 export interface UpdateVehicleInput {
   plate?: string;
@@ -133,3 +135,41 @@ export function useUpdateVehicle() {
     },
   });
 }
+
+export function useTransferVehicle() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ vehicleId, newCustomerId }: { vehicleId: string; newCustomerId: string }) =>
+      apiClient.post<VehicleRecord>(`/vehicles/${vehicleId}/transfer`, { newCustomerId }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      toast.success('Araç devir işlemi tamamlandı.', {
+        description: `${data?.plate || 'Araç'} yeni müşteriye devredildi.`,
+      });
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Araç devredilemedi.';
+      toast.error(message);
+    },
+  });
+}
+
+export async function checkVehiclePlate(plate: string) {
+  if (!plate || plate.trim().length < 3) return { exists: false };
+  return apiClient.get<{
+    exists: boolean;
+    vehicleId?: string;
+    plate?: string;
+    brand?: string;
+    model?: string;
+    year?: number;
+    customerId?: string;
+    ownerName?: string;
+    ownerPhone?: string;
+    isVehicleDeleted?: boolean;
+    isCustomerDeleted?: boolean;
+  }>('/vehicles/check-plate', { params: { plate } });
+}
+
