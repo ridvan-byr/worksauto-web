@@ -72,18 +72,37 @@ export function CustomerSearchSelect({
     [selectedCustomer]
   )
 
+function foldTurkishText(str: string): string {
+  if (!str) return ""
+  return str
+    .toLocaleLowerCase("tr-TR")
+    .replace(/İ/g, "i")
+    .replace(/I/g, "i")
+    .replace(/ı/g, "i")
+    .replace(/ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/ş/g, "s")
+    .replace(/ö/g, "o")
+    .replace(/ç/g, "c")
+    .trim()
+}
+
   // Filtered customer list
   const searchResults = React.useMemo(() => {
     if (!customerSearch.trim()) return customers
-    const q = customerSearch.toLowerCase().trim()
-    const cleanDigits = q.replace(/\D/g, "")
+    const qFolded = foldTurkishText(customerSearch)
+    const cleanDigits = customerSearch.replace(/\D/g, "")
+    const qPlate = customerSearch.toLowerCase().replace(/[\s-]/g, "")
+
     return customers.filter((c) => {
-      const matchName = `${c.name} ${c.surname || ""}`.toLowerCase().includes(q)
-      const matchCompany = c.companyTitle?.toLowerCase().includes(q) || false
+      const fullNameFolded = foldTurkishText(`${c.name} ${c.surname || ""}`)
+      const matchName = fullNameFolded.includes(qFolded)
+      const matchCompany = c.companyTitle ? foldTurkishText(c.companyTitle).includes(qFolded) : false
       const matchPhone = cleanDigits.length >= 3 && c.phone.replace(/\D/g, "").includes(cleanDigits)
-      const matchPlates = c.vehicles.some((v) =>
-        v.plate.toLowerCase().replace(/\s/g, "").includes(q.replace(/\s/g, ""))
-      )
+      const matchPlates = c.vehicles.some((v) => {
+        const pClean = v.plate.toLowerCase().replace(/[\s-]/g, "")
+        return pClean.includes(qPlate)
+      })
       return matchName || matchCompany || matchPhone || matchPlates
     })
   }, [customers, customerSearch])
@@ -91,10 +110,11 @@ export function CustomerSearchSelect({
   // Filtered fleet vehicles (for 4+ vehicles)
   const filteredVehicles = React.useMemo(() => {
     if (!vehicleSearch.trim()) return customerVehicles
-    const q = vehicleSearch.toLowerCase().trim()
+    const qFolded = foldTurkishText(vehicleSearch)
+    const qPlate = vehicleSearch.toLowerCase().replace(/[\s-]/g, "")
     return customerVehicles.filter((v) => {
-      const matchPlate = v.plate.toLowerCase().replace(/\s/g, "").includes(q.replace(/\s/g, ""))
-      const matchModel = `${v.brand} ${v.model}`.toLowerCase().includes(q)
+      const matchPlate = v.plate.toLowerCase().replace(/[\s-]/g, "").includes(qPlate)
+      const matchModel = foldTurkishText(`${v.brand} ${v.model}`).includes(qFolded)
       return matchPlate || matchModel
     })
   }, [customerVehicles, vehicleSearch])

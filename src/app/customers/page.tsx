@@ -32,6 +32,7 @@ import { ExportColumnDef } from "@/features/import-export/utils/aesthetic-excel"
 
 import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/vehicle-formatters"
 import { cn } from "@/lib/utils"
+import { toast } from "@/components/ui/sonner"
 
 export default function CustomersPage() {
   const queryClient = useQueryClient()
@@ -119,11 +120,11 @@ export default function CustomersPage() {
           transmission: v.transmission === "Otomatik" ? "AUTOMATIC" : "MANUAL",
         })
       }
-    } catch (e) {
-      console.warn('API sync fallback to local:', e)
+      await queryClient.invalidateQueries({ queryKey: ['customers'] })
+    } catch (e: any) {
+      console.error('Customer creation API error:', e)
+      toast.error(e?.response?.data?.message || e?.message || 'Müşteri kaydedilirken bir hata oluştu.')
     }
-    const next = [newCust, ...customers]
-    setCustomers(next)
   }
 
   // Filtered list
