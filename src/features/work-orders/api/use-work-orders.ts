@@ -37,6 +37,14 @@ export function useCreateWorkOrder() {
   });
 }
 
+export const WORK_ORDER_STATUS_MAP: Record<string, string> = {
+  PENDING: 'Sırada Bekliyor',
+  QUEUE: 'Sırada Bekliyor',
+  IN_PROGRESS: 'Liftte / İşlemde',
+  COMPLETED: 'Hazır / Bitti',
+  CANCELLED: 'İptal Edildi',
+};
+
 export function useUpdateWorkOrderStatus() {
   const queryClient = useQueryClient();
   return useMutation<WorkOrder, Error, { id: string; status: WorkOrderStatus | string }>({
@@ -47,8 +55,9 @@ export function useUpdateWorkOrderStatus() {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['current-accounts'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
+      const statusLabel = WORK_ORDER_STATUS_MAP[variables.status] || variables.status;
       toast.success('İş emri aşaması güncellendi.', {
-        description: `Yeni Durum: ${variables.status}`,
+        description: `Yeni Aşama: ${statusLabel}`,
       });
     },
     onError: (err: Error) => {

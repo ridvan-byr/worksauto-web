@@ -36,6 +36,8 @@ interface CustomerSearchSelectProps {
   vehicleError?: string
 }
 
+const RECENT_CUSTOMERS_STORAGE_KEY = "worksauto_recent_customer_ids_v1"
+
 export function CustomerSearchSelect({
   customers,
   selectedCustomerId,
@@ -49,7 +51,57 @@ export function CustomerSearchSelect({
   const [customerSearch, setCustomerSearch] = React.useState("")
   const [isDropdownOpen, setIsDropdownOpen] = React.useState(false)
   const [vehicleSearch, setVehicleSearch] = React.useState("")
+  const [recentCustomerIds, setRecentCustomerIds] = React.useState<string[]>([])
   const dropdownRef = React.useRef<HTMLDivElement>(null)
+
+  // Load recently selected customers from localStorage
+  React.useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_CUSTOMERS_STORAGE_KEY)
+      if (stored) {
+        const parsed = JSON.parse(stored)
+        if (Array.isArray(parsed)) {
+          setRecentCustomerIds(parsed)
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [])
+
+  // Sync selectedCustomerId from props to the top of recent selections if present
+  React.useEffect(() => {
+    if (selectedCustomerId) {
+      setRecentCustomerIds((prev) => {
+        if (prev[0] === selectedCustomerId) return prev
+        const next = [selectedCustomerId, ...prev.filter((id) => id !== selectedCustomerId)].slice(0, 30)
+        try {
+          localStorage.setItem(RECENT_CUSTOMERS_STORAGE_KEY, JSON.stringify(next))
+        } catch {
+          // Ignore
+        }
+        return next
+      })
+    }
+  }, [selectedCustomerId])
+
+  const handleSelectCustomer = React.useCallback(
+    (customerId: string) => {
+      setRecentCustomerIds((prev) => {
+        const next = [customerId, ...prev.filter((id) => id !== customerId)].slice(0, 30)
+        try {
+          localStorage.setItem(RECENT_CUSTOMERS_STORAGE_KEY, JSON.stringify(next))
+        } catch {
+          // Ignore
+        }
+        return next
+      })
+      onSelectCustomer(customerId)
+      setIsDropdownOpen(false)
+      setCustomerSearch("")
+    },
+    [onSelectCustomer]
+  )
 
   // Close dropdown on outside click
   React.useEffect(() => {
@@ -72,40 +124,56 @@ export function CustomerSearchSelect({
     [selectedCustomer]
   )
 
-function foldTurkishText(str: string): string {
-  if (!str) return ""
-  return str
-    .toLocaleLowerCase("tr-TR")
-    .replace(/İ/g, "i")
-    .replace(/I/g, "i")
-    .replace(/ı/g, "i")
-    .replace(/ğ/g, "g")
-    .replace(/ü/g, "u")
-    .replace(/ş/g, "s")
-    .replace(/ö/g, "o")
-    .replace(/ç/g, "c")
-    .trim()
-}
+  function foldTurkishText(str: string): string {
+    if (!str) return ""
+    return str
+      .toLocaleLowerCase("tr-TR")
+      .replace(/İ/g, "i")
+      .replace(/I/g, "i")
+      .replace(/ı/g, "i")
+      .replace(/ğ/g, "g")
+      .replace(/ü/g, "u")
+      .replace(/ş/g, "s")
+      .replace(/ö/g, "o")
+      .replace(/ç/g, "c")
+      .trim()
+  }
 
-  // Filtered customer list
+  // Filtered customer list, sorted with most recently selected on top
   const searchResults = React.useMemo(() => {
-    if (!customerSearch.trim()) return customers
-    const qFolded = foldTurkishText(customerSearch)
-    const cleanDigits = customerSearch.replace(/\D/g, "")
-    const qPlate = customerSearch.toLowerCase().replace(/[\s-]/g, "")
+    let list = customers
 
-    return customers.filter((c) => {
-      const fullNameFolded = foldTurkishText(`${c.name} ${c.surname || ""}`)
-      const matchName = fullNameFolded.includes(qFolded)
-      const matchCompany = c.companyTitle ? foldTurkishText(c.companyTitle).includes(qFolded) : false
-      const matchPhone = cleanDigits.length >= 3 && c.phone.replace(/\D/g, "").includes(cleanDigits)
-      const matchPlates = c.vehicles.some((v) => {
-        const pClean = v.plate.toLowerCase().replace(/[\s-]/g, "")
-        return pClean.includes(qPlate)
+    if (customerSearch.trim()) {
+      const qFolded = foldTurkishText(customerSearch)
+      const cleanDigits = customerSearch.replace(/\D/g, "")
+      const qPlate = customerSearch.toLowerCase().replace(/[\s-]/g, "")
+
+      list = customers.filter((c) => {
+        const fullNameFolded = foldTurkishText(`${c.name} ${c.surname || ""}`)
+        const matchName = fullNameFolded.includes(qFolded)
+        const matchCompany = c.companyTitle ? foldTurkishText(c.companyTitle).includes(qFolded) : false
+        const matchPhone = cleanDigits.length >= 3 && c.phone.replace(/\D/g, "").includes(cleanDigits)
+        const matchPlates = c.vehicles.some((v) => {
+          const pClean = v.plate.toLowerCase().replace(/[\s-]/g, "")
+          return pClean.includes(qPlate)
+        })
+        return matchName || matchCompany || matchPhone || matchPlates
       })
-      return matchName || matchCompany || matchPhone || matchPlates
+    }
+
+    // Sort by recency: index 0 (most recent) comes first, index 1 second, non-recent later
+    return [...list].sort((a, b) => {
+      const idxA = recentCustomerIds.indexOf(a.id)
+      const idxB = recentCustomerIds.indexOf(b.id)
+
+      if (idxA !== -1 && idxB !== -1) {
+        return idxA - idxB
+      }
+      if (idxA !== -1) return -1
+      if (idxB !== -1) return 1
+      return 0
     })
-  }, [customers, customerSearch])
+  }, [customers, customerSearch, recentCustomerIds])
 
   // Filtered fleet vehicles (for 4+ vehicles)
   const filteredVehicles = React.useMemo(() => {
@@ -172,11 +240,7 @@ function foldTurkishText(str: string): string {
                     <button
                       key={c.id}
                       type="button"
-                      onClick={() => {
-                        onSelectCustomer(c.id)
-                        setIsDropdownOpen(false)
-                        setCustomerSearch("")
-                      }}
+                      onClick={() => handleSelectCustomer(c.id)}
                       className={cn(
                         "w-full p-3 text-left flex items-center justify-between gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer text-xs",
                         isSel && "bg-sky-500/10 dark:bg-sky-950/30"
