@@ -15,7 +15,6 @@ import {
   Info,
   ExternalLink,
   Trash2,
-  Sparkles,
 } from "lucide-react";
 import {
   useNotifications,
@@ -23,7 +22,6 @@ import {
   useMarkNotificationRead,
   useMarkAllNotificationsRead,
   useDeleteNotification,
-  useSendTestNotification,
 } from "../api/use-notifications";
 import { useSocket } from "../context/socket-context";
 import { NotificationItem, NotificationType } from "../types";
@@ -132,7 +130,6 @@ export function NotificationPopover() {
   const markReadMutation = useMarkNotificationRead();
   const markAllReadMutation = useMarkAllNotificationsRead();
   const deleteMutation = useDeleteNotification();
-  const sendTestMutation = useSendTestNotification();
 
   const allItems: NotificationItem[] = React.useMemo(() => {
     if (!notifData) return [];
@@ -403,16 +400,6 @@ export function NotificationPopover() {
             </div>
 
             <div className="flex items-center gap-2.5">
-              <button
-                type="button"
-                onClick={() => sendTestMutation.mutate()}
-                disabled={sendTestMutation.isPending}
-                className="text-[10px] text-emerald-500 hover:text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer font-medium disabled:opacity-50"
-                title="Canlı WebSocket bildirimi ve çan sesini test et"
-              >
-                <Sparkles size={11} />
-                <span>{sendTestMutation.isPending ? "Gönderiliyor..." : "Test Bildirimi Fırlat"}</span>
-              </button>
               <button
                 type="button"
                 onClick={playChime}
