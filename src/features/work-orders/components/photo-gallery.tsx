@@ -58,7 +58,7 @@ function getDisplayUrl(url?: string): string {
     return url
   }
   const clean = url.startsWith("/") ? url.slice(1) : url
-  const key = clean.replace(/^api\/v1\/media\/files\//, "")
+  const key = clean.replace(/^(api\/v1\/)?media\/files\//, "")
   const token = typeof window !== "undefined" ? getAccessToken() : null
   const query = token ? `?token=${encodeURIComponent(token)}` : ""
   if (typeof window !== "undefined") {
@@ -267,7 +267,8 @@ export function PhotoGallery({
             className="h-8 px-3 text-xs font-semibold gap-1.5 cursor-pointer bg-sky-600 hover:bg-sky-700 text-white self-start sm:self-auto"
           >
             {isAdding ? <X size={13} /> : <Plus size={13} />}
-            <span>{isAdding ? "Vazgeç" : "Fotoğraf Çek / Yükle"}</span>
+            <span className="hidden sm:inline">{isAdding ? "Vazgeç" : "Fotoğraf Yükle"}</span>
+            <span className="sm:hidden">{isAdding ? "Vazgeç" : "Fotoğraf Çek / Yükle"}</span>
           </Button>
         )}
       </div>
@@ -349,11 +350,11 @@ export function PhotoGallery({
 
           {!previewUrl ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* Option 1: Live Photo Capture */}
+              {/* Option 1: Live Photo Capture (Only on mobile) */}
               <button
                 type="button"
                 onClick={() => cameraInputRef.current?.click()}
-                className="group p-4 sm:p-5 rounded-2xl border-2 border-dashed border-sky-400/50 hover:border-sky-500 bg-white/80 dark:bg-slate-900/80 hover:bg-sky-50/70 dark:hover:bg-sky-950/30 transition-all flex flex-col items-center justify-center text-center gap-2.5 cursor-pointer shadow-xs hover:shadow-md"
+                className="sm:hidden group p-4 rounded-2xl border-2 border-dashed border-sky-400/50 hover:border-sky-500 bg-white/80 dark:bg-slate-900/80 hover:bg-sky-50/70 dark:hover:bg-sky-950/30 transition-all flex flex-col items-center justify-center text-center gap-2.5 cursor-pointer shadow-xs hover:shadow-md"
               >
                 <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 group-hover:scale-110 group-hover:bg-sky-500 group-hover:text-white transition-all flex items-center justify-center shadow-xs">
                   <Camera size={24} />
@@ -375,7 +376,7 @@ export function PhotoGallery({
               <button
                 type="button"
                 onClick={() => galleryInputRef.current?.click()}
-                className="group p-4 sm:p-5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 bg-white/80 dark:bg-slate-900/80 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/30 transition-all flex flex-col items-center justify-center text-center gap-2.5 cursor-pointer shadow-xs hover:shadow-md"
+                className="sm:col-span-2 group p-4 sm:p-5 rounded-2xl border-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-indigo-500 bg-white/80 dark:bg-slate-900/80 hover:bg-indigo-50/70 dark:hover:bg-indigo-950/30 transition-all flex flex-col items-center justify-center text-center gap-2.5 cursor-pointer shadow-xs hover:shadow-md"
               >
                 <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white transition-all flex items-center justify-center shadow-xs">
                   <ImageIcon size={24} />
@@ -385,7 +386,7 @@ export function PhotoGallery({
                     Galeriden / Dosyadan Seç
                   </p>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    Cihazınızdaki fotoğraf albümünden seçin
+                    Cihazınızdaki fotoğraf albümünden veya bilgisayarınızdan seçin
                   </p>
                 </div>
                 <span className="text-[9px] font-semibold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300">

@@ -16,10 +16,10 @@ interface TechnicianNotesProps {
 }
 
 const QUICK_NOTES = [
-  "⚡ Parça bekleniyor",
-  "⚡ Müşteri onayı alındı",
-  "⚡ Test sürüşü yapıldı",
-  "⚡ Lift kontrolü tamamlandı",
+  "Parça bekleniyor",
+  "Müşteri onayı alındı",
+  "Test sürüşü yapıldı",
+  "Lift kontrolü tamamlandı",
 ]
 
 function formatNoteText(text: string | undefined): string {
@@ -287,7 +287,7 @@ export function TechnicianNotes({
             <button
               key={quick}
               type="button"
-              onClick={() => setNewText(quick.replace("⚡ ", ""))}
+              onClick={() => setNewText(quick)}
               className="text-[10px] font-medium px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 hover:text-sky-600 dark:hover:text-sky-400 border border-slate-200/60 dark:border-slate-700/60 transition-colors cursor-pointer"
             >
               {quick}
