@@ -21,9 +21,12 @@ import {
   Download,
   Info,
   ChevronDown,
+  ChevronRight,
   Check,
   Plus,
+  Phone,
 } from "lucide-react"
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { ExcelImportModal } from "@/features/import-export/components/excel-import-modal"
@@ -180,39 +183,41 @@ export default function VehiclesPage() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsExportModalOpen(true)}
-            className="h-10 px-3.5 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <Download size={14} className="text-emerald-500" />
-            <span>Excel'e Aktar</span>
-          </Button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsExportModalOpen(true)}
+              className="flex-1 sm:flex-initial h-10 px-3 sm:px-3.5 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Download size={14} className="text-emerald-500" />
+              <span>Excel'e Aktar</span>
+            </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsImportModalOpen(true)}
-            className="h-10 px-3.5 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 shadow-2xs cursor-pointer"
-          >
-            <UploadCloud size={14} className="text-sky-500" />
-            <span>Excel İçe Aktar</span>
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex-1 sm:flex-initial h-10 px-3 sm:px-3.5 rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <UploadCloud size={14} className="text-sky-500" />
+              <span>Excel İçe Aktar</span>
+            </Button>
 
-          <Link
-            href="/customers"
-            className="h-10 px-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-2 shadow-2xs self-start sm:self-auto cursor-pointer"
-          >
-            <Users size={15} />
-            <span>Müşteri Listesine Git</span>
-          </Link>
+            <Link
+              href="/customers"
+              className="hidden md:flex h-10 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold items-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <Users size={14} />
+              <span>Müşteriler</span>
+            </Link>
+          </div>
 
           <Button
             type="button"
             onClick={() => setIsAddModalOpen(true)}
-            className="h-10 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-sky-600/20 cursor-pointer transition-all"
+            className="w-full sm:w-auto h-10 px-4 rounded-xl bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold flex items-center justify-center gap-1.5 shadow-md shadow-sky-600/20 cursor-pointer transition-all"
           >
             <Plus size={16} />
             <span>Yeni Araç Ekle</span>
@@ -382,9 +387,10 @@ export default function VehiclesPage() {
         </div>
       </div>
 
-      {/* Vehicles Table */}
+      {/* Vehicles Container */}
       <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -533,6 +539,154 @@ export default function VehiclesPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Compact Card View (< 640px) */}
+        <div className="sm:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+          {filteredVehicles.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 p-4">
+              <div className="max-w-xs mx-auto space-y-2">
+                <Car size={32} className="mx-auto text-slate-300 dark:text-slate-600" />
+                <p className="font-bold text-slate-600 dark:text-slate-300">Araç Bulunamadı</p>
+                <p className="text-[11px]">
+                  {searchQuery || brandFilter !== "all"
+                    ? "Arama kriterlerinize uygun araç kaydı bulunamadı."
+                    : "Henüz kayıtlı bir araç bulunmuyor."}
+                </p>
+                {!searchQuery && brandFilter === "all" && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => setIsAddModalOpen(true)}
+                    className="mt-2 h-8 px-3 text-xs bg-sky-600 hover:bg-sky-500 text-white gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Plus size={13} />
+                    <span>İlk Aracı Ekle</span>
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            filteredVehicles.map((v) => {
+              const rawPhone = (v.customerPhone || "").replace(/[\s()-]/g, "")
+              const cleanDigits = rawPhone.replace(/\D/g, "")
+              const waPhone = cleanDigits.startsWith("90")
+                ? cleanDigits
+                : cleanDigits.startsWith("0")
+                ? `9${cleanDigits}`
+                : `90${cleanDigits}`
+
+              return (
+                <div key={v.id} className="p-4 space-y-3 bg-white dark:bg-slate-900">
+                  {/* Top: PlateBadge, Inspection, and Action buttons */}
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <PlateBadge plate={v.plate} size="md" />
+                      {(() => {
+                        if (!v.inspectionValidUntil) return null
+                        const days = Math.ceil(
+                          (new Date(v.inspectionValidUntil).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                        )
+                        if (days > 30) return null
+                        return (
+                          <span
+                            className={cn(
+                              "text-[10px] font-bold px-2 py-0.5 rounded-md border",
+                              days < 0
+                                ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                                : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                            )}
+                          >
+                            {days < 0 ? "Muayene Geçti" : `Muayene: ${days}g`}
+                          </span>
+                        )
+                      })()}
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setVehicleToEdit(v)}
+                        className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-sky-600 transition-colors"
+                        title="Aracı Düzenle"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setVehicleToDelete(v)}
+                        className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/20 transition-colors"
+                        title="Aracı Sil"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Brand, Model, Year & Specs */}
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-900 dark:text-slate-100">
+                        {v.brand} {v.model}
+                      </h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        {v.year} Model • {formatFuelType(v.fuelType)} • {formatTransmission(v.transmission)}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <span className="font-mono font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1 justify-end">
+                        <Gauge size={12} className="text-slate-400" />
+                        <span>{(v.kilometer || 0).toLocaleString("tr-TR")} KM</span>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Customer / Owner Info */}
+                  <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Araç Sahibi</p>
+                      <Link
+                        href={`/customers/${v.customerId}`}
+                        className="font-bold text-xs text-slate-900 dark:text-slate-100 hover:text-sky-500 transition-colors truncate block"
+                      >
+                        {v.customerName || "Bilinmiyor"}
+                      </Link>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {rawPhone && (
+                        <>
+                          <a
+                            href={`tel:${rawPhone}`}
+                            className="w-8 h-8 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/20 flex items-center justify-center transition-colors"
+                            title="Telefon ile Ara"
+                          >
+                            <Phone size={13} />
+                          </a>
+                          <a
+                            href={`https://wa.me/${waPhone}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="w-8 h-8 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center transition-colors"
+                            title="WhatsApp ile Mesaj Gönder"
+                          >
+                            <WhatsAppIcon size={14} />
+                          </a>
+                        </>
+                      )}
+                      <Link
+                        href={`/customers/${v.customerId}`}
+                        className="h-8 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1 transition-colors"
+                      >
+                        <span>Detay</span>
+                        <ChevronRight size={13} />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
       </div>
 

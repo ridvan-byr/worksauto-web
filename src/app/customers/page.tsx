@@ -21,7 +21,9 @@ import {
   Download,
   Trash2,
   AlertTriangle,
+  Phone,
 } from "lucide-react"
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 import { Button } from "@/components/ui/button"
 import { Customer } from "@/features/customers/types"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -213,33 +215,35 @@ export default function CustomersPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsExportModalOpen(true)}
-            className="h-11 px-4 rounded-2xl gap-2 font-semibold text-xs border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs cursor-pointer"
-            title="Müşteri listesini Excel formatında önizle ve indir"
-          >
-            <Download size={15} className="text-slate-500" />
-            <span>Excel'e Aktar</span>
-          </Button>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsExportModalOpen(true)}
+              className="flex-1 sm:flex-initial h-10 sm:h-11 px-3 sm:px-4 rounded-xl sm:rounded-2xl gap-1.5 font-semibold text-xs border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 shadow-xs cursor-pointer"
+              title="Müşteri listesini Excel formatında önizle ve indir"
+            >
+              <Download size={14} className="text-slate-500" />
+              <span>Excel'e Aktar</span>
+            </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setIsImportModalOpen(true)}
-            className="h-11 px-4 rounded-2xl gap-2 font-semibold text-xs border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs cursor-pointer"
-            title="Excel dosyasından toplu müşteri ve araç yükle"
-          >
-            <UploadCloud size={15} />
-            <span>Excel İçe Aktar</span>
-          </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex-1 sm:flex-initial h-10 sm:h-11 px-3 sm:px-4 rounded-xl sm:rounded-2xl gap-1.5 font-semibold text-xs border-emerald-500/30 bg-emerald-500/5 hover:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shadow-xs cursor-pointer"
+              title="Excel dosyasından toplu müşteri ve araç yükle"
+            >
+              <UploadCloud size={14} />
+              <span>Excel İçe Aktar</span>
+            </Button>
+          </div>
 
           <Button
             type="button"
             onClick={() => setIsCreateModalOpen(true)}
-            className="h-11 px-5 rounded-2xl gap-2 font-semibold text-xs shadow-lg shadow-sky-500/20 cursor-pointer"
+            className="w-full sm:w-auto h-11 px-5 rounded-xl sm:rounded-2xl gap-2 font-semibold text-xs shadow-lg shadow-sky-500/20 cursor-pointer"
           >
             <Plus size={16} />
             <span>Yeni Müşteri & Araç Ekle</span>
@@ -372,9 +376,10 @@ export default function CustomersPage() {
         </div>
       </div>
 
-      {/* Customer List Table */}
+      {/* Customer List Container */}
       <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
@@ -476,6 +481,10 @@ export default function CustomersPage() {
                           <span className="inline-block px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 font-bold font-mono text-xs">
                             +{c.balance.toLocaleString("tr-TR")} ₺ Borç
                           </span>
+                        ) : c.balance < 0 ? (
+                          <span className="inline-block px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold font-mono text-xs">
+                            {Math.abs(c.balance).toLocaleString("tr-TR")} ₺ Avans
+                          </span>
                         ) : (
                           <span className="inline-block px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold font-mono text-xs">
                             0.00 ₺ (Temiz)
@@ -509,6 +518,147 @@ export default function CustomersPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Compact Card View (< 640px) */}
+        <div className="sm:hidden divide-y divide-slate-100 dark:divide-slate-800/60">
+          {filteredCustomers.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 p-4">
+              <div className="max-w-xs mx-auto space-y-2">
+                <Users size={32} className="mx-auto text-slate-300 dark:text-slate-600" />
+                <p className="font-bold text-slate-600 dark:text-slate-300">Kayıt Bulunamadı</p>
+                <p className="text-[11px]">Arama kriterlerinize uygun müşteri veya araç kaydı bulunamadı.</p>
+              </div>
+            </div>
+          ) : (
+            filteredCustomers.map((c) => {
+              const displayName = c.type === "corporate" && c.companyTitle ? c.companyTitle : `${c.name} ${c.surname}`
+              const rawPhone = (c.phone || "").replace(/[\s()-]/g, "")
+              const cleanDigits = rawPhone.replace(/\D/g, "")
+              const waPhone = cleanDigits.startsWith("90")
+                ? cleanDigits
+                : cleanDigits.startsWith("0")
+                ? `9${cleanDigits}`
+                : `90${cleanDigits}`
+
+              return (
+                <div key={c.id} className="p-4 space-y-3 bg-white dark:bg-slate-900">
+                  {/* Top: Customer info & Balance badge */}
+                  <div className="flex items-start justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={cn(
+                          "w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shrink-0 shadow-xs",
+                          c.type === "corporate"
+                            ? "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20"
+                            : "bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20"
+                        )}
+                      >
+                        {c.type === "corporate" ? <Building2 size={16} /> : <User size={16} />}
+                      </div>
+                      <div className="min-w-0">
+                        <Link
+                          href={`/customers/${c.id}`}
+                          className="font-bold text-sm text-slate-900 dark:text-slate-100 truncate block hover:text-sky-500"
+                        >
+                          {displayName}
+                        </Link>
+                        <p className="text-[11px] text-slate-400">
+                          {c.type === "corporate" ? `Yetkili: ${c.name} ${c.surname}` : "Bireysel Müşteri"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Balance badge */}
+                    <div className="shrink-0 text-right">
+                      {c.balance > 0 ? (
+                        <span className="inline-flex items-center font-mono font-bold text-[11px] px-2.5 py-1 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                          +{c.balance.toLocaleString("tr-TR")} ₺
+                        </span>
+                      ) : c.balance < 0 ? (
+                        <span className="inline-flex items-center font-mono font-bold text-[11px] px-2.5 py-1 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                          {Math.abs(c.balance).toLocaleString("tr-TR")} ₺ Avans
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center font-mono text-[11px] px-2 py-0.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-400">
+                          Temiz
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Badges (Lead, VKN) */}
+                  {(c.isLead || (c.type === "corporate" && !c.taxNumber)) && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {c.isLead && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                          Potansiyel Müşteri
+                        </span>
+                      )}
+                      {c.type === "corporate" && !c.taxNumber && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30 gap-1">
+                          <AlertTriangle size={10} />
+                          <span>VKN Eksik</span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Registered Vehicles */}
+                  {c.vehicles && c.vehicles.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      {c.vehicles.map((v) => (
+                        <PlateBadge key={v.id} plate={v.plate} size="sm" />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 italic">Kayıtlı araç bulunmuyor</p>
+                  )}
+
+                  {/* Communication & Actions */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                    {rawPhone ? (
+                      <>
+                        <a
+                          href={`tel:${rawPhone}`}
+                          className="flex-1 h-9 px-3 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                        >
+                          <Phone size={13} />
+                          <span className="font-mono text-[11px]">{c.phone}</span>
+                        </a>
+                        <a
+                          href={`https://wa.me/${waPhone}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-9 h-9 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shrink-0 transition-colors"
+                          title="WhatsApp ile Mesaj Gönder"
+                        >
+                          <WhatsAppIcon size={15} />
+                        </a>
+                      </>
+                    ) : null}
+
+                    <Link
+                      href={`/customers/${c.id}`}
+                      className="h-9 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1 transition-colors shrink-0"
+                    >
+                      <span>Profil</span>
+                      <ChevronRight size={13} />
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => setCustomerToDelete(c)}
+                      className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-500/10 transition-colors shrink-0 cursor-pointer"
+                      title="Müşteriyi Sil"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              )
+            })
+          )}
         </div>
       </div>
 

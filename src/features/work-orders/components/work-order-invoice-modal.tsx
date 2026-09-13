@@ -198,8 +198,9 @@ export function WorkOrderInvoiceModal({
         </div>
 
         {/* Modal Body */}
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-5">
-          {/* Financial Summary Breakdown */}
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 sm:space-y-5">
+            {/* Financial Summary Breakdown */}
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800/60 space-y-2 text-xs font-mono">
             <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span className="font-sans">Ara Toplam (KDV Hariç):</span>
@@ -420,21 +421,23 @@ export function WorkOrderInvoiceModal({
             </span>
           </div>
 
-          {/* Modal Actions */}
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-200/80 dark:border-slate-800/80">
+          </div>
+
+          {/* Modal Actions (Sticky Footer) */}
+          <div className="flex items-center justify-end gap-2.5 p-4 border-t border-slate-200/80 dark:border-slate-800/80 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
             <Button
               type="button"
               variant="outline"
               disabled={isSubmitting}
               onClick={onClose}
-              className="h-10 px-4 rounded-xl text-xs font-semibold"
+              className="h-10 px-4 rounded-xl text-xs font-semibold cursor-pointer"
             >
               Vazgeç
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting || grandTotal <= 0}
-              className="h-10 px-5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-xs"
+              className="h-10 px-5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-xs cursor-pointer"
             >
               {isSubmitting ? (
                 <>
