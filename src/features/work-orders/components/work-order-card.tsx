@@ -10,7 +10,6 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
-  ReceiptText,
   AlertCircle,
 } from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"

@@ -12,7 +12,6 @@ import {
   Smartphone,
   ArrowUpDown,
   QrCode,
-  CheckCircle2,
   ShieldCheck,
   AlertCircle,
   X,
@@ -20,6 +19,10 @@ import {
   ChevronUp,
   ChevronDown,
   Info,
+  Loader2,
+  RefreshCw,
+  Send,
+  LogOut,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -71,20 +74,175 @@ export function NotificationSettingsTab() {
     setMounted(true)
   }, [])
 
+  // Live WhatsApp Gateway State
+  const [waConnected, setWaConnected] = React.useState<boolean>(false)
+  const [waJid, setWaJid] = React.useState<string | null>(null)
+  const [, setWaDisplayName] = React.useState<string | null>(null)
+  const [, setIsCheckingWa] = React.useState<boolean>(false)
+  const [isDisconnectingWa, setIsDisconnectingWa] = React.useState<boolean>(false)
+
+  // QR Modal State
+  const [qrLoading, setQrLoading] = React.useState<boolean>(false)
+  const [qrImageSrc, setQrImageSrc] = React.useState<string | null>(null)
+  const [qrSecondsLeft, setQrSecondsLeft] = React.useState<number>(30)
+  const [qrError, setQrError] = React.useState<string | null>(null)
+
+  // Test Message State
+  const [testPhone, setTestPhone] = React.useState<string>("")
+  const [isSendingTest, setIsSendingTest] = React.useState<boolean>(false)
+
+  const checkWhatsAppStatus = React.useCallback(async () => {
+    try {
+      setIsCheckingWa(true)
+      const res = await apiClient.get<{
+        connected: boolean
+        state: string
+        jid?: string
+        displayName?: string
+      }>("/notifications/whatsapp/status")
+      setWaConnected(res.connected)
+      setWaJid(res.jid || null)
+      setWaDisplayName(res.displayName || null)
+      return res
+    } catch {
+      return null
+    } finally {
+      setIsCheckingWa(false)
+    }
+  }, [])
+
+  const fetchQrCode = React.useCallback(async () => {
+    setQrLoading(true)
+    setQrError(null)
+    try {
+      const res = await apiClient.get<{
+        success: boolean
+        qrLink?: string
+        qrBase64?: string
+        qrDuration?: number
+        error?: string
+      }>("/notifications/whatsapp/qr")
+      if (res.success && (res.qrBase64 || res.qrLink)) {
+        setQrImageSrc(res.qrBase64 || res.qrLink || null)
+        setQrSecondsLeft(res.qrDuration || 30)
+      } else {
+        setQrError(res.error || "QR kod üretilemedi.")
+      }
+    } catch {
+      setQrError("GOWA WhatsApp servisine bağlanılamadı.")
+    } finally {
+      setQrLoading(false)
+    }
+  }, [])
+
+  const handleOpenQrModal = () => {
+    setShowQrModal(true)
+    fetchQrCode()
+  }
+
+  const handleDisconnectWa = async () => {
+    setIsDisconnectingWa(true)
+    try {
+      await apiClient.post("/notifications/whatsapp/disconnect")
+      setWaConnected(false)
+      setWaJid(null)
+      toast.info("WhatsApp cihaz bağlantısı başarıyla sonlandırıldı.")
+    } catch {
+      toast.error("Bağlantı kesilirken hata oluştu.")
+    } finally {
+      setIsDisconnectingWa(false)
+    }
+  }
+
+  const handleSendTestMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+    const clean = testPhone.trim()
+    if (!clean) {
+      toast.warning("Lütfen bir telefon numarası giriniz.")
+      return
+    }
+    setIsSendingTest(true)
+    try {
+      const res = await apiClient.post<{
+        success: boolean
+        error?: string
+        messageId?: string
+      }>("/notifications/whatsapp/test-message", { phone: clean })
+      if (res.success) {
+        toast.success(`WhatsApp test mesajı başarıyla iletildi! (${clean})`)
+      } else {
+        toast.error(
+          `WhatsApp mesajı gönderilemedi: ${res.error || "Cihaz bağlı olmayabilir."}`
+        )
+      }
+    } catch (err: unknown) {
+      const apiErr = err as { message?: string }
+      toast.error(apiErr?.message || "Test mesajı gönderilirken hata oluştu.")
+    } finally {
+      setIsSendingTest(false)
+    }
+  }
+
+  // Poll WhatsApp status and countdown QR code timer
+  React.useEffect(() => {
+    if (!showQrModal) return
+
+    const pollInterval = setInterval(async () => {
+      const status = await checkWhatsAppStatus()
+      if (status?.connected) {
+        toast.success("Tebrikler! WhatsApp hattınız başarıyla bağlandı.")
+        setShowQrModal(false)
+        setWaConnected(true)
+      }
+    }, 3000)
+
+    const timerInterval = setInterval(() => {
+      setQrSecondsLeft((prev) => {
+        if (prev <= 1) {
+          fetchQrCode()
+          return 30
+        }
+        return prev - 1
+      })
+    }, 1000)
+
+    return () => {
+      clearInterval(pollInterval)
+      clearInterval(timerInterval)
+    }
+  }, [showQrModal, checkWhatsAppStatus, fetchQrCode])
+
   // Fetch settings on mount
   React.useEffect(() => {
     async function loadSettings() {
       try {
-        const [notifRes, legalRes] = await Promise.allSettled([
-          apiClient.get<NotificationSettingsData>("/tenants/notification-settings"),
-          apiClient.get<{ latestConsent?: { marketingAccepted?: boolean } }>("/legal/status"),
+        const [notifRes, legalRes, waRes] = await Promise.allSettled([
+          apiClient.get<NotificationSettingsData>(
+            "/tenants/notification-settings"
+          ),
+          apiClient.get<{ latestConsent?: { marketingAccepted?: boolean } }>(
+            "/legal/status"
+          ),
+          apiClient.get<{
+            connected: boolean
+            state: string
+            jid?: string
+            displayName?: string
+          }>("/notifications/whatsapp/status"),
         ])
 
         if (notifRes.status === "fulfilled" && notifRes.value?.channelPriority) {
           setSettings(notifRes.value)
         }
         if (legalRes.status === "fulfilled" && legalRes.value?.latestConsent) {
-          setMarketingAccepted(legalRes.value.latestConsent.marketingAccepted ?? true)
+          setMarketingAccepted(
+            legalRes.value.latestConsent.marketingAccepted ?? true
+          )
+        }
+        if (waRes.status === "fulfilled" && waRes.value) {
+          setWaConnected(waRes.value.connected)
+          setWaJid(waRes.value.jid || null)
+          setWaDisplayName(waRes.value.displayName || null)
         }
       } catch {
         // Fallback gracefully to default settings
@@ -227,17 +385,41 @@ export function NotificationSettingsTab() {
               Müşteriye sıfır SMS maliyetiyle fotoğraf, konum, kabul fişi ve anlık parça onay talebi gönderir.
             </p>
             <div className="flex items-center justify-between pt-2 border-t border-slate-200/60 dark:border-slate-800">
-              <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" /> GOWA Gateway Bağlı
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowQrModal(true)}
-                className="h-7 text-[11px] px-2.5 rounded-lg border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 cursor-pointer"
-              >
-                <QrCode className="h-3 w-3 mr-1" /> QR ile Eşle
-              </Button>
+              {waConnected ? (
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span>Bağlı {waJid ? `(+${waJid.split('@')[0]})` : ''}</span>
+                </div>
+              ) : (
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                  Eşleşme Bekleniyor
+                </span>
+              )}
+
+              {waConnected ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDisconnectWa}
+                  disabled={isDisconnectingWa}
+                  className="h-7 text-[11px] px-2.5 rounded-lg border-rose-500/30 hover:bg-rose-500/10 text-rose-600 dark:text-rose-400 cursor-pointer"
+                >
+                  <LogOut className="h-3 w-3 mr-1" /> Hattı Ayır
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenQrModal}
+                  className="h-7 text-[11px] px-2.5 rounded-lg border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 cursor-pointer"
+                >
+                  <QrCode className="h-3 w-3 mr-1" /> QR ile Eşle
+                </Button>
+              )}
             </div>
           </div>
 
@@ -301,6 +483,51 @@ export function NotificationSettingsTab() {
               </span>
             </div>
           </div>
+        </div>
+
+        {/* Live WhatsApp Test Box */}
+        <div className="mb-6 p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-600 text-white shadow-xs">
+              <MessageSquare size={18} />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                Canlı WhatsApp Bildirim Testi
+              </h4>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {waConnected
+                  ? "Hattınız bağlı. Telefon numaranızı girerek anlık test mesajı gönderebilirsiniz."
+                  : "Hattınız henüz bağlanmadı. Test gönderebilmek için yukarıdaki 'QR ile Eşle' butonuna tıklayınız."}
+              </p>
+            </div>
+          </div>
+
+          <form
+            onSubmit={handleSendTestMessage}
+            className="flex items-center gap-2 w-full sm:w-auto"
+          >
+            <input
+              type="text"
+              placeholder="05xxxxxxxxx"
+              value={testPhone}
+              onChange={(e) => setTestPhone(e.target.value)}
+              className="h-8 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 w-full sm:w-36 focus:outline-hidden focus:ring-1 focus:ring-emerald-500"
+            />
+            <Button
+              type="submit"
+              size="sm"
+              disabled={isSendingTest || !testPhone.trim()}
+              className="h-8 text-xs font-semibold px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shrink-0 gap-1"
+            >
+              {isSendingTest ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <Send className="h-3.5 w-3.5" />
+              )}
+              <span>Test Gönder</span>
+            </Button>
+          </form>
         </div>
 
         {/* Section 2: Strategy Selector */}
@@ -666,18 +893,57 @@ export function NotificationSettingsTab() {
             </div>
 
             <div>
-              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">WhatsApp Hattını Eşle</h3>
+              <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
+                WhatsApp Servis Hattını Eşle
+              </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 Telefonunuzdan <strong>WhatsApp &gt; Bağlı Cihazlar &gt; Cihaz Bağla</strong> seçeneğini açıp ekrandaki QR kodu okutunuz.
               </p>
             </div>
 
-            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center justify-center">
-              <div className="w-48 h-48 bg-white p-3.5 rounded-xl border border-slate-200 shadow-inner flex flex-col items-center justify-center text-center">
-                <QrCode className="h-36 w-36 text-slate-900" />
-                <span className="text-[10px] font-mono text-slate-500 mt-1">GOWA-DEVICE-ACTIVE</span>
-              </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col items-center justify-center min-h-[220px]">
+              {qrLoading ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+                  <span className="text-xs text-slate-500">QR kod üretiliyor...</span>
+                </div>
+              ) : qrError ? (
+                <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+                  <AlertCircle className="h-8 w-8 text-rose-500" />
+                  <p className="text-xs text-rose-600 dark:text-rose-400 font-medium px-4">
+                    {qrError}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={fetchQrCode}
+                    className="mt-2 text-xs rounded-xl cursor-pointer"
+                  >
+                    <RefreshCw className="h-3 w-3 mr-1" /> Tekrar Dene
+                  </Button>
+                </div>
+              ) : qrImageSrc ? (
+                <div className="flex flex-col items-center">
+                  <div className="w-48 h-48 bg-white p-2 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center">
+                    <img
+                      src={qrImageSrc}
+                      alt="WhatsApp QR Code"
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    <span>
+                      Kodun geçerlilik süresi: <strong>{qrSecondsLeft} sn</strong>
+                    </span>
+                  </div>
+                </div>
+              ) : null}
             </div>
+
+            <p className="text-[11px] text-slate-400 dark:text-slate-500">
+              Telefonunuz kodu okuttuğunda bu pencere otomatik olarak kapanacak ve hattınız aktifleşecektir.
+            </p>
 
             <div className="flex gap-2 pt-1">
               <Button
@@ -689,13 +955,14 @@ export function NotificationSettingsTab() {
                 Vazgeç
               </Button>
               <Button
-                onClick={() => {
-                  setShowQrModal(false)
-                  toast.success("WhatsApp hattınız atölyenize başarıyla bağlandı!")
-                }}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-xl cursor-pointer"
+                type="button"
+                variant="outline"
+                onClick={fetchQrCode}
+                disabled={qrLoading}
+                className="flex-1 text-xs rounded-xl cursor-pointer gap-1"
               >
-                Bağlantıyı Tamamla
+                <RefreshCw className={cn("h-3.5 w-3.5", qrLoading && "animate-spin")} />
+                Yenile
               </Button>
             </div>
           </div>

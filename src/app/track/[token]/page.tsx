@@ -22,7 +22,6 @@ import {
   MapPin,
   MessageCircle,
   XCircle,
-  Clock,
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -126,10 +125,11 @@ export default function PublicVehicleTrackPage() {
         const res = await apiClient.get<TrackingData>(`/work-orders/public/track/${token}`)
         setData(res)
         setError(null)
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.warn("Public track API error:", err)
         if (showLoading) {
-          if (err?.status === 429 || err?.message?.includes("ThrottlerException")) {
+          const apiErr = err as { status?: number; message?: string }
+          if (apiErr?.status === 429 || apiErr?.message?.includes("ThrottlerException")) {
             setError("Kısa sürede çok fazla istek gönderildi. Lütfen birkaç saniye bekleyip tekrar deneyiniz.")
           } else {
             setError("Belirtilen takip koduyla eşleşen aktif bir servis iş emri bulunamadı.")

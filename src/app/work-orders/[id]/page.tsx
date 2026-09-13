@@ -24,6 +24,7 @@ import {
   Wrench,
   User,
   Phone,
+  MessageSquare,
   CheckCircle2,
   Play,
   Plus,
@@ -670,6 +671,26 @@ export default function WorkOrderDetailPage() {
                 <Phone size={12} />
                 <span>{order.customerPhone}</span>
               </a>
+              {order.customerPhone && (
+                <>
+                  <span>•</span>
+                  <a
+                    href={`https://wa.me/${(() => {
+                      let p = order.customerPhone.replace(/\D/g, '');
+                      if (p.startsWith('0') && p.length === 11) p = '90' + p.substring(1);
+                      else if (p.length === 10) p = '90' + p;
+                      return p;
+                    })()}?text=${encodeURIComponent(`Merhaba Sayın ${order.customerName}, ${order.plate} plakalı aracınızın servis işlemleri hakkında bilgi vermek için iletişime geçiyoruz.`)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
+                    title="WhatsApp Sohbeti Başlat"
+                  >
+                    <MessageSquare size={12} />
+                    <span>WhatsApp</span>
+                  </a>
+                </>
+              )}
               {order.vin && (
                 <>
                   <span>•</span>

@@ -17,7 +17,6 @@ import {
   XCircle,
   Archive,
   AlertCircle,
-  ReceiptText,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { WorkOrder, WorkOrderStatus, WorkOrderPriority, WorkOrderNote, WorkOrderPhoto } from "@/features/work-orders/types"
@@ -134,7 +133,7 @@ function mapApiWorkOrderToWorkOrder(input: unknown): WorkOrder {
       uploadedAt: p.uploadedAt || new Date().toISOString(),
       type: (p.type || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
     })),
-    invoice: (w.invoice as any) || null,
+    invoice: (w.invoice as WorkOrder['invoice']) || null,
   }
 }
 
