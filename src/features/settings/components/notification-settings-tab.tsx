@@ -205,7 +205,7 @@ export function NotificationSettingsTab() {
         setTimeout(() => {
           setShowQrModal(false)
           setIsPairedSuccess(false)
-        }, 2200)
+        }, 2600)
       }
     }, 2000)
 
@@ -960,21 +960,63 @@ export function NotificationSettingsTab() {
                       )}
                     />
 
-                    {/* Sleek, Minimal Professional Success Overlay */}
+                    {/* Sleek, Animated SVG Checkmark Success Overlay */}
                     {isPairedSuccess && (
                       <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs flex flex-col items-center justify-center p-4 animate-in fade-in zoom-in-95 duration-200 text-center">
-                        <div className="w-11 h-11 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 flex items-center justify-center mb-2.5 text-emerald-600 dark:text-emerald-400">
-                          <Check className="w-5 h-5 stroke-[2.5]" />
+                        <style
+                          dangerouslySetInnerHTML={{
+                            __html: `
+                              @keyframes drawCircle {
+                                0% { stroke-dashoffset: 157; }
+                                100% { stroke-dashoffset: 0; }
+                              }
+                              @keyframes drawCheck {
+                                0% { stroke-dashoffset: 36; }
+                                100% { stroke-dashoffset: 0; }
+                              }
+                            `,
+                          }}
+                        />
+                        <div className="relative flex items-center justify-center mb-2">
+                          <svg className="w-13 h-13 text-emerald-500" viewBox="0 0 52 52">
+                            <circle
+                              cx="26"
+                              cy="26"
+                              r="23"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              style={{
+                                strokeDasharray: 157,
+                                strokeDashoffset: 157,
+                                animation: "drawCircle 0.45s cubic-bezier(0.65, 0, 0.45, 1) forwards",
+                              }}
+                            />
+                            <path
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="3.2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              d="M16 27l7 7 14-14"
+                              style={{
+                                strokeDasharray: 36,
+                                strokeDashoffset: 36,
+                                animation: "drawCheck 0.35s 0.35s cubic-bezier(0.65, 0, 0.45, 1) forwards",
+                              }}
+                            />
+                          </svg>
                         </div>
-                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[170px]">
+                        <span className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate max-w-[170px] animate-in fade-in duration-500 delay-300">
                           {waDisplayName || "WhatsApp Hattı"}
                         </span>
                         {waJid && (
-                          <span className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">
+                          <span className="text-[11px] font-mono font-medium text-emerald-600 dark:text-emerald-400 mt-0.5 animate-in fade-in duration-500 delay-300">
                             +{waJid.split('@')[0]}
                           </span>
                         )}
-                        <div className="flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-md bg-emerald-500/10 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        <div className="flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-md bg-emerald-500/10 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 animate-in fade-in duration-500 delay-300">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                           <span>Çevrimiçi & Aktif</span>
                         </div>
