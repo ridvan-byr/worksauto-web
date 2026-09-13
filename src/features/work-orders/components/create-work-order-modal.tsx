@@ -14,6 +14,7 @@ import { useCustomers } from "@/features/customers/api/use-customers"
 import { useCreateWorkOrder, useWorkOrders } from "@/features/work-orders/api/use-work-orders"
 import { useStaff, useWorkshopBays, useServices } from "@/features/settings/api/use-settings"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
+import { formatBayOptionLabel } from "@/lib/workshop-constants"
 import {
   CustomerSearchSelect,
   CustomerOption,
@@ -496,7 +497,7 @@ export function CreateWorkOrderModal({
                   {bays && bays.length > 0 ? (
                     bays.filter((b) => b.isActive !== false).map((b) => (
                       <option key={b.id} value={b.name}>
-                        {b.name} ({b.category || "Lift"})
+                        {formatBayOptionLabel(b.name, b.category)}
                       </option>
                     ))
                   ) : (

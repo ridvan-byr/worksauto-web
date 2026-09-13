@@ -51,3 +51,30 @@ export function formatServiceCategory(categoryCode?: string): { label: string; i
     badgeClass: "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20",
   }
 }
+
+export const BAY_CATEGORY_LABELS: Record<string, string> = {
+  TWO_POST_LIFT: "2 Direkli Lift",
+  FOUR_POST_LIFT: "4 Direkli Lift",
+  SCISSOR_LIFT: "Makaslı Lift",
+  ALIGNMENT: "Rot & Balans",
+  DIAGNOSTIC: "Ekspertiz / Arıza Tespit",
+  WASH: "Yıkama & Temizlik",
+  GENERAL: "Genel Alan",
+}
+
+/**
+ * Lift ve çalışma istasyonlarının isimlerini Türkçe ve temiz formatlar.
+ * İsimde zaten açıklayıcı parantez varsa (örn: "Lift 1 (Genel Mekanik)"),
+ * parantez içi İngilizce enum kodlarını tekrar eklemez.
+ */
+export function formatBayOptionLabel(name: string, category?: string): string {
+  if (!name) return ""
+  if (name.includes("(")) {
+    return name
+  }
+  if (!category) {
+    return name
+  }
+  const trLabel = BAY_CATEGORY_LABELS[category] || category.replace(/_/g, " ")
+  return `${name} (${trLabel})`
+}

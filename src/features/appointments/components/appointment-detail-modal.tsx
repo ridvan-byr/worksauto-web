@@ -24,6 +24,7 @@ import { Appointment, CancellationReason } from "../types"
 import { AppointmentStatusBadge } from "./appointment-status-badge"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { useStaff, useWorkshopBays } from "@/features/settings/api/use-settings"
+import { formatBayOptionLabel } from "@/lib/workshop-constants"
 import { cn } from "@/lib/utils"
 
 export interface CheckInFormData {
@@ -537,7 +538,7 @@ export function AppointmentDetailModal({
                 <option value="">Lift Seçilmedi (Genel Park / Kabul Alanı)</option>
                 {bays.map((bay) => (
                   <option key={bay.id} value={bay.name}>
-                    {bay.name} {bay.category ? `(${bay.category})` : ""}
+                    {formatBayOptionLabel(bay.name, bay.category)}
                   </option>
                 ))}
               </select>
