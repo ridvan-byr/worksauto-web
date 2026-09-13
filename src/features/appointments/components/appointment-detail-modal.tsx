@@ -418,7 +418,7 @@ export function AppointmentDetailModal({
         {/* VIEW 2: CHECK-IN & CREATE WORK ORDER FORM */}
         {viewMode === "checkin" && (
           <div className="p-6 space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/80 dark:border-slate-800/80">
+            <div className="pb-3 border-b border-slate-200/80 dark:border-slate-800/80">
               <div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                   <Play size={16} className="text-emerald-500 fill-emerald-500" />
@@ -428,9 +428,6 @@ export function AppointmentDetailModal({
                   Aracın güncel giriş km ve yakıt seviyesini belirleyin, gerekiyorsa usta ve lift atayın.
                 </p>
               </div>
-              <span className="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono text-xs font-bold">
-                {appointment.plate}
-              </span>
             </div>
 
             {/* Giriş Kilometresi */}
