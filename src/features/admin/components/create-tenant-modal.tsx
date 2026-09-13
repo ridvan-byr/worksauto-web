@@ -2,9 +2,11 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { Building2, Users, X, AlertCircle } from "lucide-react"
+import { Building2, Users, X, AlertCircle, CheckCircle2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CreateTenantInput } from "@/features/admin/api/use-admin"
+import { formatSmartPhone, formatTaxNumber } from "@/lib/input-formatters"
+import { cn } from "@/lib/utils"
 
 interface CreateTenantModalProps {
   isOpen: boolean
@@ -44,11 +46,50 @@ export function CreateTenantModal({
     }
   }, [isOpen])
 
+  const isPhoneValid = React.useMemo(() => {
+    if (!form.phone) return false
+    const digits = form.phone.replace(/\D/g, "")
+    return digits.length >= 10
+  }, [form.phone])
+
+  const isEmailValid = React.useMemo(() => {
+    if (!form.email) return false
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
+  }, [form.email])
+
+  const isTaxNumberValid = React.useMemo(() => {
+    if (!form.taxNumber || form.taxNumber.trim().length === 0) return true
+    const digits = form.taxNumber.replace(/\D/g, "")
+    return digits.length === 10 || digits.length === 11
+  }, [form.taxNumber])
+
+  const isFormValid =
+    form.title.trim().length > 0 &&
+    form.ownerName.trim().length > 0 &&
+    form.ownerSurname.trim().length > 0 &&
+    isPhoneValid &&
+    isEmailValid &&
+    isTaxNumberValid
+
   if (!isOpen || typeof document === "undefined") return null
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSubmit(form)
+    if (!isFormValid) return
+    onSubmit({
+      ...form,
+      title: form.title.trim(),
+      legalName: form.legalName?.trim() || undefined,
+      ownerName: form.ownerName.trim(),
+      ownerSurname: form.ownerSurname.trim(),
+      phone: form.phone.trim(),
+      email: form.email.trim().toLowerCase(),
+      city: form.city?.trim() || undefined,
+      district: form.district?.trim() || undefined,
+      address: form.address?.trim() || undefined,
+      taxOffice: form.taxOffice?.trim() || undefined,
+      taxNumber: form.taxNumber?.trim() || undefined,
+    })
   }
 
   return createPortal(
@@ -139,27 +180,57 @@ export function CreateTenantModal({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Telefon (SMS Girişi İçin) *</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Telefon (SMS Girişi İçin) *</label>
+                  {form.phone && (
+                    <span className={cn("text-[10px] font-medium flex items-center gap-1", isPhoneValid ? "text-emerald-500" : "text-amber-500")}>
+                      {isPhoneValid ? <CheckCircle2 size={11} /> : "En az 10 hane"}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="tel"
                   required
                   value={form.phone}
-                  onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                  placeholder="+905321112233"
-                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono transition-colors"
+                  onChange={(e) => setForm({ ...form, phone: formatSmartPhone(e.target.value) })}
+                  placeholder="05XX XXX XX XX veya +90..."
+                  className={cn(
+                    "w-full h-9 px-3 text-xs rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 font-mono transition-colors focus:outline-none focus:ring-2",
+                    form.phone && !isPhoneValid
+                      ? "border-amber-500/50 focus:ring-amber-500/20"
+                      : "border-slate-300 dark:border-slate-700 focus:border-sky-500 focus:ring-sky-500/20"
+                  )}
                 />
+                {form.phone && !isPhoneValid && (
+                  <p className="text-[10px] text-amber-500">Geçerli bir telefon numarası giriniz (örn: 0532 111 22 33).</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">E-Posta *</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">E-Posta *</label>
+                  {form.email && (
+                    <span className={cn("text-[10px] font-medium flex items-center gap-1", isEmailValid ? "text-emerald-500" : "text-amber-500")}>
+                      {isEmailValid ? <CheckCircle2 size={11} /> : "Geçersiz e-posta"}
+                    </span>
+                  )}
+                </div>
                 <input
                   type="email"
                   required
                   value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  onChange={(e) => setForm({ ...form, email: e.target.value.trim().toLowerCase() })}
                   placeholder="ahmet@acaroto.com"
-                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                  className={cn(
+                    "w-full h-9 px-3 text-xs rounded-xl border bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-colors focus:outline-none focus:ring-2",
+                    form.email && !isEmailValid
+                      ? "border-amber-500/50 focus:ring-amber-500/20"
+                      : "border-slate-300 dark:border-slate-700 focus:border-sky-500 focus:ring-sky-500/20"
+                  )}
                 />
+                {form.email && !isEmailValid && (
+                  <p className="text-[10px] text-amber-500">Geçerli bir e-posta formatı giriniz.</p>
+                )}
               </div>
             </div>
           </div>
@@ -212,13 +283,30 @@ export function CreateTenantModal({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Vergi Numarası (Opsiyonel)</label>
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-slate-700 dark:text-slate-300">Vergi No / TCKN (Opsiyonel)</label>
+                {form.taxNumber && (
+                  <span className={cn("text-[10px] font-medium flex items-center gap-1", isTaxNumberValid ? "text-emerald-500" : "text-amber-500")}>
+                    {isTaxNumberValid ? (
+                      form.taxNumber.length === 10 ? "VKN (10 hane)" : "TCKN (11 hane)"
+                    ) : (
+                      "10 veya 11 hane olmalıdır"
+                    )}
+                  </span>
+                )}
+              </div>
               <input
                 type="text"
                 value={form.taxNumber || ""}
-                onChange={(e) => setForm({ ...form, taxNumber: e.target.value })}
-                placeholder="1234567890"
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-sky-500 transition-colors"
+                onChange={(e) => setForm({ ...form, taxNumber: formatTaxNumber(e.target.value) })}
+                placeholder="VKN (10 hane) veya TCKN (11 hane)"
+                maxLength={11}
+                className={cn(
+                  "w-full h-9 px-3 text-xs rounded-xl border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 font-mono transition-colors focus:outline-none focus:ring-2",
+                  form.taxNumber && !isTaxNumberValid
+                    ? "border-amber-500/50 focus:ring-amber-500/20"
+                    : "border-slate-300 dark:border-slate-700 focus:border-sky-500 focus:ring-sky-500/20"
+                )}
               />
             </div>
           </div>
@@ -229,7 +317,7 @@ export function CreateTenantModal({
               id="isActive"
               checked={form.isActive}
               onChange={(e) => setForm({ ...form, isActive: e.target.checked })}
-              className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-sky-600 focus:ring-sky-500"
+              className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-sky-600 focus:ring-sky-500 cursor-pointer"
             />
             <label htmlFor="isActive" className="text-xs font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
               Servisi hemen aktif et (Lisans onayı verilsin)
@@ -241,14 +329,14 @@ export function CreateTenantModal({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer"
+              className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer text-xs"
             >
               İptal
             </Button>
             <Button
               type="submit"
-              disabled={isPending}
-              className="bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-semibold text-xs gap-2 shadow-lg shadow-sky-500/25 cursor-pointer"
+              disabled={isPending || !isFormValid}
+              className="bg-gradient-to-r from-sky-600 to-blue-600 hover:from-sky-500 hover:to-blue-500 text-white font-semibold text-xs gap-2 shadow-lg shadow-sky-500/25 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <span>{isPending ? "Servis Oluşturuluyor..." : "Servisi Sisteme Kaydet"}</span>
             </Button>
