@@ -6,8 +6,8 @@ import { apiClient } from "@/lib/api-client"
 import { toast } from "@/components/ui/sonner"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 import {
-  MessageSquare,
   Mail,
   Smartphone,
   ArrowUpDown,
@@ -24,6 +24,7 @@ import {
   RefreshCw,
   Send,
   LogOut,
+  BellRing,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -356,7 +357,7 @@ export function NotificationSettingsTab() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-100 dark:border-slate-800">
           <div>
             <h2 className="text-base font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-emerald-500" />
+              <BellRing className="h-5 w-5 text-emerald-500" />
               Çok Kanallı Bildirim & İletişim Tercihleri
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -385,7 +386,7 @@ export function NotificationSettingsTab() {
           >
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
-                <MessageSquare className="h-4 w-4" />
+                <WhatsAppIcon size={16} className="text-emerald-500 shrink-0" />
                 <span>WhatsApp Servis Hattı</span>
               </div>
               <Checkbox
@@ -502,7 +503,7 @@ export function NotificationSettingsTab() {
         <div className="mb-6 p-4 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 dark:bg-emerald-500/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="p-2.5 rounded-xl bg-emerald-600 text-white shadow-xs">
-              <MessageSquare size={18} />
+              <WhatsAppIcon size={18} />
             </div>
             <div>
               <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
@@ -690,7 +691,7 @@ export function NotificationSettingsTab() {
                         <div className="flex items-center gap-2">
                           <div className="flex items-center gap-1.5">
                             {channel === "WHATSAPP" && (
-                              <MessageSquare size={14} className="text-emerald-500 shrink-0" />
+                              <WhatsAppIcon size={14} className="text-emerald-500 shrink-0" />
                             )}
                             {channel === "SMS" && (
                               <Smartphone size={14} className="text-sky-500 shrink-0" />
@@ -780,7 +781,7 @@ export function NotificationSettingsTab() {
                   id: "WHATSAPP",
                   label: "WhatsApp",
                   sub: "Yalnızca WhatsApp üzerinden",
-                  icon: MessageSquare,
+                  icon: WhatsAppIcon,
                   color: "text-emerald-500",
                 },
                 {
@@ -906,13 +907,13 @@ export function NotificationSettingsTab() {
                 "w-11 h-11 rounded-xl flex items-center justify-center mx-auto transition-all duration-300",
                 isPairedSuccess
                   ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                  : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
               )}
             >
               {isPairedSuccess ? (
                 <Check size={20} className="stroke-[2.5]" />
               ) : (
-                <QrCode size={20} />
+                <WhatsAppIcon size={22} />
               )}
             </div>
 

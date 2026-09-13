@@ -15,6 +15,7 @@ import {
   useDeleteWorkOrderPhoto,
 } from "@/features/work-orders/api/use-work-orders"
 import { useProducts, type ProductRecord } from "@/features/inventory/api/use-inventory"
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 
 import * as React from "react"
 import { useParams } from "next/navigation"
@@ -24,7 +25,6 @@ import {
   Wrench,
   User,
   Phone,
-  MessageSquare,
   CheckCircle2,
   Play,
   Plus,
@@ -686,7 +686,7 @@ export default function WorkOrderDetailPage() {
                     className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold hover:bg-emerald-500/20 transition-colors"
                     title="WhatsApp Sohbeti Başlat"
                   >
-                    <MessageSquare size={12} />
+                    <WhatsAppIcon size={12} />
                     <span>WhatsApp</span>
                   </a>
                 </>
