@@ -2,10 +2,12 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, Printer, Receipt } from "lucide-react"
+import { X, Printer, Receipt, FileCheck2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { CorporatePrintDocument } from "@/components/print/corporate-print-document"
+import { apiClient } from "@/lib/api-client"
+import { toast } from "@/components/ui/sonner"
 import { InvoiceStatusBadge } from "./invoice-status-badge"
 import { Invoice } from "../types"
 
@@ -18,6 +20,7 @@ interface InvoiceDetailModalProps {
 
 export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: InvoiceDetailModalProps) {
   const [mounted, setMounted] = React.useState(false)
+  const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false)
 
   React.useEffect(() => {
     setMounted(true)
@@ -43,6 +46,71 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
     }, 1000)
   }
 
+  const handleDownloadGibPdf = async () => {
+    setIsDownloadingPdf(true)
+    try {
+      const res = await apiClient.get<{
+        pdfUrl?: string
+        pdfBuffer?: { type: string; data: number[] } | string
+        htmlContent?: string
+      }>(`/invoices/${invoice.id}/pdf`)
+
+      if (res.pdfUrl) {
+        window.open(res.pdfUrl, "_blank")
+        return
+      }
+
+      if (res.htmlContent) {
+        const printWindow = window.open("", "_blank")
+        if (printWindow) {
+          printWindow.document.write(res.htmlContent)
+          printWindow.document.close()
+          printWindow.focus()
+          printWindow.print()
+        }
+        return
+      }
+
+      if (res.pdfBuffer) {
+        let blob: Blob
+        if (typeof res.pdfBuffer === "string") {
+          const byteCharacters = atob(res.pdfBuffer)
+          const byteNumbers = new Array(byteCharacters.length)
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i)
+          }
+          const byteArray = new Uint8Array(byteNumbers)
+          blob = new Blob([byteArray], { type: "application/pdf" })
+        } else if (res.pdfBuffer.data) {
+          const byteArray = new Uint8Array(res.pdfBuffer.data)
+          blob = new Blob([byteArray], { type: "application/pdf" })
+        } else {
+          throw new Error("Geçersiz PDF formatı")
+        }
+
+        const url = window.URL.createObjectURL(blob)
+        const a = document.createElement("a")
+        a.href = url
+        a.download = `${invoice.gibInvoiceNumber || invoice.invoiceNumber}_GIB.pdf`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        window.URL.revokeObjectURL(url)
+        toast.success("E-Belge PDF başarıyla indirildi")
+        return
+      }
+
+      // If nothing returned or fallback
+      handlePrint()
+    } catch (err: unknown) {
+      console.warn("Resmi PDF indirme:", err)
+      toast.info("Resmi E-Belge bulunamadı, dahili PDF çıktısı hazırlanıyor...")
+      handlePrint()
+    } finally {
+      setIsDownloadingPdf(false)
+    }
+  }
+
   const modalContent = (
     <div
       id="invoice-modal-root"
@@ -55,15 +123,60 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
       >
         
         {/* Top Action Bar (Print sırasında gizlenir) */}
-        <div className="px-6 py-3.5 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50 dark:bg-slate-900 print:hidden">
-          <div className="flex items-center gap-2">
+        <div className="px-6 py-3.5 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50 dark:bg-slate-900 print:hidden flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
               {invoice.invoiceNumber}
             </span>
+            {invoice.gibInvoiceNumber && (
+              <span className="text-xs font-mono font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                <FileCheck2 size={12} />
+                {invoice.gibInvoiceNumber}
+              </span>
+            )}
             <InvoiceStatusBadge status={invoice.status} />
+            {invoice.eInvoiceStatus && (
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                  invoice.eInvoiceStatus === "COMPLETED"
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
+                    : invoice.eInvoiceStatus === "QUEUED" || invoice.eInvoiceStatus === "PENDING_GIB"
+                    ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800"
+                    : invoice.eInvoiceStatus === "FAILED"
+                    ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400 dark:border-rose-800"
+                    : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                }`}
+              >
+                {invoice.eInvoiceStatus === "COMPLETED"
+                  ? "GİB Onaylı"
+                  : invoice.eInvoiceStatus === "QUEUED"
+                  ? "GİB Kuyruğunda"
+                  : invoice.eInvoiceStatus === "PENDING_GIB"
+                  ? "GİB İletildi"
+                  : invoice.eInvoiceStatus === "FAILED"
+                  ? "GİB Hatası"
+                  : invoice.eInvoiceStatus}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isDownloadingPdf}
+              onClick={handleDownloadGibPdf}
+              className="h-9 px-3 text-xs font-semibold gap-1.5 cursor-pointer text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50"
+            >
+              {isDownloadingPdf ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <FileCheck2 size={14} />
+              )}
+              <span>GİB / E-Belge İndir</span>
+            </Button>
+
             <Button
               type="button"
               variant="outline"
@@ -72,7 +185,7 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
               className="h-9 px-3 text-xs font-semibold gap-1.5 cursor-pointer"
             >
               <Printer size={14} />
-              <span>Yazdır / PDF</span>
+              <span>Yazdır</span>
             </Button>
 
             {invoice.status !== "PAID" && onOpenPayment && (
@@ -104,10 +217,15 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
         <div className="overflow-y-auto flex-1 bg-slate-100 dark:bg-slate-950 p-4 sm:p-6 print:p-0 print:bg-white">
           <CorporatePrintDocument
             title="FATURA"
-            documentNumber={invoice.invoiceNumber}
+            documentNumber={invoice.gibInvoiceNumber || invoice.invoiceNumber}
             date={invoice.issueDate}
             metaBadges={
               <>
+                {invoice.gibInvoiceNumber && (
+                  <p>
+                    GİB Belge No: <strong className="text-indigo-700 font-bold">{invoice.gibInvoiceNumber}</strong>
+                  </p>
+                )}
                 {invoice.dueDate && (
                   <p>
                     Vade Tarihi: <strong className="text-slate-900 font-bold">{invoice.dueDate}</strong>

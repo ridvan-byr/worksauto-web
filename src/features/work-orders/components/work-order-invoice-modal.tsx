@@ -55,6 +55,13 @@ export function WorkOrderInvoiceModal({
   const [useAdvanceOffset, setUseAdvanceOffset] = React.useState<boolean>(true)
   const [isLoadingAdvance, setIsLoadingAdvance] = React.useState<boolean>(false)
 
+  // Active E-Invoice Provider Setting
+  const [invoiceSetting, setInvoiceSetting] = React.useState<{
+    provider: string
+    isTestMode: boolean
+    autoSendOnCompletion: boolean
+  } | null>(null)
+
   React.useEffect(() => {
     setMounted(true)
   }, [])
@@ -79,6 +86,17 @@ export function WorkOrderInvoiceModal({
       setNotes("")
       setUseAdvanceOffset(true)
       setIsLoadingAdvance(true)
+
+      // Fetch active invoice setting
+      apiClient
+        .get<{ provider: string; isTestMode: boolean; autoSendOnCompletion: boolean }>("/settings/invoice")
+        .then((res) => {
+          if (res) setInvoiceSetting(res)
+        })
+        .catch(() => {
+          // ignore or default
+        })
+
       apiClient
         .get<{ balance: number }>(`/current-accounts/customer/${order.customerId}`)
         .then((res) => {
@@ -200,6 +218,38 @@ export function WorkOrderInvoiceModal({
         {/* Modal Body */}
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 sm:space-y-5">
+            {/* E-Fatura Entegratör Durum Kartı */}
+            {invoiceSetting && (
+              <div className="flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-700/80 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2.5 h-2.5 rounded-full ${
+                    invoiceSetting.provider === "INTERNAL"
+                      ? "bg-slate-400"
+                      : "bg-emerald-500 animate-pulse"
+                  }`} />
+                  <span className="font-semibold text-slate-700 dark:text-slate-200">
+                    {invoiceSetting.provider === "PARASUT"
+                      ? "Paraşüt E-Fatura Entegrasyonu"
+                      : invoiceSetting.provider === "NILVERA"
+                      ? "Nilvera E-Fatura Entegrasyonu"
+                      : invoiceSetting.provider === "BIZIMHESAP"
+                      ? "BizimHesap Entegrasyonu"
+                      : "Dahili Taslak (Ön Muhasebe Modu)"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {invoiceSetting.isTestMode && invoiceSetting.provider !== "INTERNAL" && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                      Test Ortamı
+                    </span>
+                  )}
+                  <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                    {invoiceSetting.provider === "INTERNAL" ? "İç Fatura" : "GİB Otomatik"}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Financial Summary Breakdown */}
           <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800/60 space-y-2 text-xs font-mono">
             <div className="flex justify-between text-slate-600 dark:text-slate-400">

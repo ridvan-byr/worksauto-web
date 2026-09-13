@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Building2, Wrench, Users, Shield, Check, Layers, MessageSquare } from "lucide-react"
+import { Building2, Wrench, Users, Shield, Check, Layers, MessageSquare, Receipt } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/features/auth/auth-context"
 import {
@@ -30,9 +30,10 @@ import { ServicesTab } from "@/features/settings/components/services-tab"
 import { StaffTab } from "@/features/settings/components/staff-tab"
 import { WorkshopBaysTab } from "@/features/settings/components/workshop-bays-tab"
 import { NotificationSettingsTab } from "@/features/settings/components/notification-settings-tab"
+import { EInvoiceSettingsTab } from "@/features/settings/components/einvoice-settings-tab"
 
-type SettingsTab = "profile" | "services" | "staff" | "bays" | "notifications"
-const VALID_TABS: readonly SettingsTab[] = ["profile", "services", "staff", "bays", "notifications"] as const
+type SettingsTab = "profile" | "services" | "staff" | "bays" | "notifications" | "einvoice"
+const VALID_TABS: readonly SettingsTab[] = ["profile", "services", "staff", "bays", "notifications", "einvoice"] as const
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -367,6 +368,19 @@ export default function SettingsPage() {
           <MessageSquare size={15} />
           <span>Bildirim & WhatsApp</span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("einvoice")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            activeTab === "einvoice"
+              ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+          }`}
+        >
+          <Receipt size={15} />
+          <span>E-Fatura / Entegratör</span>
+        </button>
       </div>
 
       {/* Tab Contents */}
@@ -428,6 +442,10 @@ export default function SettingsPage() {
 
       {activeTab === "notifications" && (
         <NotificationSettingsTab />
+      )}
+
+      {activeTab === "einvoice" && (
+        <EInvoiceSettingsTab />
       )}
     </div>
   )

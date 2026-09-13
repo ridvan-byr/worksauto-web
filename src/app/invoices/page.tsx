@@ -118,6 +118,11 @@ export default function InvoicesPage() {
               ],
           createdAt: inv.issueDate,
           updatedAt: inv.issueDate,
+          eInvoiceUuid: inv.eInvoiceUuid,
+          eInvoiceStatus: inv.eInvoiceStatus,
+          gibInvoiceNumber: inv.gibInvoiceNumber,
+          profileId: inv.profileId,
+          invoiceTypeCode: inv.invoiceTypeCode,
         }
       })
       setInvoices(mapped)
@@ -377,9 +382,16 @@ export default function InvoicesPage() {
                   >
                     {/* Invoice & WO */}
                     <td className="py-4 px-4 sm:px-6">
-                      <p className="font-bold font-mono text-slate-900 dark:text-slate-100 text-xs">
-                        {inv.invoiceNumber}
-                      </p>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <p className="font-bold font-mono text-slate-900 dark:text-slate-100 text-xs">
+                          {inv.invoiceNumber}
+                        </p>
+                        {inv.gibInvoiceNumber && (
+                          <span className="text-[10px] font-mono font-bold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200 dark:border-indigo-800 px-1.5 py-0.5 rounded">
+                            {inv.gibInvoiceNumber}
+                          </span>
+                        )}
+                      </div>
                       {inv.workOrderNumber && (
                         <p className="text-[10px] text-slate-400 font-mono mt-0.5">
                           İş Emri: #{inv.workOrderNumber}
@@ -419,7 +431,32 @@ export default function InvoicesPage() {
 
                     {/* Status */}
                     <td className="py-4 px-4">
-                      <InvoiceStatusBadge status={inv.status} />
+                      <div className="flex flex-col gap-1 items-start">
+                        <InvoiceStatusBadge status={inv.status} />
+                        {inv.eInvoiceStatus && (
+                          <span
+                            className={`text-[9px] font-bold px-1.5 py-0.5 rounded border ${
+                              inv.eInvoiceStatus === "COMPLETED"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400"
+                                : inv.eInvoiceStatus === "QUEUED" || inv.eInvoiceStatus === "PENDING_GIB"
+                                ? "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400"
+                                : inv.eInvoiceStatus === "FAILED"
+                                ? "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-400"
+                                : "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300"
+                            }`}
+                          >
+                            {inv.eInvoiceStatus === "COMPLETED"
+                              ? "GİB Onaylı"
+                              : inv.eInvoiceStatus === "QUEUED"
+                              ? "GİB Sırasında"
+                              : inv.eInvoiceStatus === "PENDING_GIB"
+                              ? "GİB İletildi"
+                              : inv.eInvoiceStatus === "FAILED"
+                              ? "GİB Hatası"
+                              : inv.eInvoiceStatus}
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     {/* Actions */}

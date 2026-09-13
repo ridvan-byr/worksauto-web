@@ -55,6 +55,11 @@ export interface InvoiceRecord {
   issueDate: string;
   dueDate?: string;
   items?: InvoiceItem[];
+  eInvoiceUuid?: string | null;
+  eInvoiceStatus?: string | null;
+  gibInvoiceNumber?: string | null;
+  profileId?: string | null;
+  invoiceTypeCode?: string | null;
 }
 
 export interface CreateInvoiceInput {

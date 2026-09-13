@@ -61,6 +61,13 @@ export interface Invoice {
   dueDate: string // Vade Tarihi
   createdAt: string
   updatedAt: string
+
+  // E-Fatura / GİB Entegrasyon Alanları
+  eInvoiceUuid?: string | null
+  eInvoiceStatus?: string | null
+  gibInvoiceNumber?: string | null
+  profileId?: string | null
+  invoiceTypeCode?: string | null
 }
 
 export interface CariMovementItem {
