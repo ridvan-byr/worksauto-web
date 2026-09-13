@@ -93,7 +93,7 @@ export default function CustomerDetailPage() {
         taxNumber: apiCustomer.taxNumber,
         taxOffice: apiCustomer.taxOffice,
         balance: apiCustomer.currentAccount ? Number(apiCustomer.currentAccount.balance) : 0,
-        vehicles: (apiCustomer.vehicles || []).map((v) => ({
+        vehicles: (apiCustomer.vehicles || []).map((v: any) => ({
           id: v.id,
           tenantId: v.tenantId || 'ten_1',
           customerId: apiCustomer.id,
@@ -101,49 +101,88 @@ export default function CustomerDetailPage() {
           brand: v.brand,
           model: v.model,
           year: v.year,
-          kilometer: v.kilometer ?? 0,
+          kilometer: v.currentKm ?? v.kilometer ?? 0,
           fuelType: formatFuelType(v.fuelType),
           transmission: formatTransmission(v.transmission),
+          lastServiceDate: v.lastServiceDate
+            ? new Date(v.lastServiceDate).toLocaleDateString("tr-TR")
+            : undefined,
+          vin: v.vin,
         })),
-        appointments: (apiCustomer.appointments || []).map((app) => ({
-          id: app.id,
-          date: app.date || '-',
-          time: app.time || '10:00',
-          serviceName: app.serviceName || 'Genel Bakım',
-          plate: app.plate || '34XX000',
-          status: app.status || 'CONFIRMED',
-          technicianName: app.technicianName || 'Atölye Ustası',
-        })),
-        workOrders: (apiCustomer.workOrders || []).map((w) => ({
-          id: w.id,
-          orderNumber: w.orderNumber || 'İEM-000',
-          date: w.date || '-',
-          status: w.status || 'OPEN',
-          totalAmount: Number(w.totalAmount ?? 0),
-          kilometers: Number(w.kilometers ?? 0),
-          plate: w.plate || '34XX000',
-          itemsSummary: w.itemsSummary || 'Periyodik Bakım & Kontrol',
-          technician: w.technician || 'Atölye Ustası',
-        })),
-        invoices: (apiCustomer.invoices || []).map((inv) => ({
-          id: inv.id,
-          invoiceNumber: inv.invoiceNumber || 'FTR-000',
-          date: inv.date || '-',
-          dueDate: inv.dueDate || '-',
-          plate: inv.plate || '34XX000',
-          totalAmount: Number(inv.totalAmount ?? 0),
-          paidAmount: Number(inv.paidAmount ?? 0),
-          status: inv.status || 'PAID',
-        })),
-        movements: (apiCustomer.movements || []).map((m) => ({
-          id: m.id,
-          date: m.date || '-',
-          type: m.type || 'DEBIT',
-          amount: Number(m.amount || 0),
-          balanceAfter: Number(m.balanceAfter || 0),
-          description: m.description || '-',
-          documentNo: m.documentNo || '',
-        })),
+        appointments: (apiCustomer.appointments || []).map((app: any) => {
+          const slotDateObj = app.slotStartTime || app.slotDate ? new Date(app.slotStartTime || app.slotDate) : null
+          const dateStr = slotDateObj ? slotDateObj.toLocaleDateString('tr-TR') : (app.date || '-')
+          const timeStr = slotDateObj ? slotDateObj.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' }) : (app.time || '10:00')
+          const techName = app.assignedMechanic?.user
+            ? `${app.assignedMechanic.user.name} ${app.assignedMechanic.user.surname || ''}`.trim()
+            : (app.technicianName || 'Atölye Ustası')
+
+          return {
+            id: app.id,
+            date: dateStr,
+            time: timeStr,
+            serviceName: app.service?.name || app.serviceName || 'Genel Bakım',
+            plate: app.vehicle?.plate || app.plate || 'Plaka Yok',
+            status: app.status || 'CONFIRMED',
+            technicianName: techName,
+          }
+        }),
+        workOrders: (apiCustomer.workOrders || []).map((w: any) => {
+          const itemsSummary = (w.items && w.items.length > 0)
+            ? w.items.map((i: any) => i.name).join(', ')
+            : (w.itemsSummary || 'Genel Bakım & Kontrol')
+          const techName = w.assignedMechanic?.user
+            ? `${w.assignedMechanic.user.name} ${w.assignedMechanic.user.surname || ''}`.trim()
+            : (w.technician || 'Atölye Ustası')
+          const dateStr = w.createdAt ? new Date(w.createdAt).toLocaleDateString('tr-TR') : (w.date || '-')
+
+          return {
+            id: w.id,
+            orderNumber: w.workOrderNumber || w.orderNumber || 'İEM-000',
+            date: dateStr,
+            status: (w.status === 'COMPLETED' ? 'COMPLETED' : w.status === 'IN_PROGRESS' ? 'IN_PROGRESS' : 'OPEN') as 'OPEN' | 'IN_PROGRESS' | 'WAITING_PARTS' | 'COMPLETED',
+            totalAmount: Number(w.grandTotal ?? w.totalAmount ?? 0),
+            kilometers: Number(w.initialKm ?? w.kilometers ?? 0),
+            plate: w.vehicle?.plate || w.plate || '-',
+            itemsSummary,
+            technician: techName,
+          }
+        }),
+        invoices: (apiCustomer.invoices || []).map((inv: any) => {
+          const dateStr = inv.issueDate ? new Date(inv.issueDate).toLocaleDateString('tr-TR') : (inv.date || '-')
+          const dueDateStr = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('tr-TR') : (inv.dueDate || '-')
+          const plate = inv.workOrder?.vehicle?.plate || inv.plate || '-'
+
+          return {
+            id: inv.id,
+            invoiceNumber: inv.invoiceNumber || 'FTR-000',
+            date: dateStr,
+            dueDate: dueDateStr,
+            plate,
+            totalAmount: Number(inv.grandTotal ?? inv.totalAmount ?? 0),
+            paidAmount: Number(inv.paidAmount ?? 0),
+            status: (inv.status === 'PAID' ? 'PAID' : inv.status === 'PARTIALLY_PAID' ? 'PARTIAL' : 'UNPAID') as 'PAID' | 'PARTIAL' | 'UNPAID',
+          }
+        }),
+        movements: ((apiCustomer.currentAccount?.movements || apiCustomer.movements || []) as any[]).map((m: any) => {
+          const dateStr = m.date
+            ? new Date(m.date).toLocaleDateString('tr-TR')
+            : (m.createdAt ? new Date(m.createdAt).toLocaleDateString('tr-TR') : '-')
+          const debitVal = Number(m.debit || 0)
+          const creditVal = Number(m.credit || 0)
+          const movementType = (m.type || (debitVal > 0 ? 'DEBIT' : 'CREDIT')) as 'DEBIT' | 'CREDIT'
+          const movementAmount = Number(m.amount || (debitVal > 0 ? debitVal : creditVal) || 0)
+
+          return {
+            id: m.id,
+            date: dateStr,
+            type: movementType,
+            amount: movementAmount,
+            balanceAfter: Number(m.balanceAfter ?? 0),
+            description: m.description || '-',
+            documentNo: m.documentNo || m.referenceNo || '',
+          }
+        }),
         createdAt: apiCustomer.createdAt,
         updatedAt: apiCustomer.updatedAt || apiCustomer.createdAt,
       })

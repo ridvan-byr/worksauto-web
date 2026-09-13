@@ -82,6 +82,7 @@ export default function VehiclesPage() {
     { key: "transmission", label: "Vites", type: "text" },
     { key: "customerName", label: "Müşteri / Araç Sahibi", type: "text" },
     { key: "customerPhone", label: "Müşteri Telefon", type: "phone" },
+    { key: "lastServiceDate", label: "Son Servis Tarihi", type: "text" },
   ]
 
   React.useEffect(() => {
@@ -101,6 +102,10 @@ export default function VehiclesPage() {
         customerPhone: v.customer?.phone || '',
         inspectionValidUntil: v.inspectionValidUntil,
         insuranceValidUntil: v.insuranceValidUntil,
+        lastServiceDate: v.lastServiceDate
+          ? new Date(v.lastServiceDate).toLocaleDateString("tr-TR")
+          : undefined,
+        lastServiceStatus: v.lastServiceStatus,
       }))
       setVehicles(mapped)
     }
@@ -153,6 +158,7 @@ export default function VehiclesPage() {
       transmission: formatTransmission(v.transmission),
       customerName: v.customerName || "",
       customerPhone: v.customerPhone || "",
+      lastServiceDate: v.lastServiceDate || "-",
     }))
   }, [filteredVehicles])
 
@@ -482,9 +488,14 @@ export default function VehiclesPage() {
 
                     {/* Last Service Date */}
                     <td className="py-4 px-4 text-slate-500 dark:text-slate-400 text-[11px]">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <Calendar size={13} className="text-slate-400" />
                         <span>{v.lastServiceDate || "-"}</span>
+                        {v.lastServiceStatus && v.lastServiceStatus !== "COMPLETED" && v.lastServiceStatus !== "CANCELLED" && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-sky-50 dark:bg-sky-500/10 text-sky-600 dark:text-sky-400 font-semibold border border-sky-200 dark:border-sky-500/20">
+                            İşlemde
+                          </span>
+                        )}
                       </div>
                     </td>
 

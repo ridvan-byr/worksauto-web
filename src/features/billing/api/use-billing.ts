@@ -23,7 +23,9 @@ export interface InvoiceRecord {
     firstName?: string;
     lastName?: string;
     phone?: string;
+    type?: string;
     taxNumber?: string;
+    taxOffice?: string;
     companyTitle?: string;
   };
   workOrderId?: string;

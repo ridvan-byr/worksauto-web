@@ -21,6 +21,7 @@ export interface VehicleRecord {
   customerName?: string;
   customerPhone?: string;
   lastServiceDate?: string;
+  lastServiceStatus?: string | null;
   customer?: {
     id?: string;
     name?: string;
