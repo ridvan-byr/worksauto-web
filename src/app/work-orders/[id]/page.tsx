@@ -70,7 +70,7 @@ export default function WorkOrderDetailPage() {
   // Part Form
   const [newPartName, setNewPartName] = React.useState("")
   const [newPartNumber, setNewPartNumber] = React.useState("")
-  const [newPartQty, setNewPartQty] = React.useState<number>(1)
+  const [newPartQty, setNewPartQty] = React.useState<number | "">(1)
   const [newPartPrice, setNewPartPrice] = React.useState<number | "">(450)
   const [isAddingPart, setIsAddingPart] = React.useState(false)
   const [isCustomPartMode, setIsCustomPartMode] = React.useState(false)
@@ -1224,7 +1224,7 @@ export default function WorkOrderDetailPage() {
                     )}
 
                     {/* Low/Insufficient Stock Warning */}
-                    {selectedProduct && newPartQty > selectedProduct.stockQuantity && (
+                    {selectedProduct && Number(newPartQty) > selectedProduct.stockQuantity && (
                       <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center gap-1.5">
                         <AlertTriangle size={14} className="shrink-0" />
                         <span>
@@ -1288,7 +1288,20 @@ export default function WorkOrderDetailPage() {
                         min={1}
                         placeholder="Adet"
                         value={newPartQty}
-                        onChange={(e) => setNewPartQty(Math.max(1, Number(e.target.value)))}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          if (val === "") {
+                            setNewPartQty("")
+                          } else {
+                            const parsed = parseInt(val, 10)
+                            setNewPartQty(isNaN(parsed) ? "" : Math.max(1, parsed))
+                          }
+                        }}
+                        onBlur={() => {
+                          if (newPartQty === "" || Number(newPartQty) < 1) {
+                            setNewPartQty(1)
+                          }
+                        }}
                         className="w-20 h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono text-center font-bold"
                         required
                       />
