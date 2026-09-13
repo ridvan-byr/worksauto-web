@@ -12,6 +12,7 @@ import {
   Smartphone,
   ArrowUpDown,
   QrCode,
+  Check,
   ShieldCheck,
   AlertCircle,
   X,
@@ -86,6 +87,7 @@ export function NotificationSettingsTab() {
   const [qrImageSrc, setQrImageSrc] = React.useState<string | null>(null)
   const [qrSecondsLeft, setQrSecondsLeft] = React.useState<number>(90)
   const [qrError, setQrError] = React.useState<string | null>(null)
+  const [isPairedSuccess, setIsPairedSuccess] = React.useState<boolean>(false)
 
   // Test Message State
   const [testPhone, setTestPhone] = React.useState<string>("")
@@ -141,6 +143,7 @@ export function NotificationSettingsTab() {
       toast.success("WhatsApp hattınız zaten bağlı durumda!")
       return
     }
+    setIsPairedSuccess(false)
     setShowQrModal(true)
     fetchQrCode()
   }
@@ -190,16 +193,21 @@ export function NotificationSettingsTab() {
 
   // Poll WhatsApp status and countdown QR code timer
   React.useEffect(() => {
-    if (!showQrModal) return
+    if (!showQrModal || isPairedSuccess) return
 
     const pollInterval = setInterval(async () => {
       const status = await checkWhatsAppStatus()
       if (status?.connected) {
-        toast.success("Tebrikler! WhatsApp hattınız başarıyla bağlandı.")
-        setShowQrModal(false)
+        setIsPairedSuccess(true)
         setWaConnected(true)
+        clearInterval(pollInterval)
+        toast.success("Tebrikler! WhatsApp hattınız başarıyla bağlandı.")
+        setTimeout(() => {
+          setShowQrModal(false)
+          setIsPairedSuccess(false)
+        }, 2200)
       }
-    }, 3000)
+    }, 2000)
 
     const timerInterval = setInterval(() => {
       setQrSecondsLeft((prev) => {
@@ -215,7 +223,7 @@ export function NotificationSettingsTab() {
       clearInterval(pollInterval)
       clearInterval(timerInterval)
     }
-  }, [showQrModal, checkWhatsAppStatus, fetchQrCode])
+  }, [showQrModal, isPairedSuccess, checkWhatsAppStatus, fetchQrCode])
 
   // Fetch settings on mount
   React.useEffect(() => {
@@ -893,16 +901,29 @@ export function NotificationSettingsTab() {
               <X size={16} />
             </button>
 
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto">
-              <QrCode size={26} />
+            <div
+              className={cn(
+                "w-12 h-12 rounded-2xl flex items-center justify-center mx-auto transition-all duration-500",
+                isPairedSuccess
+                  ? "bg-emerald-500 text-white scale-110 shadow-lg shadow-emerald-500/30 rotate-[360deg]"
+                  : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+              )}
+            >
+              {isPairedSuccess ? (
+                <Check size={28} className="stroke-[3] animate-in zoom-in-50 duration-300" />
+              ) : (
+                <QrCode size={26} />
+              )}
             </div>
 
             <div>
               <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">
-                WhatsApp Servis Hattını Eşle
+                {isPairedSuccess ? "WhatsApp Başarıyla Eşleşti!" : "WhatsApp Servis Hattını Eşle"}
               </h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Telefonunuzdan <strong>WhatsApp &gt; Bağlı Cihazlar &gt; Cihaz Bağla</strong> seçeneğini açıp ekrandaki QR kodu okutunuz.
+                {isPairedSuccess
+                  ? "Cihazınız doğrulandı, yönlendiriliyorsunuz..."
+                  : "Telefonunuzdan WhatsApp > Bağlı Cihazlar > Cihaz Bağla seçeneğini açıp ekrandaki QR kodu okutunuz."}
               </p>
             </div>
 
@@ -929,35 +950,61 @@ export function NotificationSettingsTab() {
                 </div>
               ) : qrImageSrc ? (
                 <div className="flex flex-col items-center">
-                  <div className="w-48 h-48 bg-white p-2 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center">
+                  <div className="w-48 h-48 bg-white p-2 rounded-xl border border-slate-200 shadow-inner flex items-center justify-center relative overflow-hidden">
                     <img
                       src={qrImageSrc}
                       alt="WhatsApp QR Code"
-                      className="w-full h-full object-contain"
+                      className={cn(
+                        "w-full h-full object-contain transition-all duration-300",
+                        isPairedSuccess && "blur-xs scale-90 opacity-20"
+                      )}
                     />
+
+                    {/* Animated Checkmark and Success Overlay */}
+                    {isPairedSuccess && (
+                      <div className="absolute inset-0 bg-emerald-600/95 backdrop-blur-xs flex flex-col items-center justify-center text-white p-4 animate-in zoom-in-75 fade-in duration-300">
+                        <div className="w-14 h-14 rounded-full bg-white/20 flex items-center justify-center mb-2 animate-bounce shadow-md">
+                          <Check className="w-8 h-8 text-white stroke-[3]" />
+                        </div>
+                        <span className="text-sm font-bold tracking-tight">Bağlantı Kuruldu!</span>
+                        <span className="text-[11px] text-emerald-100 mt-0.5 font-medium truncate max-w-[170px]">
+                          {waDisplayName || "Telefonunuz"} bağlandı
+                        </span>
+                        {waJid && (
+                          <span className="text-[10px] font-mono text-emerald-100 mt-1 bg-emerald-700/80 px-2.5 py-0.5 rounded-full shadow-inner">
+                            +{waJid.split('@')[0]}
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-500 dark:text-slate-400">
-                    <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                    <span>
-                      Kodun geçerlilik süresi: <strong>{qrSecondsLeft} sn</strong>
-                    </span>
-                  </div>
+                  {!isPairedSuccess && (
+                    <div className="flex items-center gap-1.5 mt-2 text-[11px] text-slate-500 dark:text-slate-400">
+                      <span className="inline-block w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                      <span>
+                        Kodun geçerlilik süresi: <strong>{qrSecondsLeft} sn</strong>
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : null}
             </div>
 
             <p className="text-[11px] text-slate-400 dark:text-slate-500">
-              Telefonunuz kodu okuttuğunda bu pencere otomatik olarak kapanacak ve hattınız aktifleşecektir.
+              {isPairedSuccess
+                ? "Bağlantı başarılı! Panel otomatik güncelleniyor..."
+                : "Telefonunuz kodu okuttuğunda bu pencere otomatik olarak kapanacak ve hattınız aktifleşecektir."}
             </p>
 
             <div className="flex gap-2 pt-1">
               <Button
                 variant="outline"
                 type="button"
+                disabled={isPairedSuccess}
                 onClick={() => setShowQrModal(false)}
                 className="flex-1 text-xs rounded-xl cursor-pointer"
               >
-                Vazgeç
+                {isPairedSuccess ? "Tamamlandı" : "Vazgeç"}
               </Button>
               <Button
                 type="button"
