@@ -302,85 +302,87 @@ export default function SettingsPage() {
         )}
       </div>
 
-      {/* Tabs Navigation */}
-      <div className="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
-        <button
-          type="button"
-          onClick={() => setActiveTab("profile")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "profile"
-              ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-          }`}
-        >
-          <Building2 size={15} />
-          <span>Firma & Servis Profili</span>
-        </button>
+      {/* Tabs Navigation (Responsive Horizontal Scroll) */}
+      <div className="border-b border-slate-200 dark:border-slate-800 pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scrollbar-none py-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab("profile")}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
+              activeTab === "profile"
+                ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-slate-100/60 dark:bg-slate-900/60 sm:bg-transparent"
+            }`}
+          >
+            <Building2 size={15} className="shrink-0" />
+            <span>Firma & Servis Profili</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("services")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "services"
-              ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-          }`}
-        >
-          <Wrench size={15} />
-          <span>Hizmet & İşçilik Kataloğu</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("services")}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
+              activeTab === "services"
+                ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-slate-100/60 dark:bg-slate-900/60 sm:bg-transparent"
+            }`}
+          >
+            <Wrench size={15} className="shrink-0" />
+            <span>Hizmet & İşçilik Kataloğu</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("staff")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "staff"
-              ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-          }`}
-        >
-          <Users size={15} />
-          <span>Personel & Atölye Ustaları</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("staff")}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
+              activeTab === "staff"
+                ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-slate-100/60 dark:bg-slate-900/60 sm:bg-transparent"
+            }`}
+          >
+            <Users size={15} className="shrink-0" />
+            <span>Personel & Atölye Ustaları</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("bays")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "bays"
-              ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-          }`}
-        >
-          <Layers size={15} />
-          <span>İstasyonlar & Liftler</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("bays")}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
+              activeTab === "bays"
+                ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-slate-100/60 dark:bg-slate-900/60 sm:bg-transparent"
+            }`}
+          >
+            <Layers size={15} className="shrink-0" />
+            <span>İstasyonlar & Liftler</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("notifications")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "notifications"
-              ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-          }`}
-        >
-          <MessageSquare size={15} />
-          <span>Bildirim & WhatsApp</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("notifications")}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
+              activeTab === "notifications"
+                ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-slate-100/60 dark:bg-slate-900/60 sm:bg-transparent"
+            }`}
+          >
+            <MessageSquare size={15} className="shrink-0" />
+            <span>Bildirim & WhatsApp</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab("einvoice")}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-            activeTab === "einvoice"
-              ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
-              : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-          }`}
-        >
-          <Receipt size={15} />
-          <span>E-Fatura / Entegratör</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("einvoice")}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
+              activeTab === "einvoice"
+                ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-slate-100/60 dark:bg-slate-900/60 sm:bg-transparent"
+            }`}
+          >
+            <Receipt size={15} className="shrink-0" />
+            <span>E-Fatura / Entegratör</span>
+          </button>
+        </div>
       </div>
 
       {/* Tab Contents */}
