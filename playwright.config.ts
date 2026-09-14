@@ -18,14 +18,14 @@ export default defineConfig({
     },
   ],
   webServer: {
-    // output: 'standalone' ile 'next start' çalışmaz; CI'daki gibi paketlenmiş sunucuyu kullan
     command: 'node scripts/prepare-standalone.mjs && node .next/standalone/server.js',
     url: 'http://localhost:3100',
     reuseExistingServer: false,
     timeout: 120000,
     env: {
       PORT: '3100',
-      HOSTNAME: '127.0.0.1',
+      HOSTNAME: '0.0.0.0',
     },
   },
 });
+
