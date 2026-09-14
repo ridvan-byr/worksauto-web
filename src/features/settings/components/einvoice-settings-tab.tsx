@@ -18,6 +18,8 @@ import {
   Copy,
   Check,
   HelpCircle,
+  FlaskConical,
+  Zap,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
@@ -856,45 +858,135 @@ export function EInvoiceSettingsTab() {
 
         {/* Akıllı Otomasyon Switch'leri */}
         <div className="pt-4 border-t border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-50 cursor-pointer transition-colors">
-            <input
-              type="checkbox"
-              checked={isTestMode}
-              onChange={(e) => setIsTestMode(e.target.checked)}
-              className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 mt-0.5 cursor-pointer"
-            />
-            <div>
-              <p className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                <span>Sandbox / Test Ortamı</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-600">
-                  Güvenli Mod
-                </span>
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                Aktif olduğunda kesilen faturalar GİB mali kaydı oluşturmaz, test sunucusuna gönderilir ve kontör harcanmaz.
-              </p>
+          {/* 1. Sandbox / Test Ortamı */}
+          <div
+            role="switch"
+            aria-checked={isTestMode}
+            tabIndex={0}
+            onClick={() => setIsTestMode(!isTestMode)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                setIsTestMode(!isTestMode)
+              }
+            }}
+            className={`group relative flex items-start justify-between gap-3 p-4 rounded-2xl border transition-all duration-200 cursor-pointer select-none ${
+              isTestMode
+                ? "bg-amber-500/10 dark:bg-amber-950/30 border-amber-500/40 shadow-sm shadow-amber-500/5 ring-1 ring-amber-500/20"
+                : "bg-slate-50/80 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100/70 dark:hover:bg-slate-900/60"
+            }`}
+          >
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors mt-0.5 ${
+                  isTestMode
+                    ? "bg-amber-500/20 text-amber-600 dark:text-amber-400"
+                    : "bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
+                }`}
+              >
+                <FlaskConical size={18} />
+              </div>
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                    Sandbox / Test Ortamı
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border transition-colors ${
+                      isTestMode
+                        ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    Güvenli Mod
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  Aktif olduğunda kesilen faturalar GİB mali kaydı oluşturmaz, test sunucusuna gönderilir ve kontör harcanmaz.
+                </p>
+              </div>
             </div>
-          </label>
 
-          <label className="flex items-start gap-3 p-3.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-50 cursor-pointer transition-colors">
-            <input
-              type="checkbox"
-              checked={autoSendOnCompletion}
-              onChange={(e) => setAutoSendOnCompletion(e.target.checked)}
-              className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500 mt-0.5 cursor-pointer"
-            />
-            <div>
-              <p className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
-                <span>İş Emri Kapanışında Otomatik Gönder</span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-sky-500/10 text-sky-600">
-                  Otomasyon
-                </span>
-              </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                İş emri tamamlanıp &quot;Teslim Edildi&quot; aşamasına geçtiğinde faturayı beklemeden otomatik GİB sırasına alır.
-              </p>
+            {/* iOS Style Custom Toggle Switch */}
+            <div className="shrink-0 pt-0.5 ml-2">
+              <div
+                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out ${
+                  isTestMode ? "bg-amber-500" : "bg-slate-300 dark:bg-slate-700"
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
+                    isTestMode ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </div>
             </div>
-          </label>
+          </div>
+
+          {/* 2. İş Emri Kapanışında Otomatik Gönder */}
+          <div
+            role="switch"
+            aria-checked={autoSendOnCompletion}
+            tabIndex={0}
+            onClick={() => setAutoSendOnCompletion(!autoSendOnCompletion)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                setAutoSendOnCompletion(!autoSendOnCompletion)
+              }
+            }}
+            className={`group relative flex items-start justify-between gap-3 p-4 rounded-2xl border transition-all duration-200 cursor-pointer select-none ${
+              autoSendOnCompletion
+                ? "bg-sky-500/10 dark:bg-sky-950/30 border-sky-500/40 shadow-sm shadow-sky-500/5 ring-1 ring-sky-500/20"
+                : "bg-slate-50/80 dark:bg-slate-950/60 border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100/70 dark:hover:bg-slate-900/60"
+            }`}
+          >
+            <div className="flex items-start gap-3 min-w-0 flex-1">
+              <div
+                className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-colors mt-0.5 ${
+                  autoSendOnCompletion
+                    ? "bg-sky-500/20 text-sky-600 dark:text-sky-400"
+                    : "bg-slate-200/70 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-300"
+                }`}
+              >
+                <Zap size={18} />
+              </div>
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                    İş Emri Kapanışında Otomatik Gönder
+                  </span>
+                  <span
+                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border transition-colors ${
+                      autoSendOnCompletion
+                        ? "bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/30"
+                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
+                    }`}
+                  >
+                    Otomasyon
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                  İş emri tamamlanıp &quot;Teslim Edildi&quot; aşamasına geçtiğinde faturayı beklemeden otomatik GİB sırasına alır.
+                </p>
+              </div>
+            </div>
+
+            {/* iOS Style Custom Toggle Switch */}
+            <div className="shrink-0 pt-0.5 ml-2">
+              <div
+                className={`w-11 h-6 flex items-center rounded-full p-1 transition-colors duration-200 ease-in-out ${
+                  autoSendOnCompletion ? "bg-sky-500" : "bg-slate-300 dark:bg-slate-700"
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
+                    autoSendOnCompletion ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
