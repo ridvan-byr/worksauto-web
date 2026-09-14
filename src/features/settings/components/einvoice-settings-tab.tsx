@@ -887,18 +887,9 @@ export function EInvoiceSettingsTab() {
                 <FlaskConical size={18} />
               </div>
               <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
                     Sandbox / Test Ortamı
-                  </span>
-                  <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border transition-colors ${
-                      isTestMode
-                        ? "bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/30"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    Güvenli Mod
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
@@ -952,18 +943,9 @@ export function EInvoiceSettingsTab() {
                 <Zap size={18} />
               </div>
               <div className="space-y-1 min-w-0">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
                     İş Emri Kapanışında Otomatik Gönder
-                  </span>
-                  <span
-                    className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md border transition-colors ${
-                      autoSendOnCompletion
-                        ? "bg-sky-500/20 text-sky-700 dark:text-sky-300 border-sky-500/30"
-                        : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700"
-                    }`}
-                  >
-                    Otomasyon
                   </span>
                 </div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
