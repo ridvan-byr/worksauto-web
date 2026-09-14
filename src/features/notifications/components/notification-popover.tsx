@@ -15,6 +15,7 @@ import {
   Info,
   ExternalLink,
   Trash2,
+  X,
 } from "lucide-react";
 import {
   useNotifications,
@@ -199,9 +200,17 @@ export function NotificationPopover() {
         )}
       </button>
 
+      {/* Mobile Backdrop Overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs sm:hidden animate-in fade-in-0 duration-150"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
       {/* Popover Card */}
       {isOpen && (
-        <div className="absolute right-0 top-11 z-50 w-[360px] sm:w-[420px] rounded-2xl border border-slate-200/80 bg-white shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-[#0c121e] overflow-hidden animate-in fade-in-50 zoom-in-95 duration-150">
+        <div className="fixed inset-x-3 top-[68px] z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-11 sm:w-[420px] rounded-2xl border border-slate-200/80 bg-white shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-[#0c121e] overflow-hidden flex flex-col max-h-[calc(100dvh-84px)] sm:max-h-[580px] animate-in fade-in-50 zoom-in-95 duration-150">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 px-4 py-3 bg-slate-50/50 dark:bg-slate-900/30">
             <div className="flex items-center gap-2">
@@ -221,7 +230,7 @@ export function NotificationPopover() {
                 type="button"
                 onClick={toggleMute}
                 title={isMuted ? "Sesleri Aç" : "Sesi Kapat"}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
                 {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} className="text-sky-500" />}
               </button>
@@ -233,12 +242,23 @@ export function NotificationPopover() {
                   onClick={() => markAllReadMutation.mutate()}
                   disabled={markAllReadMutation.isPending}
                   title="Tümünü Okundu İşaretle"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
                   <CheckCheck size={14} className="text-sky-500" />
                   <span>Tümünü Oku</span>
                 </button>
               )}
+
+              {/* Mobile Close Button */}
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                title="Kapat"
+                className="sm:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer ml-1"
+                aria-label="Kapat"
+              >
+                <X size={16} />
+              </button>
             </div>
           </div>
 
@@ -295,7 +315,7 @@ export function NotificationPopover() {
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-[380px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 sm:max-h-[380px]">
             {isLoading && allItems.length === 0 ? (
               <div className="py-12 text-center text-xs text-slate-400">
                 <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-sky-500 border-t-transparent mb-2" />
