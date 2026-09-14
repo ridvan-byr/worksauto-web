@@ -200,25 +200,25 @@ export function NotificationPopover() {
         )}
       </button>
 
-      {/* Mobile Backdrop Overlay */}
+      {/* Mobile Backdrop Overlay (Light dismiss area) */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-xs sm:hidden animate-in fade-in-0 duration-150"
+          className="fixed inset-0 z-40 bg-black/15 backdrop-blur-[1px] sm:hidden animate-in fade-in-0 duration-150"
           onClick={() => setIsOpen(false)}
         />
       )}
 
       {/* Popover Card */}
       {isOpen && (
-        <div className="fixed inset-x-3 top-[68px] z-50 sm:absolute sm:inset-auto sm:right-0 sm:top-11 sm:w-[420px] rounded-2xl border border-slate-200/80 bg-white shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-[#0c121e] overflow-hidden flex flex-col max-h-[calc(100dvh-84px)] sm:max-h-[580px] animate-in fade-in-50 zoom-in-95 duration-150">
+        <div className="fixed right-2 top-[66px] z-50 w-[320px] max-w-[calc(100vw-16px)] sm:absolute sm:inset-auto sm:right-0 sm:top-11 sm:w-[420px] rounded-2xl border border-slate-200/80 bg-white/95 shadow-2xl backdrop-blur-xl dark:border-slate-800 dark:bg-[#0c121e]/95 overflow-hidden flex flex-col max-h-[72vh] sm:max-h-[580px] animate-in fade-in-50 zoom-in-95 duration-150">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 px-4 py-3 bg-slate-50/50 dark:bg-slate-900/30">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-slate-900 dark:text-slate-100">
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 px-3 py-2.5 sm:px-4 sm:py-3 bg-slate-50/50 dark:bg-slate-900/30">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <span className="font-semibold text-xs sm:text-sm text-slate-900 dark:text-slate-100">
                 Bildirimler
               </span>
               {unreadCount > 0 && (
-                <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[11px] font-semibold text-sky-600 dark:text-sky-400">
+                <span className="rounded-full bg-sky-500/10 px-1.5 py-0.2 text-[10px] sm:text-[11px] font-semibold text-sky-600 dark:text-sky-400">
                   {unreadCount} yeni
                 </span>
               )}
@@ -230,9 +230,9 @@ export function NotificationPopover() {
                 type="button"
                 onClick={toggleMute}
                 title={isMuted ? "Sesleri Aç" : "Sesi Kapat"}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                className="p-1 sm:p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
               >
-                {isMuted ? <VolumeX size={15} /> : <Volume2 size={15} className="text-sky-500" />}
+                {isMuted ? <VolumeX size={14} /> : <Volume2 size={14} className="text-sky-500" />}
               </button>
 
               {/* Mark All Read */}
@@ -242,10 +242,10 @@ export function NotificationPopover() {
                   onClick={() => markAllReadMutation.mutate()}
                   disabled={markAllReadMutation.isPending}
                   title="Tümünü Okundu İşaretle"
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 px-1.5 py-1 rounded-lg text-[10px] sm:text-[11px] font-medium text-slate-500 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 >
-                  <CheckCheck size={14} className="text-sky-500" />
-                  <span>Tümünü Oku</span>
+                  <CheckCheck size={13} className="text-sky-500" />
+                  <span className="hidden xs:inline sm:inline">Tümünü Oku</span>
                 </button>
               )}
 
@@ -254,21 +254,21 @@ export function NotificationPopover() {
                 type="button"
                 onClick={() => setIsOpen(false)}
                 title="Kapat"
-                className="sm:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer ml-1"
+                className="sm:hidden p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors cursor-pointer"
                 aria-label="Kapat"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             </div>
           </div>
 
           {/* Filter Tabs */}
-          <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-100 dark:border-slate-800/60 text-xs">
+          <div className="flex items-center gap-1.5 sm:gap-2 px-3 py-1.5 sm:px-4 sm:py-2 border-b border-slate-100 dark:border-slate-800/60 text-[11px] sm:text-xs">
             <button
               type="button"
               onClick={() => setFilterUnread(false)}
               className={cn(
-                "px-2.5 py-1 rounded-lg font-medium transition-colors",
+                "px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-medium transition-colors",
                 !filterUnread
                   ? "bg-sky-500/10 text-sky-600 dark:bg-sky-500/20 dark:text-sky-400"
                   : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
@@ -280,7 +280,7 @@ export function NotificationPopover() {
               type="button"
               onClick={() => setFilterUnread(true)}
               className={cn(
-                "px-2.5 py-1 rounded-lg font-medium transition-colors flex items-center gap-1.5",
+                "px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-lg font-medium transition-colors flex items-center gap-1",
                 filterUnread
                   ? "bg-sky-500/10 text-sky-600 dark:bg-sky-500/20 dark:text-sky-400"
                   : "text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200"
@@ -288,7 +288,7 @@ export function NotificationPopover() {
             >
               <span>Okunmamış</span>
               {unreadCount > 0 && (
-                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] text-white">
+                <span className="flex h-3.5 w-3.5 sm:h-4 sm:w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] sm:text-[10px] text-white font-bold">
                   {unreadCount}
                 </span>
               )}
@@ -296,14 +296,14 @@ export function NotificationPopover() {
           </div>
 
           {/* Category Filter Pills */}
-          <div className="flex items-center gap-1.5 px-4 py-1.5 border-b border-slate-100 dark:border-slate-800/60 overflow-x-auto bg-slate-50/40 dark:bg-slate-900/20 text-[11px]">
+          <div className="flex items-center gap-1 sm:gap-1.5 px-3 py-1.5 sm:px-4 sm:py-1.5 border-b border-slate-100 dark:border-slate-800/60 overflow-x-auto bg-slate-50/40 dark:bg-slate-900/20 text-[10px] sm:text-[11px] no-scrollbar">
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.key}
                 type="button"
                 onClick={() => setSelectedCategory(cat.key)}
                 className={cn(
-                  "px-2.5 py-0.5 rounded-full font-medium shrink-0 transition-colors cursor-pointer",
+                  "px-2 py-0.5 rounded-full font-medium shrink-0 transition-colors cursor-pointer",
                   selectedCategory === cat.key
                     ? "bg-sky-500 text-white shadow-xs"
                     : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
@@ -315,7 +315,7 @@ export function NotificationPopover() {
           </div>
 
           {/* Notifications List */}
-          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 sm:max-h-[380px]">
+          <div className="flex-1 min-h-0 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/60 max-h-[340px] sm:max-h-[380px]">
             {isLoading && allItems.length === 0 ? (
               <div className="py-12 text-center text-xs text-slate-400">
                 <div className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-sky-500 border-t-transparent mb-2" />
@@ -341,12 +341,12 @@ export function NotificationPopover() {
                   key={item.id}
                   onClick={() => handleItemClick(item)}
                   className={cn(
-                    "group flex items-start gap-3 p-3.5 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer text-left relative",
+                    "group flex items-start gap-2.5 sm:gap-3 p-2.5 sm:p-3.5 hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors cursor-pointer text-left relative",
                     !item.isRead && "bg-sky-50/30 dark:bg-sky-950/10"
                   )}
                 >
                   {/* Category / Type Icon */}
-                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm">
+                  <div className="mt-0.5 flex h-7 w-7 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-xl border border-slate-200/80 bg-white dark:border-slate-700 dark:bg-slate-800 shadow-sm">
                     {getCategoryIcon(item.category)}
                   </div>
 
@@ -406,7 +406,7 @@ export function NotificationPopover() {
           </div>
 
           {/* Footer Status Bar */}
-          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80 px-4 py-2 bg-slate-50/50 dark:bg-slate-900/30 text-[11px] text-slate-400">
+          <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-800/80 px-3 py-1.5 sm:px-4 sm:py-2 bg-slate-50/50 dark:bg-slate-900/30 text-[10px] sm:text-[11px] text-slate-400">
             <div className="flex items-center gap-1.5">
               <span
                 className={cn(
