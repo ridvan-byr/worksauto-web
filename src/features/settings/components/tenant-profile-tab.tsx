@@ -1,7 +1,8 @@
 "use client"
 
 import * as React from "react"
-import { Building2, Save, MapPin, Navigation, ExternalLink, Loader2, Compass, Check } from "lucide-react"
+import { Building2, Save, MapPin, Navigation, ExternalLink, Loader2, Compass, Check, Link2, AlertTriangle } from "lucide-react"
+import { UnsavedChangesBar } from "./unsaved-changes-bar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { TenantSettings } from "@/features/settings/api/use-settings"
@@ -47,6 +48,8 @@ export function TenantProfileTab({
   const [latitude, setLatitude] = React.useState<string>("")
   const [longitude, setLongitude] = React.useState<string>("")
   const [isLocating, setIsLocating] = React.useState(false)
+  const [mapsLink, setMapsLink] = React.useState("")
+  const [linkParsed, setLinkParsed] = React.useState(false)
 
   React.useEffect(() => {
     if (initialData) {
@@ -85,11 +88,73 @@ export function TenantProfileTab({
     }
   }
 
+  const parseGoogleMapsLink = (link: string): { lat: number; lng: number } | null => {
+    // Pattern 1: google.com/maps?q=41.008234,28.978456
+    const qMatch = link.match(/[?&]q=(-?\d+\.\d+),\s*(-?\d+\.\d+)/)
+    if (qMatch) return { lat: parseFloat(qMatch[1]), lng: parseFloat(qMatch[2]) }
+
+    // Pattern 2: google.com/maps/@41.008234,28.978456
+    const atMatch = link.match(/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/)
+    if (atMatch) return { lat: parseFloat(atMatch[1]), lng: parseFloat(atMatch[2]) }
+
+    // Pattern 3: google.com/maps/place/.../@41.008234,28.978456
+    const placeMatch = link.match(/place\/.*?\/@(-?\d+\.\d+),\s*(-?\d+\.\d+)/)
+    if (placeMatch) return { lat: parseFloat(placeMatch[1]), lng: parseFloat(placeMatch[2]) }
+
+    // Pattern 4: maps.app.goo.gl short links — user may paste full resolved URL
+    const llMatch = link.match(/ll=(-?\d+\.\d+),\s*(-?\d+\.\d+)/)
+    if (llMatch) return { lat: parseFloat(llMatch[1]), lng: parseFloat(llMatch[2]) }
+
+    // Pattern 5: Raw coordinates: "41.008234, 28.978456" or "41.008234,28.978456"
+    const rawMatch = link.trim().match(/^(-?\d+\.\d+)[,\s]+(-?\d+\.\d+)$/)
+    if (rawMatch) return { lat: parseFloat(rawMatch[1]), lng: parseFloat(rawMatch[2]) }
+
+    return null
+  }
+
+  const handleParseMapsLink = () => {
+    const parsed = parseGoogleMapsLink(mapsLink)
+    if (parsed) {
+      setLatitude(String(parsed.lat))
+      setLongitude(String(parsed.lng))
+      setLinkParsed(true)
+      setTimeout(() => setLinkParsed(false), 3000)
+      toast.success(`Koordinatlar alındı: ${parsed.lat}, ${parsed.lng}`)
+    } else {
+      toast.error("Bu linkten koordinat çözümlenemedi. Google Maps linki veya koordinat yapıştırın.")
+    }
+  }
+
+  const handleMapsLinkPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    setTimeout(() => {
+      const val = e.currentTarget?.value || mapsLink
+      const parsed = parseGoogleMapsLink(val)
+      if (parsed) {
+        setLatitude(String(parsed.lat))
+        setLongitude(String(parsed.lng))
+        setLinkParsed(true)
+        setTimeout(() => setLinkParsed(false), 3000)
+        toast.success(`Koordinatlar otomatik alındı: ${parsed.lat}, ${parsed.lng}`)
+      }
+    }, 100)
+  }
+
   const handleGetLocation = () => {
     if (typeof window === "undefined" || !navigator.geolocation) {
       toast.error("Tarayıcınız konum servisini desteklemiyor.")
       return
     }
+
+    // HTTPS check — Geolocation API requires secure context
+    const isSecure = window.isSecureContext
+    if (!isSecure) {
+      toast.error(
+        "Konum servisi yalnızca HTTPS üzerinden çalışır. Lütfen Google Maps'ten link yapıştırarak konum belirleyin.",
+        { duration: 6000 }
+      )
+      return
+    }
+
     setIsLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -103,12 +168,17 @@ export function TenantProfileTab({
       (err) => {
         setIsLocating(false)
         if (err.code === 1) {
-          toast.error("Konum izni reddedildi. Tarayıcı izinlerinden aktif edebilir veya koordinatları elle girebilirsiniz.")
+          toast.error(
+            "Konum izni reddedildi. Tarayıcı ayarlarından konum iznini aktif edin veya Google Maps linkinden koordinat yapıştırın.",
+            { duration: 6000 }
+          )
+        } else if (err.code === 2) {
+          toast.error("Konum servisi kullanılamıyor. GPS kapalı olabilir.")
         } else {
-          toast.error("Konum alınırken bir hata oluştu: " + err.message)
+          toast.error("Konum alınırken zaman aşımı oluştu. Tekrar deneyin veya link yapıştırın.")
         }
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     )
   }
 
@@ -323,25 +393,76 @@ export function TenantProfileTab({
       </Card>
 
       {/* Workshop Exact GPS Coordinates & Pinning */}
-      <Card className="border-sky-200/60 dark:border-sky-900/30 overflow-hidden shadow-xs">
+      <Card className="border-sky-200/60 dark:border-sky-900/30 shadow-xs">
         <CardHeader className="p-6 bg-gradient-to-r from-sky-500/5 via-transparent to-transparent">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div>
-              <CardTitle className="text-base font-bold flex items-center gap-2">
-                <MapPin size={18} className="text-rose-500" />
-                <span>Atölye GPS Konumu & Navigasyon Pinleme</span>
-              </CardTitle>
-              <CardDescription className="text-xs mt-1">
-                Müşteri takip sayfasındaki &quot;Yol Tarifi Al&quot; butonunun dükkanınızın tam kapısına ve liftine rota çizmesini sağlar. Sanayi sitelerinde kaybolmayı önler.
-              </CardDescription>
+          <div>
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <MapPin size={18} className="text-rose-500" />
+              <span>Atölye GPS Konumu & Navigasyon Pinleme</span>
+            </CardTitle>
+            <CardDescription className="text-xs mt-1">
+              Müşteri takip sayfasındaki &quot;Yol Tarifi Al&quot; butonunun dükkanınızın tam kapısına rota çizmesini sağlar.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="p-6 pt-0 space-y-4">
+          {/* Google Maps Link Paste — Primary Method */}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+              <Link2 size={13} className="text-sky-500" />
+              <span>Google Maps Linki Yapıştır</span>
+              <span className="ml-auto text-[10px] font-normal text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-1.5 py-0.5 rounded">Önerilen Yöntem</span>
+            </label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={mapsLink}
+                  onChange={(e) => setMapsLink(e.target.value)}
+                  onPaste={handleMapsLinkPaste}
+                  className="w-full h-9 pl-3 pr-8 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500"
+                  placeholder="https://maps.google.com/... veya 41.008234, 28.978456"
+                />
+                {linkParsed && (
+                  <div className="absolute right-2.5 top-1/2 -translate-y-1/2">
+                    <Check size={14} className="text-emerald-500" />
+                  </div>
+                )}
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleParseMapsLink}
+                disabled={!mapsLink.trim()}
+                className="h-9 px-3 text-xs font-semibold gap-1.5 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 shrink-0 cursor-pointer"
+              >
+                <MapPin size={13} />
+                <span className="hidden sm:inline">Konumu Al</span>
+              </Button>
             </div>
+            <p className="text-[10px] text-slate-400 leading-relaxed">
+              Google Maps'te dükkanınızı bulun → Paylaş → Bağlantıyı kopyala → Buraya yapıştırın. Koordinatlar otomatik algılanır.
+            </p>
+          </div>
+
+          {/* Divider */}
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-slate-200 dark:border-slate-800" /></div>
+            <div className="relative flex justify-center">
+              <span className="bg-white dark:bg-slate-900 px-3 text-[10px] font-medium text-slate-400">veya</span>
+            </div>
+          </div>
+
+          {/* GPS Auto-detect — Secondary Method */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <Button
               type="button"
               variant="outline"
               size="sm"
               onClick={handleGetLocation}
               disabled={isLocating}
-              className="h-9 px-3 text-xs font-semibold gap-1.5 border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40 shrink-0 cursor-pointer"
+              className="h-9 px-3 text-xs font-semibold gap-1.5 border-slate-300 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-950/40 cursor-pointer"
             >
               {isLocating ? (
                 <Loader2 size={14} className="animate-spin" />
@@ -350,46 +471,46 @@ export function TenantProfileTab({
               )}
               <span>{isLocating ? "Konum Alınıyor..." : "Mevcut Konumumu Al (GPS)"}</span>
             </Button>
+            {typeof window !== "undefined" && !window.isSecureContext && (
+              <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                <AlertTriangle size={11} className="shrink-0" />
+                <span>GPS yalnızca HTTPS&apos;te çalışır. Link yapıştırma yöntemini kullanın.</span>
+              </p>
+            )}
           </div>
-        </CardHeader>
-        <CardContent className="p-6 pt-0 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>Enlem (Latitude)</span>
-                <span className="text-[10px] text-slate-400 font-normal">Örn: 41.008234</span>
-              </label>
+
+          {/* Parsed coordinates display */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-slate-400">Enlem</label>
               <input
                 type="text"
                 value={latitude}
                 onChange={(e) => setLatitude(e.target.value)}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500 font-mono"
+                className="w-full h-8 px-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 focus:outline-none focus:border-sky-500 font-mono text-slate-600 dark:text-slate-300"
                 placeholder="41.008234"
               />
             </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>Boylam (Longitude)</span>
-                <span className="text-[10px] text-slate-400 font-normal">Örn: 28.978456</span>
-              </label>
+            <div className="space-y-1">
+              <label className="text-[10px] font-medium text-slate-400">Boylam</label>
               <input
                 type="text"
                 value={longitude}
                 onChange={(e) => setLongitude(e.target.value)}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 focus:outline-none focus:border-sky-500 font-mono"
+                className="w-full h-8 px-2.5 text-xs rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/80 focus:outline-none focus:border-sky-500 font-mono text-slate-600 dark:text-slate-300"
                 placeholder="28.978456"
               />
             </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
+          {/* Status bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-xs">
             <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
-              <Compass size={16} className="text-sky-500 shrink-0" />
+              <Compass size={15} className="text-sky-500 shrink-0" />
               <span>
                 {latitude && longitude
                   ? `Pinlenen Koordinat: ${latitude}, ${longitude}`
-                  : "Henüz koordinat girilmedi. Dükkandayken tek tıkla GPS alabilir veya haritadan koordinat yapıştırabilirsiniz."}
+                  : "Henüz koordinat belirlenmedi."}
               </span>
             </div>
             {latitude && longitude && (
@@ -399,7 +520,7 @@ export function TenantProfileTab({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 font-semibold text-[11px] transition-colors shrink-0"
               >
-                <span>Google Haritada Doğrula</span>
+                <span>Haritada Doğrula</span>
                 <ExternalLink size={12} />
               </a>
             )}
@@ -477,39 +598,13 @@ export function TenantProfileTab({
         </CardContent>
       </Card>
 
-      {/* Floating Unsaved Changes Sticky Notification Bar */}
-      {hasUnsavedChanges && (
-        <div className="fixed bottom-5 inset-x-4 sm:inset-x-auto sm:right-8 sm:min-w-[380px] z-50 flex items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-3 rounded-2xl bg-slate-900/95 dark:bg-slate-800/95 text-white border border-slate-700/80 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-200">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
-            </span>
-            <span className="text-xs font-medium text-slate-200 truncate">
-              Kaydedilmemiş değişiklikler var
-            </span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleReset}
-              disabled={isPending}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            >
-              Geri Al
-            </button>
-            <Button
-              type="submit"
-              disabled={isPending}
-              size="sm"
-              className="h-8 px-3.5 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-white shadow-md shadow-sky-500/25 gap-1.5 cursor-pointer"
-            >
-              {isPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-              <span>{isPending ? "Kaydediliyor..." : "Kaydet"}</span>
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Shopify tarzı yüzen kayıt barı — her zaman ekranın altında, içerikte ortalı */}
+      <UnsavedChangesBar
+        visible={hasUnsavedChanges}
+        onDiscard={handleReset}
+        isSaving={isPending}
+        saveButtonType="submit"
+      />
     </form>
   )
 }

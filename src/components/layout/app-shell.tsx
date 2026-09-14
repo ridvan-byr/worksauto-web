@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { AppSidebar } from "./app-sidebar"
 import { AppHeader } from "./app-header"
 import { useAuth } from "@/features/auth/auth-context"
+import { SIDEBAR_TOGGLE_EVENT } from "@/lib/sidebar-events"
 import { cn } from "@/lib/utils"
 
 const COOKIE_NAME = "worksauto_sidebar_collapsed"
@@ -30,6 +31,7 @@ export function AppShell({ children, defaultCollapsed = false }: AppShellProps) 
       try {
         document.cookie = `${COOKIE_NAME}=${next}; path=/; max-age=31536000; SameSite=Lax`
         localStorage.setItem("worksauto-sidebar-collapsed", JSON.stringify(next))
+        window.dispatchEvent(new CustomEvent<boolean>(SIDEBAR_TOGGLE_EVENT, { detail: next }))
       } catch {
         // ignore
       }

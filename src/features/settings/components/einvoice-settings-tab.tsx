@@ -8,10 +8,8 @@ import {
   Loader2,
   Key,
   ShieldCheck,
-  Building2,
   Hash,
   RefreshCw,
-  ExternalLink,
   Sparkles,
   Eye,
   EyeOff,
@@ -20,12 +18,11 @@ import {
   HelpCircle,
   FlaskConical,
   Zap,
-  Undo2,
-  Save,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
 import { apiClient } from "@/lib/api-client"
+import { UnsavedChangesBar } from "./unsaved-changes-bar"
 
 export type InvoiceProvider =
   | "INTERNAL"
@@ -1090,40 +1087,13 @@ export function EInvoiceSettingsTab() {
         </Button>
       </div>
 
-      {/* Floating Unsaved Changes Sticky Notification Bar */}
-      {hasUnsavedChanges && (
-        <div className="fixed bottom-5 inset-x-4 sm:inset-x-auto sm:right-8 sm:min-w-[380px] z-50 flex items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-3 rounded-2xl bg-slate-900/95 dark:bg-slate-800/95 text-white border border-slate-700/80 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-200">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <span className="relative flex h-2.5 w-2.5 shrink-0">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
-            </span>
-            <span className="text-xs font-medium text-slate-200 truncate">
-              Kaydedilmemiş değişiklikler var
-            </span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleReset}
-              disabled={isSaving}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-            >
-              Geri Al
-            </button>
-            <Button
-              type="button"
-              onClick={handleSave}
-              disabled={isSaving}
-              size="sm"
-              className="h-8 px-3.5 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-white shadow-md shadow-sky-500/25 gap-1.5 cursor-pointer"
-            >
-              {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
-              <span>{isSaving ? "Kaydediliyor..." : "Kaydet"}</span>
-            </Button>
-          </div>
-        </div>
-      )}
+      {/* Shopify tarzı yüzen kayıt barı — her zaman ekranın altında, içerikte ortalı */}
+      <UnsavedChangesBar
+        visible={hasUnsavedChanges}
+        onDiscard={handleReset}
+        isSaving={isSaving}
+        saveButtonType="submit"
+      />
     </form>
   )
 }

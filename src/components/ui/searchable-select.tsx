@@ -110,7 +110,8 @@ export function SearchableSelect({
   return (
     <div
       ref={containerRef}
-      className={cn("relative w-full", isOpen && "z-40", className)}
+      className={cn("relative w-full", isOpen && "z-[100]", className)}
+      style={isOpen ? { isolation: "isolate" } : undefined}
       onKeyDown={handleKeyDown}
     >
       {/* Trigger Button */}
