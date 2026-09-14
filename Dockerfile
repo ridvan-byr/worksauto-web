@@ -46,3 +46,23 @@ USER nextjs
 EXPOSE 3000
 
 CMD ["node", "server.js"]
+
+# --- Dev Stage: Live Reload (used by docker-compose.dev.yml) ---
+FROM node:20-alpine AS development
+WORKDIR /app
+
+RUN apk add --no-cache libc6-compat
+
+COPY package.json package-lock.json ./
+RUN npm install --no-audit
+
+COPY . .
+
+ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PORT=3000
+ENV HOSTNAME="0.0.0.0"
+
+EXPOSE 3000
+
+CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]
