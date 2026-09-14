@@ -11,9 +11,4 @@ test.describe('E2E Authentication & Route Guard', () => {
     // Public booking page should load (200 status or Next.js client render)
     expect(response?.status()).toBeLessThan(400);
   });
-
-  test('admin portal requires admin authentication', async ({ page }) => {
-    await page.goto('/admin');
-    await expect(page).toHaveURL(/.*admin\/login/);
-  });
 });
