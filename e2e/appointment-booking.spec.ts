@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Appointment Booking & Public Portal E2E', () => {
   test('public customer successfully books appointment via public portal', async ({ page }) => {
@@ -10,7 +10,7 @@ test.describe('Appointment Booking & Public Portal E2E', () => {
         body: JSON.stringify({
           id: 'ten_yildiz',
           title: 'Yıldız Oto Servis',
-          phone: '02123334455',
+          phone: '05523741500',
           city: 'İstanbul',
           district: 'Kadıköy',
           services: [
@@ -44,7 +44,7 @@ test.describe('Appointment Booking & Public Portal E2E', () => {
 
     // 5. Fill customer details
     await page.getByPlaceholder(/Örn: Rıdvan (Emre )?Bayar/i).fill('Murat Demir');
-    await page.getByPlaceholder(/0 \(5XX\) XXX XX XX/i).fill('05339876543');
+    await page.getByPlaceholder(/0 \(5XX\) XXX XX XX/i).fill('05523741500');
     await page.getByPlaceholder('34 ABC 123').fill('34XYZ789');
     await page.getByPlaceholder(/Örn: BMW 320i/i).fill('Renault Megane 2021');
 
@@ -88,14 +88,14 @@ test.describe('Appointment Booking & Public Portal E2E', () => {
             id: 'usr_advisor_1',
             name: 'Mert',
             surname: 'Danışman',
-            phone: '05321112233',
+            phone: '05523741500',
             role: 'SERVICE_ADVISOR',
           },
           tenant: {
             id: 'ten_test_1',
             title: 'Test Oto Servis',
             slug: 'test-oto',
-            phone: '02123334455',
+            phone: '05523741500',
             isActive: true,
             onboardingCompleted: true,
           },
@@ -141,7 +141,7 @@ test.describe('Appointment Booking & Public Portal E2E', () => {
             id: 'apt-1',
             tenantId: 'ten_test_1',
             customerId: 'cust-1',
-            customer: { firstName: 'Kemal', lastName: 'Aksoy', phone: '05329998877' },
+            customer: { firstName: 'Kemal', lastName: 'Aksoy', phone: '05523741500' },
             vehicleId: 'veh-1',
             vehicle: { plate: '06ANK06', brand: 'Ford', model: 'Focus' },
             service: { id: 'srv-1', name: 'Fren Kontrolü', defaultDurationMin: 45, basePrice: 850 },

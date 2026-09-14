@@ -53,7 +53,7 @@ import { WorkOrderInvoiceModal } from "@/features/work-orders/components/work-or
 import { WorkOrderPrintModal } from "@/features/work-orders/components/work-order-print-modal"
 import { ReopenWorkOrderModal } from "@/features/work-orders/components/reopen-work-order-modal"
 import { InvoiceDetailModal } from "@/features/billing/components/invoice-detail-modal"
-import type { Invoice as BillingInvoice } from "@/features/billing/types"
+import type { Invoice as BillingInvoice, PaymentMethod } from "@/features/billing/types"
 import { useCancelInvoice } from "@/features/billing/api/use-billing"
 import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
@@ -258,7 +258,7 @@ export default function WorkOrderDetailPage() {
         invoiceId: activeInvoice.id,
         date: String(p.paymentDate || new Date().toISOString()),
         amount: Number(p.amount),
-        method: (p.paymentMethod === "CREDIT_CARD" ? "POS" : p.paymentMethod === "BANK_TRANSFER" ? "BANK_TRANSFER" : "CASH") as "CASH" | "POS" | "BANK_TRANSFER",
+        method: (p.paymentMethod === "CREDIT_CARD" ? "POS" : p.paymentMethod) as PaymentMethod,
         performedByName: order.customerName,
         createdAt: String(p.paymentDate || new Date().toISOString()),
       })),

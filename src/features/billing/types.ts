@@ -1,6 +1,6 @@
 export type InvoiceStatus = "UNPAID" | "PARTIALLY_PAID" | "PAID" | "CANCELLED"
 
-export type PaymentMethod = "CASH" | "POS" | "BANK_TRANSFER" | "OTHER"
+export type PaymentMethod = "CASH" | "POS" | "BANK_TRANSFER" | "ONLINE" | "ADVANCE_OFFSET" | "OTHER"
 
 export interface InvoiceItem {
   id: string

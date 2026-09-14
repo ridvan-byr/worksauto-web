@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Work Order Lifecycle E2E', () => {
   test.beforeEach(async ({ context, page }) => {
@@ -20,14 +20,14 @@ test.describe('Work Order Lifecycle E2E', () => {
             id: 'usr_tech_1',
             name: 'Ahmet',
             surname: 'Usta',
-            phone: '05321112233',
+            phone: '05523741500',
             role: 'OWNER',
           },
           tenant: {
             id: 'ten_test_1',
             title: 'Test Oto Servis',
             slug: 'test-oto',
-            phone: '02123334455',
+            phone: '05523741500',
             isActive: true,
             onboardingCompleted: true,
           },
@@ -76,7 +76,7 @@ test.describe('Work Order Lifecycle E2E', () => {
             tenantId: 'ten_test_1',
             workOrderNumber: 'WO-2026-001',
             customerId: 'cust-1',
-            customer: { firstName: 'Ahmet', lastName: 'Yılmaz', phone: '05321112233' },
+            customer: { firstName: 'Ahmet', lastName: 'Yılmaz', phone: '05523741500' },
             vehicleId: 'veh-1',
             vehicle: { plate: '34ABC123', brand: 'Volkswagen', model: 'Golf', year: 2022, currentKm: 45000 },
             status: 'PENDING',
@@ -109,7 +109,7 @@ test.describe('Work Order Lifecycle E2E', () => {
           tenantId: 'ten_test_1',
           workOrderNumber: 'WO-2026-001',
           customerId: 'cust-1',
-          customer: { firstName: 'Ahmet', lastName: 'Yılmaz', phone: '05321112233' },
+          customer: { firstName: 'Ahmet', lastName: 'Yılmaz', phone: '05523741500' },
           vehicleId: 'veh-1',
           vehicle: { plate: '34ABC123', brand: 'Volkswagen', model: 'Golf', year: 2022, mileage: 45000 },
           status: 'IN_PROGRESS',

@@ -100,7 +100,7 @@ export default function InvoicesPage() {
             invoiceId: inv.id,
             date: p.createdAt,
             amount: Number(p.amount),
-            method: (p.paymentMethod === 'CREDIT_CARD' ? 'POS' : p.paymentMethod === 'BANK_TRANSFER' ? 'BANK_TRANSFER' : 'CASH') as PaymentMethod,
+            method: (p.paymentMethod === 'CREDIT_CARD' ? 'POS' : p.paymentMethod) as PaymentMethod,
             performedByName: p.customer?.name || 'Sistem',
             createdAt: p.createdAt,
           })),

@@ -8,7 +8,7 @@ export default defineConfig({
   workers: process.env.CI ? 1 : undefined,
   reporter: 'list',
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:3100',
     trace: 'on-first-retry',
   },
   projects: [
@@ -18,9 +18,14 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run start',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
+    // output: 'standalone' ile 'next start' çalışmaz; CI'daki gibi paketlenmiş sunucuyu kullan
+    command: 'node scripts/prepare-standalone.mjs && node .next/standalone/server.js',
+    url: 'http://localhost:3100',
+    reuseExistingServer: false,
     timeout: 120000,
+    env: {
+      PORT: '3100',
+      HOSTNAME: '127.0.0.1',
+    },
   },
 });

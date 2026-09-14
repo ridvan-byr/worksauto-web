@@ -39,7 +39,7 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   async rewrites() {
-    const backendBase = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1").replace(/\/$/, "");
+    const backendBase = (process.env.API_INTERNAL_URL || "http://localhost:4000/api/v1").replace(/\/$/, "");
     return [
       {
         source: "/api/v1/:path*",
