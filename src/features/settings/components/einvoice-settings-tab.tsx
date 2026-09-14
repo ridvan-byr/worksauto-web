@@ -20,6 +20,8 @@ import {
   HelpCircle,
   FlaskConical,
   Zap,
+  Undo2,
+  Save,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
@@ -192,6 +194,17 @@ export function EInvoiceSettingsTab() {
   const [autoSendOnCompletion, setAutoSendOnCompletion] = React.useState(false)
   const [maskedApiKey, setMaskedApiKey] = React.useState<string | null>(null)
 
+  // Track initially loaded settings to detect unsaved changes
+  const [initialSettings, setInitialSettings] = React.useState<{
+    provider: InvoiceProvider
+    username: string
+    companyTaxId: string
+    taxOffice: string
+    seriesPrefix: string
+    isTestMode: boolean
+    autoSendOnCompletion: boolean
+  } | null>(null)
+
   // Load Settings
   React.useEffect(() => {
     let isMounted = true
@@ -199,14 +212,32 @@ export function EInvoiceSettingsTab() {
       .get<InvoiceSettingsResponse>("/settings/invoice")
       .then((data) => {
         if (!isMounted || !data) return
-        setProvider(data.provider || "INTERNAL")
+        const loadedProvider = data.provider || "INTERNAL"
+        const loadedUsername = data.username || ""
+        const loadedTaxId = data.companyTaxId || ""
+        const loadedTaxOffice = data.taxOffice || ""
+        const loadedPrefix = data.seriesPrefix || "ATW"
+        const loadedTestMode = Boolean(data.isTestMode)
+        const loadedAutoSend = Boolean(data.autoSendOnCompletion)
+
+        setProvider(loadedProvider)
         setMaskedApiKey(data.maskedApiKey)
-        setUsername(data.username || "")
-        setCompanyTaxId(data.companyTaxId || "")
-        setTaxOffice(data.taxOffice || "")
-        setSeriesPrefix(data.seriesPrefix || "ATW")
-        setIsTestMode(Boolean(data.isTestMode))
-        setAutoSendOnCompletion(Boolean(data.autoSendOnCompletion))
+        setUsername(loadedUsername)
+        setCompanyTaxId(loadedTaxId)
+        setTaxOffice(loadedTaxOffice)
+        setSeriesPrefix(loadedPrefix)
+        setIsTestMode(loadedTestMode)
+        setAutoSendOnCompletion(loadedAutoSend)
+
+        setInitialSettings({
+          provider: loadedProvider,
+          username: loadedUsername,
+          companyTaxId: loadedTaxId,
+          taxOffice: loadedTaxOffice,
+          seriesPrefix: loadedPrefix,
+          isTestMode: loadedTestMode,
+          autoSendOnCompletion: loadedAutoSend,
+        })
       })
       .catch((err) => {
         console.warn("Fatura ayarları yüklenemedi:", err)
@@ -308,6 +339,15 @@ export function EInvoiceSettingsTab() {
         setApiKey("")
         setApiSecret("")
         setPassword("")
+        setInitialSettings({
+          provider: updated.provider || provider,
+          username: updated.username || "",
+          companyTaxId: updated.companyTaxId || "",
+          taxOffice: updated.taxOffice || "",
+          seriesPrefix: updated.seriesPrefix || "ATW",
+          isTestMode: Boolean(updated.isTestMode),
+          autoSendOnCompletion: Boolean(updated.autoSendOnCompletion),
+        })
       }
 
       toast.success("Fatura & Entegrasyon ayarları başarıyla kaydedildi!")
@@ -317,6 +357,63 @@ export function EInvoiceSettingsTab() {
     } finally {
       setIsSaving(false)
     }
+  }
+
+  // Detect unsaved changes
+  const hasUnsavedChanges = React.useMemo(() => {
+    if (!initialSettings) return false
+    return (
+      provider !== initialSettings.provider ||
+      username !== initialSettings.username ||
+      companyTaxId !== initialSettings.companyTaxId ||
+      taxOffice !== initialSettings.taxOffice ||
+      seriesPrefix !== initialSettings.seriesPrefix ||
+      isTestMode !== initialSettings.isTestMode ||
+      autoSendOnCompletion !== initialSettings.autoSendOnCompletion ||
+      apiKey.trim() !== "" ||
+      apiSecret.trim() !== "" ||
+      password.trim() !== ""
+    )
+  }, [
+    initialSettings,
+    provider,
+    username,
+    companyTaxId,
+    taxOffice,
+    seriesPrefix,
+    isTestMode,
+    autoSendOnCompletion,
+    apiKey,
+    apiSecret,
+    password,
+  ])
+
+  // Browser reload/navigation warning
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  // Reset all fields back to initial saved state
+  const handleReset = () => {
+    if (!initialSettings) return
+    setProvider(initialSettings.provider)
+    setUsername(initialSettings.username)
+    setCompanyTaxId(initialSettings.companyTaxId)
+    setTaxOffice(initialSettings.taxOffice)
+    setSeriesPrefix(initialSettings.seriesPrefix)
+    setIsTestMode(initialSettings.isTestMode)
+    setAutoSendOnCompletion(initialSettings.autoSendOnCompletion)
+    setApiKey("")
+    setApiSecret("")
+    setPassword("")
+    toast.info("Değişiklikler geri alındı.")
   }
 
   const copyMaskedKey = () => {
@@ -992,6 +1089,41 @@ export function EInvoiceSettingsTab() {
           )}
         </Button>
       </div>
+
+      {/* Floating Unsaved Changes Sticky Notification Bar */}
+      {hasUnsavedChanges && (
+        <div className="fixed bottom-5 inset-x-4 sm:inset-x-auto sm:right-8 sm:min-w-[380px] z-50 flex items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-3 rounded-2xl bg-slate-900/95 dark:bg-slate-800/95 text-white border border-slate-700/80 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-200">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
+            </span>
+            <span className="text-xs font-medium text-slate-200 truncate">
+              Kaydedilmemiş değişiklikler var
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={isSaving}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              Geri Al
+            </button>
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving}
+              size="sm"
+              className="h-8 px-3.5 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-white shadow-md shadow-sky-500/25 gap-1.5 cursor-pointer"
+            >
+              {isSaving ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+              <span>{isSaving ? "Kaydediliyor..." : "Kaydet"}</span>
+            </Button>
+          </div>
+        </div>
+      )}
     </form>
   )
 }

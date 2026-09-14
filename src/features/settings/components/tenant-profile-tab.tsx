@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Building2, Save, MapPin, Navigation, ExternalLink, Loader2, Compass } from "lucide-react"
+import { Building2, Save, MapPin, Navigation, ExternalLink, Loader2, Compass, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { TenantSettings } from "@/features/settings/api/use-settings"
@@ -110,6 +110,76 @@ export function TenantProfileTab({
       },
       { enableHighAccuracy: true, timeout: 10000 }
     )
+  }
+
+  const hasUnsavedChanges = React.useMemo(() => {
+    if (!initialData) return false
+    const initLat = initialData.latitude !== undefined && initialData.latitude !== null ? String(initialData.latitude) : ""
+    const initLng = initialData.longitude !== undefined && initialData.longitude !== null ? String(initialData.longitude) : ""
+    return (
+      title !== (initialData.title || "") ||
+      legalName !== (initialData.legalName || "") ||
+      phone !== (initialData.phone || "") ||
+      email !== (initialData.email || "") ||
+      address !== (initialData.address || "") ||
+      city !== (initialData.city || "") ||
+      district !== (initialData.district || "") ||
+      taxOffice !== (initialData.taxOffice || "") ||
+      taxNumber !== (initialData.taxNumber || "") ||
+      autoInvoice !== (initialData.autoInvoiceOnComplete ?? true) ||
+      latitude !== initLat ||
+      longitude !== initLng
+    )
+  }, [
+    initialData,
+    title,
+    legalName,
+    phone,
+    email,
+    address,
+    city,
+    district,
+    taxOffice,
+    taxNumber,
+    autoInvoice,
+    latitude,
+    longitude,
+  ])
+
+  React.useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [hasUnsavedChanges])
+
+  const handleReset = () => {
+    if (!initialData) return
+    setTitle(initialData.title || "")
+    setLegalName(initialData.legalName || "")
+    setPhone(initialData.phone || "")
+    setEmail(initialData.email || "")
+    setAddress(initialData.address || "")
+    setCity(initialData.city || "")
+    setDistrict(initialData.district || "")
+    setTaxOffice(initialData.taxOffice || "")
+    setTaxNumber(initialData.taxNumber || "")
+    setAutoInvoice(initialData.autoInvoiceOnComplete ?? true)
+    setLatitude(
+      initialData.latitude !== undefined && initialData.latitude !== null
+        ? String(initialData.latitude)
+        : ""
+    )
+    setLongitude(
+      initialData.longitude !== undefined && initialData.longitude !== null
+        ? String(initialData.longitude)
+        : ""
+    )
+    toast.info("Değişiklikler geri alındı.")
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -406,6 +476,40 @@ export function TenantProfileTab({
           </div>
         </CardContent>
       </Card>
+
+      {/* Floating Unsaved Changes Sticky Notification Bar */}
+      {hasUnsavedChanges && (
+        <div className="fixed bottom-5 inset-x-4 sm:inset-x-auto sm:right-8 sm:min-w-[380px] z-50 flex items-center justify-between gap-3 p-3.5 sm:px-5 sm:py-3 rounded-2xl bg-slate-900/95 dark:bg-slate-800/95 text-white border border-slate-700/80 shadow-2xl backdrop-blur-xl animate-in slide-in-from-bottom-5 duration-200">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <span className="relative flex h-2.5 w-2.5 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-400" />
+            </span>
+            <span className="text-xs font-medium text-slate-200 truncate">
+              Kaydedilmemiş değişiklikler var
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={isPending}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-medium text-slate-300 hover:text-white hover:bg-slate-800 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              Geri Al
+            </button>
+            <Button
+              type="submit"
+              disabled={isPending}
+              size="sm"
+              className="h-8 px-3.5 rounded-xl text-xs font-bold bg-sky-500 hover:bg-sky-400 text-white shadow-md shadow-sky-500/25 gap-1.5 cursor-pointer"
+            >
+              {isPending ? <Loader2 size={13} className="animate-spin" /> : <Check size={13} />}
+              <span>{isPending ? "Kaydediliyor..." : "Kaydet"}</span>
+            </Button>
+          </div>
+        </div>
+      )}
     </form>
   )
 }
