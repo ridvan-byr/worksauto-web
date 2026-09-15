@@ -85,7 +85,7 @@ export interface PaymentRecord {
     phone?: string;
   };
   amount: number;
-  paymentMethod: 'CASH' | 'CREDIT_CARD' | 'BANK_TRANSFER';
+  paymentMethod: 'CASH' | 'POS' | 'CREDIT_CARD' | 'BANK_TRANSFER' | 'ONLINE' | 'ADVANCE_OFFSET';
   notes?: string;
   createdAt: string;
 }

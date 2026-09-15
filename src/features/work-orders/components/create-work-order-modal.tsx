@@ -13,6 +13,7 @@ import { WorkOrder } from "../types"
 import { useCustomers } from "@/features/customers/api/use-customers"
 import { useCreateWorkOrder, useWorkOrders } from "@/features/work-orders/api/use-work-orders"
 import { useStaff, useWorkshopBays, useServices } from "@/features/settings/api/use-settings"
+import { useStaffLeaves } from "@/features/staff/api/use-staff-management"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { formatBayOptionLabel } from "@/lib/workshop-constants"
 import {
@@ -83,6 +84,21 @@ export function CreateWorkOrderModal({
       return s.role === "TECHNICIAN" || !!s.mechanic
     })
   }, [staffList])
+
+  const { data: staffLeaves = [] } = useStaffLeaves()
+  const onLeaveStaffIds = React.useMemo(() => {
+    const todayStr = new Date().toISOString().split("T")[0]
+    const ids = new Set<string>()
+    staffLeaves.forEach((l) => {
+      if (l.status === "CANCELLED") return
+      const start = l.startDate.split("T")[0]
+      const end = l.endDate.split("T")[0]
+      if (todayStr >= start && todayStr <= end) {
+        ids.add(l.userId)
+      }
+    })
+    return ids
+  }, [staffLeaves])
 
   const customers: CustomerOption[] = React.useMemo(() => {
     if (!apiCustomers) return []
@@ -230,6 +246,13 @@ export function CreateWorkOrderModal({
         const staffObj = mechanicStaffList.find(
           (s) => s.id === values.assignedMechanic || s.mechanic?.id === values.assignedMechanic
         )
+        const staffUserId = staffObj ? staffObj.user?.id || staffObj.id : ""
+        const isOnLeave = staffUserId ? onLeaveStaffIds.has(staffUserId) : false
+        if (isOnLeave) {
+          toast.error("Seçilen usta / teknisyen bugün izinli olduğu için iş emrine atanamaz.")
+          setIsSubmitting(false)
+          return
+        }
         assignedMechanicId = staffObj?.mechanic?.id || (staffObj?.role === "TECHNICIAN" ? staffObj.id : undefined)
       }
 
@@ -527,9 +550,12 @@ export function CreateWorkOrderModal({
                       const fullName = `${s.name} ${s.surname || ""}`.trim()
                       const specialty = s.specialty || s.mechanic?.specialty || "Mekanik Teknisyeni"
                       const idVal = s.mechanic?.id || s.id
+                      const staffUserId = s.user?.id || s.id
+                      const isOnLeave = onLeaveStaffIds.has(staffUserId)
+
                       return (
-                        <option key={s.id} value={idVal}>
-                          {fullName} ({specialty})
+                        <option key={s.id} value={idVal} disabled={isOnLeave}>
+                          {fullName} ({specialty}) {isOnLeave ? "— [İzinli / Görev Dışı]" : ""}
                         </option>
                       )
                     })

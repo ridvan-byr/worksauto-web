@@ -1,14 +1,14 @@
 # --- Stage 1: Dependencies ---
-FROM node:20-alpine AS deps
+FROM node:22-alpine AS deps
 WORKDIR /app
 
 RUN apk add --no-cache libc6-compat
 
 COPY package.json package-lock.json ./
-RUN npm install --no-audit
+RUN npm ci --no-audit
 
 # --- Stage 2: Builder ---
-FROM node:20-alpine AS builder
+FROM node:22-alpine AS builder
 WORKDIR /app
 
 COPY --from=deps /app/node_modules ./node_modules
@@ -17,13 +17,14 @@ COPY . .
 # In production behind reverse proxy, relative /api/v1 is used
 ARG NEXT_PUBLIC_API_URL=/api/v1
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV API_INTERNAL_URL=http://api:4000/api/v1
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 
 RUN npm run build
 
 # --- Stage 3: Runner ---
-FROM node:20-alpine AS runner
+FROM node:22-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -48,13 +49,13 @@ EXPOSE 3000
 CMD ["node", "server.js"]
 
 # --- Dev Stage: Live Reload (used by docker-compose.dev.yml) ---
-FROM node:20-alpine AS development
+FROM node:22-alpine AS development
 WORKDIR /app
 
 RUN apk add --no-cache libc6-compat
 
 COPY package.json package-lock.json ./
-RUN npm install --no-audit
+RUN npm ci --no-audit
 
 COPY . .
 
@@ -64,5 +65,7 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 EXPOSE 3000
-
 CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]
+
+# Default docker build must produce the production image.
+FROM runner AS production

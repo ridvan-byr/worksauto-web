@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './fixtures';
 
 test.describe('Work Order Lifecycle E2E', () => {
   test.beforeEach(async ({ context, page }) => {
@@ -7,7 +7,8 @@ test.describe('Work Order Lifecycle E2E', () => {
       {
         name: 'worksauto_session',
         value: '1',
-        url: 'http://localhost:3000',
+        domain: 'localhost',
+        path: '/',
       },
     ]);
 
@@ -18,16 +19,17 @@ test.describe('Work Order Lifecycle E2E', () => {
         JSON.stringify({
           user: {
             id: 'usr_tech_1',
-            name: 'Ahmet',
-            surname: 'Usta',
-            phone: '05321112233',
+            name: 'Rıdvan',
+            surname: 'Bayar',
+            phone: '05523741500',
+            email: 'ridvanemrebayar@gmail.com',
             role: 'OWNER',
           },
           tenant: {
             id: 'ten_test_1',
             title: 'Test Oto Servis',
             slug: 'test-oto',
-            phone: '02123334455',
+            phone: '05523741500',
             isActive: true,
             onboardingCompleted: true,
           },
@@ -76,7 +78,7 @@ test.describe('Work Order Lifecycle E2E', () => {
             tenantId: 'ten_test_1',
             workOrderNumber: 'WO-2026-001',
             customerId: 'cust-1',
-            customer: { firstName: 'Ahmet', lastName: 'Yılmaz', phone: '05321112233' },
+            customer: { firstName: 'Rıdvan', lastName: 'Bayar', phone: '05523741500', email: 'ridvanemrebayar@gmail.com' },
             vehicleId: 'veh-1',
             vehicle: { plate: '34ABC123', brand: 'Volkswagen', model: 'Golf', year: 2022, currentKm: 45000 },
             status: 'PENDING',
@@ -109,7 +111,7 @@ test.describe('Work Order Lifecycle E2E', () => {
           tenantId: 'ten_test_1',
           workOrderNumber: 'WO-2026-001',
           customerId: 'cust-1',
-          customer: { firstName: 'Ahmet', lastName: 'Yılmaz', phone: '05321112233' },
+          customer: { firstName: 'Rıdvan', lastName: 'Bayar', phone: '05523741500', email: 'ridvanemrebayar@gmail.com' },
           vehicleId: 'veh-1',
           vehicle: { plate: '34ABC123', brand: 'Volkswagen', model: 'Golf', year: 2022, mileage: 45000 },
           status: 'IN_PROGRESS',
@@ -148,7 +150,7 @@ test.describe('Work Order Lifecycle E2E', () => {
     await expect(page.getByText('WO-2026-001')).toBeVisible();
     await expect(page.getByText('34 ABC 123')).toBeVisible();
     await expect(page.getByText('Volkswagen Golf')).toBeVisible();
-    await expect(page.getByText('Ahmet Yılmaz')).toBeVisible();
+    await expect(page.getByText('Rıdvan Bayar').first()).toBeVisible();
 
     // Verify action buttons exist
     const addPartBtn = page.getByRole('button', { name: /Parça Ekle/i });

@@ -42,7 +42,7 @@ import { Invoice } from "@/features/billing/types"
 import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/vehicle-formatters"
 import { cn } from "@/lib/utils"
 
-export const formatDateDisplay = (val?: string | null) => {
+const formatDateDisplay = (val?: string | null) => {
   if (!val || val === "-" || val === "null" || val === "undefined") return "-"
   try {
     const d = new Date(val)

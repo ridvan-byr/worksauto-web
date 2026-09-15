@@ -257,3 +257,35 @@ export function useAddWorkOrderPhoto() {
     },
   });
 }
+
+export interface NotifyWorkOrderStatusPayload {
+  workOrderId: string;
+  channels?: ('EMAIL' | 'WHATSAPP' | 'SMS')[];
+  customMessage?: string;
+}
+
+export function useNotifyWorkOrderStatus() {
+  const queryClient = useQueryClient();
+  return useMutation<
+    { success: boolean; notificationId: string; channels: unknown },
+    Error,
+    NotifyWorkOrderStatusPayload
+  >({
+    mutationFn: ({ workOrderId, channels, customMessage }) =>
+      apiClient.post(`/work-orders/${workOrderId}/notify-status`, {
+        channels,
+        customMessage,
+      }),
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['work-orders', variables.workOrderId] });
+      queryClient.invalidateQueries({ queryKey: ['audit-logs'] });
+      toast.success('Durum bildirimi müşteriye başarıyla iletildi.', {
+        description: 'Seçilen kanallar üzerinden gönderim yapıldı.',
+      });
+    },
+    onError: (err: Error) => {
+      toast.error(err?.message || 'Bildirim gönderilirken bir hata oluştu.');
+    },
+  });
+}
+

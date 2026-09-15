@@ -95,11 +95,19 @@ export function EditCustomerModal({
     if (customerType === "individual") {
       if (!firstName.trim()) errs.firstName = "Ad zorunludur."
       if (!lastName.trim()) errs.lastName = "Soyad zorunludur."
+      const cleanTax = taxNumber.replace(/\D/g, "")
+      if (!cleanTax || cleanTax.length !== 11) {
+        errs.taxNumber = "Bireysel müşteriler için 11 haneli T.C. Kimlik Numarası zorunludur (veya 11111111111)."
+      }
     } else {
       if (!companyTitle.trim()) errs.companyTitle = "Şirket ünvanı zorunludur."
       if (!firstName.trim()) errs.firstName = "Yetkili adı zorunludur."
-      if (!taxNumber.trim() || taxNumber.trim().length < 10) {
+      const cleanTax = taxNumber.replace(/\D/g, "")
+      if (!cleanTax || cleanTax.length !== 10) {
         errs.taxNumber = "Kurumsal müşteriler için 10 haneli Vergi Numarası zorunludur."
+      }
+      if (!taxOffice.trim()) {
+        errs.taxOffice = "Vergi dairesi zorunludur."
       }
     }
 
@@ -111,6 +119,7 @@ export function EditCustomerModal({
     if (Object.keys(errs).length > 0) return
 
     try {
+      const finalTaxNumber = taxNumber.trim() || (customerType === "corporate" ? "1111111111" : "11111111111")
       await updateCustomerMutation.mutateAsync({
         id: customer.id,
         data: {
@@ -119,7 +128,7 @@ export function EditCustomerModal({
           lastName: lastName.trim(),
           companyTitle: customerType === "corporate" ? companyTitle.trim() : undefined,
           taxOffice: customerType === "corporate" ? taxOffice.trim() : undefined,
-          taxNumber: customerType === "corporate" ? taxNumber.trim() : undefined,
+          taxNumber: finalTaxNumber,
           phone: phone.trim(),
           email: email.trim() || undefined,
           notes: notes.trim() || undefined,
@@ -132,7 +141,7 @@ export function EditCustomerModal({
         surname: lastName.trim(),
         companyTitle: customerType === "corporate" ? companyTitle.trim() : undefined,
         taxOffice: customerType === "corporate" ? taxOffice.trim() : undefined,
-        taxNumber: customerType === "corporate" ? taxNumber.trim() : undefined,
+        taxNumber: finalTaxNumber,
         phone: phone.trim(),
         email: email.trim() || undefined,
         city,
@@ -229,20 +238,32 @@ export function EditCustomerModal({
                 <div className="grid grid-cols-2 gap-2.5">
                   <div className="space-y-1">
                     <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                      Vergi Dairesi
+                      Vergi Dairesi <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
-                      placeholder="Örn: İkitelli"
+                      placeholder="Örn: İkitelli V.D."
                       value={taxOffice}
                       onChange={(e) => setTaxOffice(e.target.value)}
                       className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-sky-500"
                     />
+                    {errors.taxOffice && (
+                      <p className="text-[10px] text-rose-500">{errors.taxOffice}</p>
+                    )}
                   </div>
                   <div className="space-y-1">
-                    <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                      Vergi No <span className="text-rose-500">*</span>
-                    </label>
+                    <div className="flex items-center justify-between">
+                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                        Vergi No (VKN) <span className="text-rose-500">*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setTaxNumber("1111111111")}
+                        className="text-[10px] font-medium text-sky-600 dark:text-sky-400 hover:underline"
+                      >
+                        1111111111 Doldur
+                      </button>
+                    </div>
                     <input
                       type="text"
                       placeholder="10 Haneli VKN"
@@ -292,6 +313,34 @@ export function EditCustomerModal({
                 )}
               </div>
             </div>
+
+            {customerType === "individual" && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                    T.C. Kimlik Numarası (TCKN) <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setTaxNumber("11111111111")}
+                    className="text-[10px] font-medium text-sky-600 dark:text-sky-400 hover:underline"
+                  >
+                    11111111111 Doldur
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  placeholder="11 Haneli TCKN"
+                  maxLength={11}
+                  value={taxNumber}
+                  onChange={(e) => setTaxNumber(formatTaxNumber(e.target.value, "tckn"))}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+                {errors.taxNumber && (
+                  <p className="text-[10px] text-rose-500">{errors.taxNumber}</p>
+                )}
+              </div>
+            )}
 
             {/* Phone & Email */}
             <div className="grid grid-cols-2 gap-2.5">
