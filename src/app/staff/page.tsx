@@ -92,6 +92,13 @@ export default function StaffPage() {
     setDeletingStaff(null);
   };
 
+  const handleReactivateStaff = async (staff: StaffRecord) => {
+    await updateStaffMutation.mutateAsync({
+      id: staff.id,
+      data: { isActive: true },
+    });
+  };
+
   const handleCreateLeaveSubmit = async (data: CreateStaffLeaveInput) => {
     await createLeaveMutation.mutateAsync(data);
     setIsLeaveModalOpen(false);
@@ -154,7 +161,7 @@ export default function StaffPage() {
           <Users className="h-4 w-4" />
           <span>Kadro & Ustalar</span>
           <span className="ml-1 px-1.5 py-0.2 rounded-md bg-slate-200/60 dark:bg-slate-800 text-[10px] font-semibold">
-            {staffList.length}
+            {staffList.filter((s) => s.isActive !== false).length}
           </span>
         </button>
 
@@ -199,6 +206,7 @@ export default function StaffPage() {
           onOpenCreateModal={handleOpenCreateStaff}
           onEditStaff={handleEditStaff}
           onDeleteStaff={handleDeleteStaff}
+          onReactivateStaff={handleReactivateStaff}
           onDefineLeave={handleDefineLeave}
           isLoading={isStaffLoading}
         />

@@ -12,6 +12,7 @@ import {
   Pencil,
   Trash2,
   Layers,
+  RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StaffRecord, StaffLeave } from "../api/use-staff-management";
@@ -22,6 +23,7 @@ interface StaffListTabProps {
   onOpenCreateModal: () => void;
   onEditStaff: (staff: StaffRecord) => void;
   onDeleteStaff: (staff: StaffRecord) => void;
+  onReactivateStaff?: (staff: StaffRecord) => void;
   onDefineLeave: (staffId: string) => void;
   isLoading: boolean;
 }
@@ -65,12 +67,13 @@ export function StaffListTab({
   onOpenCreateModal,
   onEditStaff,
   onDeleteStaff,
+  onReactivateStaff,
   onDefineLeave,
   isLoading,
 }: StaffListTabProps) {
   const [searchTerm, setSearchTerm] = React.useState("");
   const [roleFilter, setRoleFilter] = React.useState<string>("ALL");
-  const [statusFilter, setStatusFilter] = React.useState<string>("ALL");
+  const [statusFilter, setStatusFilter] = React.useState<string>("ACTIVE");
 
   const todayStr = new Date().toISOString().split("T")[0];
 
@@ -88,13 +91,17 @@ export function StaffListTab({
     return ids;
   }, [leaves, todayStr]);
 
-  // KPIs
-  const totalCount = staff.length;
+  // Counts
+  const activeCount = staff.filter((s) => s.isActive !== false).length;
+  const passiveCount = staff.filter((s) => s.isActive === false).length;
   const technicianCount = staff.filter(
     (s) => s.role === "TECHNICIAN" && s.isActive !== false
   ).length;
   const assignedLiftCount = staff.filter(
-    (s) => s.mechanic?.assignedLift && s.mechanic.assignedLift !== "Atanmamış"
+    (s) =>
+      s.isActive !== false &&
+      s.mechanic?.assignedLift &&
+      s.mechanic.assignedLift !== "Atanmamış"
   ).length;
 
   const filteredStaff = React.useMemo(() => {
@@ -111,9 +118,10 @@ export function StaffListTab({
 
       const isOnLeave = onLeaveStaffIds.has(s.id);
       let matchesStatus = true;
-      if (statusFilter === "ACTIVE") matchesStatus = s.isActive !== false && !isOnLeave;
-      if (statusFilter === "ON_LEAVE") matchesStatus = isOnLeave;
+      if (statusFilter === "ACTIVE") matchesStatus = s.isActive !== false;
+      if (statusFilter === "ON_LEAVE") matchesStatus = s.isActive !== false && isOnLeave;
       if (statusFilter === "PASSIVE") matchesStatus = s.isActive === false;
+      if (statusFilter === "ALL") matchesStatus = true;
 
       return matchesSearch && matchesRole && matchesStatus;
     });
@@ -126,16 +134,18 @@ export function StaffListTab({
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Toplam Servis Kadrosu
+              Aktif Servis Kadrosu
             </span>
             <div className="p-2 rounded-xl bg-sky-50 dark:bg-sky-950/40 text-sky-600">
               <Users className="h-4 w-4" />
             </div>
           </div>
           <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {totalCount}
+            {activeCount}
           </p>
-          <span className="text-[11px] text-slate-400">Tüm yetkili personeller</span>
+          <span className="text-[11px] text-slate-400">
+            {passiveCount > 0 ? `${passiveCount} ayrılan personel arşivde` : "Tüm kadro aktif görevde"}
+          </span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
@@ -220,10 +230,12 @@ export function StaffListTab({
             onChange={(e) => setStatusFilter(e.target.value)}
             className="h-9 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 text-xs text-slate-700 dark:text-slate-300 font-medium focus:outline-hidden"
           >
-            <option value="ALL">Tüm Durumlar</option>
-            <option value="ACTIVE">Aktif (Görevde)</option>
-            <option value="ON_LEAVE">İzinli (Bugün)</option>
-            <option value="PASSIVE">Pasif / Ayrılmış</option>
+            <option value="ACTIVE">Aktif Kadro (Görevde)</option>
+            <option value="ON_LEAVE">Bugün İzinli Olanlar</option>
+            <option value="PASSIVE">
+              Ayrılan / Pasif Personel (Arşiv){passiveCount > 0 ? ` (${passiveCount})` : ""}
+            </option>
+            <option value="ALL">Tüm Kayıtlar (Aktif + Arşiv)</option>
           </select>
         </div>
 
@@ -353,36 +365,57 @@ export function StaffListTab({
 
                 {/* Bottom Actions */}
                 <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-1">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onDefineLeave(s.id)}
-                    className="h-8 px-2 text-[11px] rounded-xl text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 border-amber-200 dark:border-amber-800/60"
-                  >
-                    <Calendar className="h-3.5 w-3.5 mr-1" />
-                    İzin Tanımla
-                  </Button>
+                  {isPassive ? (
+                    <span className="text-[10px] font-semibold text-rose-500 bg-rose-50 dark:bg-rose-950/40 px-2 py-1 rounded-lg border border-rose-200 dark:border-rose-900">
+                      Ayrıldı / Pasif
+                    </span>
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onDefineLeave(s.id)}
+                      className="h-8 px-2 text-[11px] rounded-xl text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/30 border-amber-200 dark:border-amber-800/60"
+                    >
+                      <Calendar className="h-3.5 w-3.5 mr-1" />
+                      İzin Tanımla
+                    </Button>
+                  )}
 
                   <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onEditStaff(s)}
-                      className="h-8 w-8 p-0 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => onDeleteStaff(s)}
-                      className="h-8 w-8 p-0 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    {isPassive ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => onReactivateStaff?.(s)}
+                        className="h-8 px-2.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 rounded-xl flex items-center gap-1 cursor-pointer"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        <span>İşe Geri Al / Aktifleştir</span>
+                      </Button>
+                    ) : (
+                      <>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onEditStaff(s)}
+                          className="h-8 w-8 p-0 rounded-xl text-slate-500 hover:text-slate-900 dark:hover:text-slate-100"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => onDeleteStaff(s)}
+                          className="h-8 w-8 p-0 rounded-xl text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
