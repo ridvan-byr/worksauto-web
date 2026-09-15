@@ -24,6 +24,7 @@ import { Appointment, CancellationReason } from "../types"
 import { AppointmentStatusBadge } from "./appointment-status-badge"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { useStaff, useWorkshopBays } from "@/features/settings/api/use-settings"
+import { useStaffLeaves } from "@/features/staff/api/use-staff-management"
 import { formatBayOptionLabel } from "@/lib/workshop-constants"
 import { cn } from "@/lib/utils"
 
@@ -81,6 +82,21 @@ export function AppointmentDetailModal({
       return s.role === "TECHNICIAN" || !!s.mechanic
     })
   }, [staffList])
+
+  const { data: staffLeaves = [] } = useStaffLeaves()
+  const onLeaveStaffIds = React.useMemo(() => {
+    const today = new Date().toISOString().split("T")[0]
+    const ids = new Set<string>()
+    staffLeaves.forEach((l) => {
+      if (l.status === "CANCELLED") return
+      const start = l.startDate.split("T")[0]
+      const end = l.endDate.split("T")[0]
+      if (today >= start && today <= end) {
+        ids.add(l.userId)
+      }
+    })
+    return ids
+  }, [staffLeaves])
 
   // Check-In Form State
   const [initialKm, setInitialKm] = React.useState<number | "">("")
@@ -508,11 +524,17 @@ export function AppointmentDetailModal({
                 className="w-full h-11 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
               >
                 <option value="">⚠️ Atölye Havuzuna Bırak (Sonradan Panodan Ata)</option>
-                {mechanics.map((m) => (
-                  <option key={m.id} value={m.mechanic?.id || m.id}>
-                    {m.name} {m.surname || ""} {m.specialty || m.mechanic?.specialty ? `• ${m.specialty || m.mechanic?.specialty}` : "• Teknisyen"}
-                  </option>
-                ))}
+                {mechanics.map((m) => {
+                  const staffUserId = m.user?.id || m.id
+                  const isOnLeave = onLeaveStaffIds.has(staffUserId)
+                  const spec = m.specialty || m.mechanic?.specialty || "Teknisyen"
+
+                  return (
+                    <option key={m.id} value={m.mechanic?.id || m.id} disabled={isOnLeave}>
+                      {m.name} {m.surname || ""} • {spec} {isOnLeave ? "— [İzinli / Seçilemez]" : ""}
+                    </option>
+                  )
+                })}
               </select>
               {!assignedMechanicId && (
                 <p className="text-[10px] text-amber-600 dark:text-amber-400">
