@@ -38,14 +38,17 @@ export function CreateLeaveModal({
   const [totalDays, setTotalDays] = React.useState<number>(1);
   const [reason, setReason] = React.useState("");
   const [error, setError] = React.useState<string | null>(null);
+  const activeStaffList = React.useMemo(() => {
+    return (staffList || []).filter((st) => st.isActive !== false);
+  }, [staffList]);
 
   React.useEffect(() => {
-    if (preselectedUserId) {
+    if (preselectedUserId && activeStaffList.some((s) => s.id === preselectedUserId)) {
       setUserId(preselectedUserId);
-    } else if (staffList.length > 0 && !userId) {
-      setUserId(staffList[0].id);
+    } else if (activeStaffList.length > 0 && (!userId || !activeStaffList.some((s) => s.id === userId))) {
+      setUserId(activeStaffList[0].id);
     }
-  }, [preselectedUserId, staffList, userId]);
+  }, [preselectedUserId, activeStaffList, userId]);
 
   React.useEffect(() => {
     if (isOpen) {
@@ -159,7 +162,7 @@ export function CreateLeaveModal({
               required
             >
               <option value="" disabled>Personel seçin</option>
-              {staffList.map((st) => (
+              {activeStaffList.map((st) => (
                 <option key={st.id} value={st.id}>
                   {st.name} {st.surname || ""} ({st.role === "TECHNICIAN" ? "Usta / Teknisyen" : st.role})
                   {st.mechanic?.assignedLift ? ` — ${st.mechanic.assignedLift}` : ""}
