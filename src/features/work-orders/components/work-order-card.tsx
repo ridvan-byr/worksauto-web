@@ -12,6 +12,7 @@ import {
   ChevronDown,
   AlertCircle,
   RotateCcw,
+  Send,
 } from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -24,6 +25,7 @@ interface WorkOrderCardProps {
   activeDraggedId?: string | null
   activeDraggedStatus?: WorkOrderStatus | null
   onStatusChange: (id: string, newStatus: WorkOrderStatus) => void
+  onSendNotification?: (order: WorkOrder) => void
   onMoveUp?: () => void
   onMoveDown?: () => void
   isFirst?: boolean
@@ -41,6 +43,7 @@ export function WorkOrderCard({
   activeDraggedId,
   activeDraggedStatus: _activeDraggedStatus,
   onStatusChange,
+  onSendNotification,
   onMoveUp,
   onMoveDown,
   isFirst = false,
@@ -145,6 +148,21 @@ export function WorkOrderCard({
           <span className="text-[10px] font-mono font-bold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
             {order.workOrderNumber}
           </span>
+
+          {onSendNotification && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSendNotification(order)
+              }}
+              className="h-6 px-1.5 rounded-md flex items-center gap-1 text-[10px] font-semibold text-slate-500 hover:text-sky-600 dark:hover:text-sky-400 bg-slate-100 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors cursor-pointer shrink-0"
+              title="Müşteriye SMS/WhatsApp Durum Bildirimi Gönder"
+            >
+              <Send size={11} className="text-sky-500" />
+              <span className="hidden sm:inline">Bildir</span>
+            </button>
+          )}
 
           {/* Up & Down Reorder Micro Buttons */}
           {(onMoveUp || onMoveDown) && (

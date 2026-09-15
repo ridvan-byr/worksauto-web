@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Search, ArrowUpRight, Wrench } from "lucide-react"
+import { Search, ArrowUpRight, Wrench, Send } from "lucide-react"
 import { WorkOrder } from "../types"
 import { WorkOrderStatusBadge } from "./work-order-status-badge"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -11,9 +11,10 @@ import { cn } from "@/lib/utils"
 interface WorkOrderListViewProps {
   orders: WorkOrder[]
   initialStatusFilter?: string
+  onSendNotification?: (order: WorkOrder) => void
 }
 
-export function WorkOrderListView({ orders, initialStatusFilter }: WorkOrderListViewProps) {
+export function WorkOrderListView({ orders, initialStatusFilter, onSendNotification }: WorkOrderListViewProps) {
   const router = useRouter()
   const [searchQuery, setSearchQuery] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<string>(initialStatusFilter || "all")
@@ -138,10 +139,26 @@ export function WorkOrderListView({ orders, initialStatusFilter }: WorkOrderList
                     </td>
 
                     <td className="py-4 px-4 sm:px-6 text-right">
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 group-hover:bg-slate-100 dark:group-hover:bg-slate-800 text-xs font-semibold shadow-2xs transition-colors">
-                        <span>Usta Ekranı</span>
-                        <ArrowUpRight size={13} />
-                      </span>
+                      <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {onSendNotification && (
+                          <button
+                            type="button"
+                            onClick={() => onSendNotification(order)}
+                            className="h-7 px-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 hover:bg-sky-50 dark:hover:bg-sky-950/40 text-sky-600 dark:text-sky-400 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Müşteriye Bildirim Gönder"
+                          >
+                            <Send size={11} />
+                            <span>Bildir</span>
+                          </button>
+                        )}
+                        <span
+                          onClick={() => router.push(`/work-orders/${order.id}`)}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 group-hover:bg-slate-100 dark:group-hover:bg-slate-800 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                        >
+                          <span>Usta Ekranı</span>
+                          <ArrowUpRight size={13} />
+                        </span>
+                      </div>
                     </td>
                   </tr>
                 ))

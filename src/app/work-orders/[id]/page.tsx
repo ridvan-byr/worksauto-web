@@ -45,6 +45,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SendStatusNotificationModal } from "@/features/work-orders/components/send-status-notification-modal"
+import { CompleteWorkOrderConfirmModal } from "@/features/work-orders/components/complete-work-order-confirm-modal"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { useAuth } from "@/features/auth/auth-context"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
@@ -116,6 +117,7 @@ export default function WorkOrderDetailPage() {
   const [isReopenModalOpen, setIsReopenModalOpen] = React.useState(false)
   const [isInvoiceDetailOpen, setIsInvoiceDetailOpen] = React.useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = React.useState(false)
+  const [isCompleteConfirmOpen, setIsCompleteConfirmOpen] = React.useState(false)
   const addItemMutation = useAddWorkOrderItem()
   const updateStatusMutation = useUpdateWorkOrderStatus()
   const removeItemMutation = useRemoveWorkOrderItem()
@@ -332,17 +334,50 @@ export default function WorkOrderDetailPage() {
     }
   }
 
+  const executeStatusUpdate = async (status: WorkOrderStatus) => {
+    if (!order) return
+    try {
+      await updateStatusMutation.mutateAsync({ id: order.id, status })
+      setOrder((prev) => (prev ? { ...prev, status } : null))
+
+      if (status === "COMPLETED") {
+        toast.success(`#${order.workOrderNumber} numaralı iş emri tamamlandı!`, {
+          description: "Müşteriye aracın hazır olduğuna dair SMS/WhatsApp bildirimi göndermek ister misiniz?",
+          action: {
+            label: "Bildirim Gönder",
+            onClick: () => setIsNotificationModalOpen(true),
+          },
+          duration: 9000,
+        })
+      } else if (status === "IN_PROGRESS") {
+        toast.success("İş emri işlemde / onarımda", {
+          description: "Müşteriye işleme başlandığına dair bildirim göndermek ister misiniz?",
+          action: {
+            label: "Bildirim Gönder",
+            onClick: () => setIsNotificationModalOpen(true),
+          },
+          duration: 7000,
+        })
+      }
+    } catch (e: unknown) {
+      const err = e as Error
+      console.warn('API status update error:', err)
+      toast.error(err?.message || "Durum güncellenirken bir hata oluştu.")
+    }
+  }
+
   const handleStatusUpdate = async (status: WorkOrderStatus) => {
     if (status === "IN_PROGRESS" && activeInvoice) {
       handleOpenReopenModal()
       return
     }
-    try {
-      await updateStatusMutation.mutateAsync({ id: order.id, status })
-    } catch (e) {
-      console.warn('API status update error:', e)
+
+    if (status === "COMPLETED" && order?.status !== "COMPLETED") {
+      setIsCompleteConfirmOpen(true)
+      return
     }
-    setOrder((prev) => (prev ? { ...prev, status } : null))
+
+    await executeStatusUpdate(status)
   }
 
   const handleCancelWorkOrder = async () => {
@@ -1619,6 +1654,18 @@ export default function WorkOrderDetailPage() {
         isOpen={isInvoiceDetailOpen}
         invoice={mappedInvoiceForModal}
         onClose={() => setIsInvoiceDetailOpen(false)}
+      />
+
+      {/* Complete Work Order Confirmation Modal */}
+      <CompleteWorkOrderConfirmModal
+        isOpen={isCompleteConfirmOpen}
+        workOrder={order}
+        onClose={() => setIsCompleteConfirmOpen(false)}
+        onConfirm={async () => {
+          setIsCompleteConfirmOpen(false)
+          await executeStatusUpdate("COMPLETED")
+        }}
+        isLoading={updateStatusMutation.isPending}
       />
 
       {/* Manual Customer Status Notification Modal */}

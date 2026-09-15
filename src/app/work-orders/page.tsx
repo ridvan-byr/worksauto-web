@@ -24,6 +24,9 @@ import { KanbanBoard } from "@/features/work-orders/components/kanban-board"
 import { WorkOrderListView } from "@/features/work-orders/components/work-order-list-view"
 import { CreateWorkOrderModal, type CreateWorkOrderModalValues } from "@/features/work-orders/components/create-work-order-modal"
 import { CancelledWorkOrdersModal } from "@/features/work-orders/components/cancelled-work-orders-modal"
+import { CompleteWorkOrderConfirmModal } from "@/features/work-orders/components/complete-work-order-confirm-modal"
+import { SendStatusNotificationModal } from "@/features/work-orders/components/send-status-notification-modal"
+import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
 interface ApiWorkOrderInput {
@@ -148,6 +151,8 @@ export default function WorkOrdersPage() {
   const [cloneInitialData, setCloneInitialData] = React.useState<Partial<CreateWorkOrderModalValues> | null>(null)
   const [isCancelledModalOpen, setIsCancelledModalOpen] = React.useState(false)
   const [listInitialFilter, setListInitialFilter] = React.useState<string>("all")
+  const [orderToComplete, setOrderToComplete] = React.useState<WorkOrder | null>(null)
+  const [orderForNotification, setOrderForNotification] = React.useState<WorkOrder | null>(null)
 
   const { data: apiOrders } = useWorkOrders()
   const { data: staffMembers = [] } = useStaff()
@@ -162,27 +167,77 @@ export default function WorkOrdersPage() {
     }
   }, [apiOrders])
 
+  const executeStatusUpdate = async (targetOrder: WorkOrder, newStatus: WorkOrderStatus) => {
+    const backendStatus = (newStatus as string) === "PENDING" ? "QUEUE" : newStatus
+    try {
+      await updateStatusMutation.mutateAsync({ id: targetOrder.id, status: backendStatus })
+      setOrders((prev) => prev.map((o) => (o.id === targetOrder.id ? { ...o, status: newStatus } : o)))
+
+      // Durum değişikliğinde müşteriye bildirim gönderme hatırlatıcısı
+      if (newStatus === "COMPLETED") {
+        toast.success(`#${targetOrder.workOrderNumber} numaralı iş emri tamamlandı!`, {
+          description: `${targetOrder.plate} müşterisine aracın hazır olduğuna dair bildirim göndermek ister misiniz?`,
+          action: {
+            label: "Bildirim Gönder",
+            onClick: () => setOrderForNotification(targetOrder),
+          },
+          duration: 9000,
+        })
+      } else if (newStatus === "IN_PROGRESS") {
+        toast.success(`${targetOrder.plate} aracı lifte / onarıma alındı`, {
+          description: "Müşteriye işleme başlandığına dair bildirim göndermek ister misiniz?",
+          action: {
+            label: "Bildirim Gönder",
+            onClick: () => setOrderForNotification(targetOrder),
+          },
+          duration: 7000,
+        })
+      }
+    } catch (e: unknown) {
+      const err = e as Error
+      console.error("API status update error:", err)
+      toast.error("Durum güncellenemedi", {
+        description: err?.message || "Sunucu yanıt vermedi.",
+      })
+    }
+  }
+
   const handleStatusChange = async (id: string, newStatus: WorkOrderStatus) => {
     const targetOrder = orders.find((o) => o.id === id)
+    if (!targetOrder) return
 
     // COMPLETED -> IN_PROGRESS transition requires rollback endpoint in domain
-    if (targetOrder?.status === "COMPLETED" && newStatus === "IN_PROGRESS") {
+    if (targetOrder.status === "COMPLETED" && newStatus === "IN_PROGRESS") {
       try {
         await rollbackMutation.mutateAsync(id)
         setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: "IN_PROGRESS" } : o)))
-      } catch (e) {
-        console.error("Rollback hatası:", e)
+        toast.success(`#${targetOrder.workOrderNumber} iş emri geri alındı`, {
+          description: "İş emri tekrar 'Liftte / İşlemde' durumuna getirildi.",
+        })
+      } catch (e: unknown) {
+        const err = e as Error
+        console.error("Rollback hatası:", err)
+        toast.error("İş emri geri alınamadı", {
+          description: err?.message || "Yalnızca Servis Müdürü ve İşletme Sahibi geri alabilir.",
+        })
       }
       return
     }
 
-    const backendStatus = (newStatus as string) === "PENDING" ? "QUEUE" : newStatus
-    try {
-      await updateStatusMutation.mutateAsync({ id, status: backendStatus })
-      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)))
-    } catch (e) {
-      console.error("API status update error:", e)
+    // Tamamlandı durumuna geçerken yanlışlıkları önleyen onay modalı aç
+    if (newStatus === "COMPLETED" && targetOrder.status !== "COMPLETED") {
+      setOrderToComplete(targetOrder)
+      return
     }
+
+    await executeStatusUpdate(targetOrder, newStatus)
+  }
+
+  const handleConfirmComplete = async (orderId: string) => {
+    const target = orders.find((o) => o.id === orderId)
+    if (!target) return
+    setOrderToComplete(null)
+    await executeStatusUpdate(target, "COMPLETED")
   }
 
   const handleCreatedOrder = (newOrder: WorkOrder) => {
@@ -525,10 +580,34 @@ export default function WorkOrdersPage() {
 
       {/* Main View */}
       {viewMode === "kanban" ? (
-        <KanbanBoard orders={displayedOrders} onStatusChange={handleStatusChange} />
+        <KanbanBoard
+          orders={displayedOrders}
+          onStatusChange={handleStatusChange}
+          onSendNotification={(order) => setOrderForNotification(order)}
+        />
       ) : (
-        <WorkOrderListView orders={displayedOrders} initialStatusFilter={listInitialFilter} />
+        <WorkOrderListView
+          orders={displayedOrders}
+          initialStatusFilter={listInitialFilter}
+          onSendNotification={(order) => setOrderForNotification(order)}
+        />
       )}
+
+      {/* Complete Work Order Confirmation Modal */}
+      <CompleteWorkOrderConfirmModal
+        isOpen={Boolean(orderToComplete)}
+        workOrder={orderToComplete}
+        onClose={() => setOrderToComplete(null)}
+        onConfirm={handleConfirmComplete}
+        isLoading={updateStatusMutation.isPending}
+      />
+
+      {/* Send Status Notification Modal */}
+      <SendStatusNotificationModal
+        isOpen={Boolean(orderForNotification)}
+        workOrder={orderForNotification}
+        onClose={() => setOrderForNotification(null)}
+      />
 
       {/* Cancelled Work Orders Modal */}
       <CancelledWorkOrdersModal
