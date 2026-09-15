@@ -47,9 +47,76 @@ export default function DashboardPage() {
   const { data: summary } = useDashboardSummary()
   const { data: apiWorkOrders } = useWorkOrders()
 
-  const userName = user ? `${user.name} ${user.surname || ""}`.trim() : "Yetkili"
+  const [currentHour, setCurrentHour] = React.useState<number>(() => new Date().getHours())
+  const [formattedDate, setFormattedDate] = React.useState<string>("")
+
+  React.useEffect(() => {
+    const now = new Date()
+    setCurrentHour(now.getHours())
+    setFormattedDate(
+      new Intl.DateTimeFormat("tr-TR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        weekday: "long",
+      }).format(now)
+    )
+  }, [])
+
   const userRole = (user?.role || "").toUpperCase()
-  const isTechnician = userRole === "TECHNICIAN"
+  const isTechnician = userRole === "TECHNICIAN" || userRole === "TECHNICIAN"
+  const isOwner = userRole === "OWNER" || userRole === "TENANT_ADMIN"
+  const isServiceManager = userRole === "SERVICE_MANAGER" || userRole === "SERVICE_ADVISOR"
+  const isCashier = userRole === "CASHIER"
+  const isWarehouse = userRole === "WAREHOUSE_KEEPER"
+
+  const roleBadgeLabel = React.useMemo(() => {
+    if (isTechnician) return "Atölye Teknisyeni"
+    if (isOwner) return "İşletme Sahibi"
+    if (isServiceManager) return "Servis Müdürü"
+    if (isCashier) return "Ön Büro & Vezne"
+    if (isWarehouse) return "Depo & Envanter"
+    return "Servis Yetkilisi"
+  }, [isTechnician, isOwner, isServiceManager, isCashier, isWarehouse])
+
+  const roleBadgeColor = React.useMemo(() => {
+    if (isTechnician) return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25"
+    if (isOwner) return "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25"
+    if (isServiceManager) return "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25"
+    if (isCashier) return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
+    if (isWarehouse) return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25"
+    return "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/25"
+  }, [isTechnician, isOwner, isServiceManager, isCashier, isWarehouse])
+
+  const greetingInfo = React.useMemo(() => {
+    if (currentHour >= 5 && currentHour < 12) {
+      return { text: "Günaydın", icon: "☀️" }
+    }
+    if (currentHour >= 12 && currentHour < 18) {
+      return { text: "İyi günler", icon: "🌤️" }
+    }
+    if (currentHour >= 18 && currentHour < 22) {
+      return { text: "İyi akşamlar", icon: "🌅" }
+    }
+    return { text: "İyi çalışmalar", icon: "🌙" }
+  }, [currentHour])
+
+  // Technician personal assigned active orders
+  const myAssignedOrdersCount = React.useMemo(() => {
+    if (!isTechnician || !apiWorkOrders || !user) return 0
+    const nameLower = (user.name || "").toLowerCase()
+    return apiWorkOrders.filter((w: WorkOrder) => {
+      const isActive = w.status === "IN_PROGRESS" || w.status === "PENDING"
+      if (!isActive) return false
+      const mechUserId = (w as { assignedMechanic?: { user?: { id?: string }; userId?: string } }).assignedMechanic?.userId ||
+        (w as { assignedMechanic?: { user?: { id?: string } } }).assignedMechanic?.user?.id
+      if (mechUserId && mechUserId === user.id) return true
+      const mechName = (w.assignedMechanicName || "").toLowerCase()
+      return mechName.length > 0 && mechName.includes(nameLower)
+    }).length
+  }, [isTechnician, apiWorkOrders, user])
+
+  const displayName = user ? user.name : "Yetkili"
 
   // Map real database work orders
   const recentOrders: DashboardRecentOrder[] = React.useMemo(() => {
@@ -94,36 +161,83 @@ export default function DashboardPage() {
       {/* Premium Hero Banner */}
       <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/50 backdrop-blur-md p-6 sm:p-8 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-                Hoş Geldiniz, {userName}
+          <div className="space-y-2">
+            {/* Live Operational Pulse & Date Bar */}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Servis Operasyonu Aktif
+              </span>
+              {formattedDate && (
+                <>
+                  <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+                  <span className="text-slate-600 dark:text-slate-400 text-xs flex items-center gap-1">
+                    <Calendar size={13} className="text-slate-400" />
+                    {formattedDate}
+                  </span>
+                </>
+              )}
+            </div>
+
+            {/* Greeting Title with Role Accent */}
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>{greetingInfo.text}, {displayName}</span>
+                {isTechnician && (
+                  <span className="text-amber-600 dark:text-amber-400 font-black">
+                    Usta
+                  </span>
+                )}
+                <span className="text-xl sm:text-2xl select-none" role="img" aria-label="günün zamanı">
+                  {greetingInfo.icon}
+                </span>
               </h1>
-              <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
-                isTechnician
-                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25"
-                  : "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25"
-              }`}>
-                {isTechnician ? "Atölye Teknisyeni" : "Servis Yöneticisi"}
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${roleBadgeColor}`}>
+                {roleBadgeLabel}
               </span>
             </div>
-            <p className="text-slate-600 dark:text-slate-400 text-sm max-w-xl">
+
+            {/* Dynamic Briefing Subtext */}
+            <p className="text-slate-600 dark:text-slate-400 text-sm max-w-2xl leading-relaxed">
               {(() => {
-                const parts: string[] = [];
-                if (inProgressCount > 0 && queueCount > 0) {
-                  parts.push(`Atölyede şu an liftte ${inProgressCount} araç işlem görüyor, ${queueCount} araç sırada bekliyor.`);
-                } else if (inProgressCount > 0) {
-                  parts.push(`Atölyede şu an liftte ${inProgressCount} araç işlem görüyor.`);
-                } else if (queueCount > 0) {
-                  parts.push(`Atölyede şu an sırada bekleyen ${queueCount} araç bulunuyor.`);
-                } else {
-                  parts.push(`Atölyede şu an bekleyen veya işlem gören araç bulunmuyor.`);
+                if (isTechnician) {
+                  if (myAssignedOrdersCount > 0) {
+                    return `Bugün senin üzerinde ${myAssignedOrdersCount} aktif iş emri bulunuyor, lift seni bekliyor. Atölyede toplam ${inProgressCount} araç işlemde, ${queueCount} araç sırada bekliyor.`;
+                  }
+                  return `Şu an üzerine doğrudan atanmış aktif iş emri bulunmuyor. Atölyede ${inProgressCount} araç işlemde, sıradaki ${queueCount} aracı inceleyebilirsin.`;
                 }
 
-                if (!isTechnician && criticalStock > 0) {
-                  parts.push(`${criticalStock} adet kritik stok uyarısı ve ${todayAppCount} kayıtlı randevu bulunuyor.`);
+                const parts: string[] = [];
+                if (currentHour >= 5 && currentHour < 12) {
+                  parts.push(`Bugün ${todayAppCount} randevu planlandı.`);
+                  if (inProgressCount > 0 || queueCount > 0) {
+                    parts.push(`Atölyede ${inProgressCount} araç işlemde, ${queueCount} araç sırada. Verimli bir gün dileriz!`);
+                  } else {
+                    parts.push("Atölye yeni güne hazır. Verimli bir çalışma günü dileriz!");
+                  }
+                } else if (currentHour >= 12 && currentHour < 18) {
+                  if (inProgressCount > 0 && queueCount > 0) {
+                    parts.push(`Atölyede yoğun mesai: ${inProgressCount} araç liftte işlem görüyor, ${queueCount} araç sırada bekliyor.`);
+                  } else if (inProgressCount > 0) {
+                    parts.push(`Atölyede şu an ${inProgressCount} araç işlem görüyor.`);
+                  } else {
+                    parts.push(`Atölyede bekleyen araç bulunmuyor.`);
+                  }
+                  if (criticalStock > 0) {
+                    parts.push(`${criticalStock} adet parça kritik stok seviyesinde.`);
+                  } else {
+                    parts.push(`${todayAppCount} kayıtlı randevu takip ediliyor.`);
+                  }
                 } else {
-                  parts.push(`${todayAppCount} kayıtlı randevu planlandı.`);
+                  if (inProgressCount > 0) {
+                    parts.push(`Günün son işlemleri: Atölyede ${inProgressCount} araç işlem görmeye devam ediyor.`);
+                  } else {
+                    parts.push(`Günün atölye işlemleri büyük ölçüde tamamlandı.`);
+                  }
+                  parts.push(`Gün sonu teslimatlarını, kasayı ve açık faturaları inceleyebilirsiniz.`);
                 }
                 return parts.join(" ");
               })()}
