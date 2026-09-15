@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   LogOut,
   BarChart3,
+  UserCheck,
 } from "lucide-react"
 import { BrandLogo } from "@/components/shared/brand-logo"
 import { useAuth } from "@/features/auth/auth-context"
@@ -200,6 +201,12 @@ export function AppSidebar({
         title: "İşlem Geçmişi & Denetim",
         href: "/audit-logs",
         icon: ShieldCheck,
+        roles: ["OWNER", "SERVICE_MANAGER", "tenant_admin"],
+      },
+      {
+        title: "Personel Yönetimi",
+        href: "/staff",
+        icon: UserCheck,
         roles: ["OWNER", "SERVICE_MANAGER", "tenant_admin"],
       },
       {

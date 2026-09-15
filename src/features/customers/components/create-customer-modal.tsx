@@ -69,6 +69,14 @@ const fullCustomerFormSchema = z.object({
         path: ["surname"],
       });
     }
+    const cleanTax = (data.taxNumber || "").replace(/\D/g, "");
+    if (!cleanTax || cleanTax.length !== 11) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Bireysel müşteriler için 11 haneli T.C. Kimlik Numarası zorunludur (veya 11111111111).",
+        path: ["taxNumber"],
+      });
+    }
   } else {
     if (!data.companyTitle || data.companyTitle.trim().length === 0) {
       ctx.addIssue({
@@ -77,11 +85,19 @@ const fullCustomerFormSchema = z.object({
         path: ["companyTitle"],
       });
     }
-    if (!data.taxNumber || data.taxNumber.trim().length < 10) {
+    const cleanTax = (data.taxNumber || "").replace(/\D/g, "");
+    if (!cleanTax || cleanTax.length !== 10) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: "Kurumsal müşteriler için en az 10 haneli Vergi Numarası zorunludur.",
+        message: "Kurumsal müşteriler için 10 haneli Vergi Kimlik Numarası (VKN) zorunludur.",
         path: ["taxNumber"],
+      });
+    }
+    if (!data.taxOffice || data.taxOffice.trim().length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Vergi dairesi zorunludur.",
+        path: ["taxOffice"],
       });
     }
   }
@@ -297,7 +313,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
       surname: data.surname ? data.surname.trim() : "",
       companyTitle: data.customerType === "corporate" ? data.companyTitle?.trim() : undefined,
       taxOffice: data.customerType === "corporate" ? data.taxOffice?.trim() : undefined,
-      taxNumber: data.customerType === "corporate" ? data.taxNumber?.trim() : undefined,
+      taxNumber: data.taxNumber?.trim() || (data.customerType === "corporate" ? "1111111111" : "11111111111"),
       phone: data.phone,
       email: data.email ? data.email.trim() : undefined,
       city: data.city,
@@ -402,7 +418,7 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="space-y-1">
                       <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                        Vergi Dairesi
+                        Vergi Dairesi <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -414,18 +430,27 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
-                        Vergi No <span className="text-rose-500">*</span>
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                          Vergi No (VKN) <span className="text-rose-500">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setValue("taxNumber", "1111111111", { shouldValidate: true })}
+                          className="text-[10px] font-medium text-sky-600 dark:text-sky-400 hover:underline"
+                        >
+                          1111111111 Doldur
+                        </button>
+                      </div>
                       <input
                         type="text"
-                        placeholder="10 veya 11 haneli"
-                        maxLength={11}
+                        placeholder="10 haneli VKN"
+                        maxLength={10}
                         {...register("taxNumber", {
                           onChange: (e) =>
                             setValue(
                               "taxNumber",
-                              formatTaxNumber(e.target.value, customerType === "corporate" ? "vkn" : "tckn")
+                              formatTaxNumber(e.target.value, "vkn")
                             ),
                         })}
                         className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
@@ -463,6 +488,37 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
                   {errors.surname && <p className="text-[10px] text-rose-500">{errors.surname.message}</p>}
                 </div>
               </div>
+
+              {customerType === "individual" && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
+                      T.C. Kimlik Numarası (TCKN) <span className="text-rose-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setValue("taxNumber", "11111111111", { shouldValidate: true })}
+                      className="text-[10px] font-medium text-sky-600 dark:text-sky-400 hover:underline"
+                    >
+                      11111111111 Doldur
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="11 haneli TCKN"
+                    maxLength={11}
+                    {...register("taxNumber", {
+                      onChange: (e) =>
+                        setValue(
+                          "taxNumber",
+                          formatTaxNumber(e.target.value, "tckn")
+                        ),
+                    })}
+                    className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  {errors.taxNumber && <p className="text-[10px] text-rose-500">{errors.taxNumber.message}</p>}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="space-y-1">

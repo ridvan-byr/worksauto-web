@@ -41,8 +41,10 @@ import {
   ExternalLink,
   Ban,
   Printer,
+  Send,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { SendStatusNotificationModal } from "@/features/work-orders/components/send-status-notification-modal"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { useAuth } from "@/features/auth/auth-context"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
@@ -113,6 +115,7 @@ export default function WorkOrderDetailPage() {
   const [isCancellingInvoice, setIsCancellingInvoice] = React.useState(false)
   const [isReopenModalOpen, setIsReopenModalOpen] = React.useState(false)
   const [isInvoiceDetailOpen, setIsInvoiceDetailOpen] = React.useState(false)
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = React.useState(false)
   const addItemMutation = useAddWorkOrderItem()
   const updateStatusMutation = useUpdateWorkOrderStatus()
   const removeItemMutation = useRemoveWorkOrderItem()
@@ -647,6 +650,17 @@ export default function WorkOrderDetailPage() {
           >
             <Printer size={13} />
             <span>Servis Formu / PDF</span>
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setIsNotificationModalOpen(true)}
+            className="h-8 px-2.5 text-xs font-semibold gap-1.5 cursor-pointer rounded-xl border-sky-300 dark:border-sky-800 text-sky-700 dark:text-sky-300 hover:bg-sky-50 dark:hover:bg-sky-950/40"
+            title="Müşteriye güncel durum bildirimini (SMS/WhatsApp/E-posta) manuel gönder"
+          >
+            <Send size={13} />
+            <span>Müşteriye Bildir</span>
           </Button>
         </div>
       </div>
@@ -1605,6 +1619,13 @@ export default function WorkOrderDetailPage() {
         isOpen={isInvoiceDetailOpen}
         invoice={mappedInvoiceForModal}
         onClose={() => setIsInvoiceDetailOpen(false)}
+      />
+
+      {/* Manual Customer Status Notification Modal */}
+      <SendStatusNotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        workOrder={apiOrder || null}
       />
     </div>
   )

@@ -65,7 +65,6 @@ ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
 EXPOSE 3000
-
 CMD ["npm", "run", "dev", "--", "--hostname", "0.0.0.0", "--port", "3000"]
 
 # Default docker build must produce the production image.
