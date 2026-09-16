@@ -88,7 +88,7 @@ export function NotificationSettingsTab() {
   // QR Modal State
   const [qrLoading, setQrLoading] = React.useState<boolean>(false)
   const [qrImageSrc, setQrImageSrc] = React.useState<string | null>(null)
-  const [qrSecondsLeft, setQrSecondsLeft] = React.useState<number>(90)
+  const [qrSecondsLeft, setQrSecondsLeft] = React.useState<number>(30)
   const [qrError, setQrError] = React.useState<string | null>(null)
   const [isPairedSuccess, setIsPairedSuccess] = React.useState<boolean>(false)
 
@@ -129,7 +129,7 @@ export function NotificationSettingsTab() {
       }>("/notifications/whatsapp/qr")
       if (res.success && (res.qrBase64 || res.qrLink)) {
         setQrImageSrc(res.qrBase64 || res.qrLink || null)
-        setQrSecondsLeft(Math.max(res.qrDuration || 90, 90))
+        setQrSecondsLeft(res.qrDuration || 30)
       } else {
         setQrError(res.error || "QR kod üretilemedi.")
       }
@@ -216,7 +216,7 @@ export function NotificationSettingsTab() {
       setQrSecondsLeft((prev) => {
         if (prev <= 1) {
           fetchQrCode()
-          return 90
+          return 30
         }
         return prev - 1
       })
