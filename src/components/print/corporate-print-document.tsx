@@ -76,28 +76,35 @@ export function CorporatePrintDocument({
     >
       {/* 1. SABİT KURUMSAL FİRMA BAŞLIĞI (HEADER) */}
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b-2 border-slate-900/80 print:pb-4">
-        {/* Sol: Firma Logosu & Resmi Bilgiler */}
-        <div className="space-y-1.5 max-w-md text-left">
-          <div className="flex items-center gap-2.5">
+        {/* Sol: SADECE Firma Logosu & Resmi Bilgiler (Asıl Marka Sahibi) */}
+        <div className="space-y-2 max-w-md text-left">
+          <div className="flex items-center gap-3">
             {tenant?.logoUrl ? (
               <img
                 src={tenant.logoUrl}
                 alt={companyName}
-                className="h-9 max-w-[160px] object-contain"
+                style={{
+                  maxHeight: `${tenant.logoHeight || 48}px`,
+                  maxWidth: `${tenant.logoWidth || 180}px`,
+                }}
+                className="object-contain"
               />
             ) : (
-              <Image
-                src="/brand/worksauto-logo-dark.png"
-                alt={companyName}
-                width={160}
-                height={34}
-                priority
-                className="h-8 w-auto object-contain"
-              />
+              /* Logo yüklenmemişse tasarımı otomatik ayarlayan şık kurumsal monogram mühür */
+              <div className="flex items-center gap-2.5">
+                <div className="w-10 h-10 rounded-xl bg-slate-900 text-white font-black flex items-center justify-center text-sm shadow-xs print:border print:border-slate-800 shrink-0">
+                  {companyName.slice(0, 2).toUpperCase()}
+                </div>
+                <div>
+                  <p className="text-base font-black text-slate-900 leading-tight tracking-tight">
+                    {companyName}
+                  </p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                    Yetkili Servis Merkezi
+                  </p>
+                </div>
+              </div>
             )}
-            <span className="text-[11px] font-black text-slate-500 tracking-wider uppercase border-l-2 border-slate-300 pl-2.5 my-auto">
-              {companyName}
-            </span>
           </div>
 
           <div className="text-[11px] text-slate-600 leading-relaxed font-medium">
@@ -107,8 +114,20 @@ export function CorporatePrintDocument({
           </div>
         </div>
 
-        {/* Sağ: Belge Başlığı & Referans Bilgileri */}
-        <div className="text-left sm:text-right space-y-1 self-stretch sm:self-auto flex flex-col justify-between sm:justify-start">
+        {/* Sağ: Belge Başlığı, Referans Bilgileri & Şık WorksAuto Altyapı İmzası */}
+        <div className="text-left sm:text-right space-y-1.5 self-stretch sm:self-auto flex flex-col justify-between sm:justify-start">
+          <div className="flex items-center justify-start sm:justify-end gap-1.5 opacity-80 print:opacity-100">
+            <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Altyapı</span>
+            <Image
+              src="/brand/worksauto-logo-dark.png"
+              alt="WorksAuto"
+              width={100}
+              height={20}
+              priority
+              className="h-3.5 w-auto object-contain shrink-0"
+            />
+          </div>
+
           <p className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase font-mono">
             {title}
           </p>
@@ -177,10 +196,20 @@ export function CorporatePrintDocument({
           </div>
         )}
 
-        {/* Kurumsal Alt Dipnot */}
-        <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-500 font-mono gap-2 text-center sm:text-left">
-          <span className="leading-relaxed">{noticeText}</span>
-          <span className="shrink-0 text-slate-500 font-semibold">
+        {/* Kurumsal Alt Dipnot & WorksAuto Güvenlik Mührü */}
+        <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-500 font-mono gap-3 text-center sm:text-left">
+          <div className="flex items-center gap-2">
+            <Image
+              src="/brand/worksauto-logo-dark.png"
+              alt="WorksAuto"
+              width={90}
+              height={18}
+              className="h-3.5 w-auto object-contain shrink-0"
+            />
+            <span className="text-slate-300">|</span>
+            <span className="leading-relaxed">{noticeText}</span>
+          </div>
+          <span className="shrink-0 text-slate-600 font-semibold">
             Belge Takip No: {documentNumber || `REF-${formattedDate.replace(/-/g, "")}`} • Sayfa 1/1
           </span>
         </div>

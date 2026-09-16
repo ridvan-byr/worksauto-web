@@ -1088,7 +1088,7 @@ export function StaffShiftTab({
       {isPrintModalOpen && typeof document !== "undefined" && createPortal(
         <div
           id="print-schedule-root"
-          className="fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto print:fixed print:inset-0 print:p-0 print:bg-white print:backdrop-blur-none print:z-[9999]"
+          className="corporate-print-root fixed inset-0 z-[130] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto print:fixed print:inset-0 print:p-0 print:bg-white print:backdrop-blur-none print:z-[9999]"
           onClick={() => setIsPrintModalOpen(false)}
         >
           <div

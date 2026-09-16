@@ -229,7 +229,7 @@ body {
   }
 
   /* Hide the entire AppShell and everything except portaled print roots */
-  body > *:not(#invoice-modal-root):not(#cari-modal-root):not(#reports-print-root):not(.corporate-print-root),
+  body > *:not(#invoice-modal-root):not(#cari-modal-root):not(#reports-print-root):not(#print-schedule-root):not(.corporate-print-root),
   body.printing-reports > *:not(#reports-print-root) {
     display: none !important;
   }
@@ -237,6 +237,7 @@ body {
   #invoice-modal-root,
   #cari-modal-root,
   #reports-print-root,
+  #print-schedule-root,
   .corporate-print-root {
     position: static !important;
     background: #ffffff !important;
