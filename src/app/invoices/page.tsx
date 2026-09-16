@@ -221,7 +221,7 @@ export default function InvoicesPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-16">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-tour="invs-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -238,7 +238,7 @@ export default function InvoicesPage() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="invs-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Açık / Bekleyen Alacak</p>
@@ -289,7 +289,7 @@ export default function InvoicesPage() {
       </div>
 
       {/* Daily Cashier Breakdown Ribbon */}
-      <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex flex-wrap items-center justify-between gap-4 text-xs">
+      <div data-tour="invs-ribbon" className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex flex-wrap items-center justify-between gap-4 text-xs">
         <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
           <Receipt size={14} className="text-sky-500" />
           <span>Kasa Tahsilat Dağılımı:</span>
@@ -352,7 +352,7 @@ export default function InvoicesPage() {
       </div>
 
       {/* Invoice Table */}
-      <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden">
+      <div data-tour="invs-table" className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse text-xs">
             <thead>

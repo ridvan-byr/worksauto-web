@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
-  Key,
   ShieldCheck,
   Hash,
   RefreshCw,
@@ -18,11 +17,11 @@ import {
   HelpCircle,
   FlaskConical,
   Zap,
+  Undo2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "@/components/ui/sonner"
 import { apiClient } from "@/lib/api-client"
-import { UnsavedChangesBar } from "./unsaved-changes-bar"
 
 export type InvoiceProvider =
   | "INTERNAL"
@@ -47,104 +46,91 @@ interface InvoiceSettingsResponse {
 }
 
 /* =========================================================================
-   Özgün Vektörel Sağlayıcı Logoları (SVG Brand Icons)
+   Resmi Entegratör Logoları (WebP / PNG Yüksek Çözünürlüklü Marka Varlıkları)
 ========================================================================= */
 
-function ParasutLogo({ className = "w-8 h-8" }: { className?: string }) {
+function ParasutLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect width="48" height="48" rx="14" fill="#00A3B5" />
-      {/* Paraşüt İkonik Origami Figürü */}
-      <path
-        d="M24 10C17.3726 10 12 15.3726 12 22C12 24.5 13.5 25.5 16 25.5C18.5 25.5 20 24 21 22C22 20 23 20 24 20C25 20 26 20 27 22C28 24 29.5 25.5 32 25.5C34.5 25.5 36 24.5 36 22C36 15.3726 30.6274 10 24 10Z"
-        fill="white"
+    <div
+      className={`relative flex items-center justify-center rounded-2xl bg-white p-1.5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0 overflow-hidden ${className}`}
+    >
+      <img
+        src="/integrators/parasut.webp"
+        alt="Paraşüt Logo"
+        className="w-full h-full object-contain"
+        onError={(e) => {
+          e.currentTarget.src = "/integrators/parasut.png"
+        }}
       />
-      <path d="M16 25.5L23 37" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-      <path d="M32 25.5L25 37" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-      <circle cx="24" cy="37.5" r="2.5" fill="#FFE600" />
-    </svg>
+    </div>
   )
 }
 
-function NilveraLogo({ className = "w-8 h-8" }: { className?: string }) {
+function NilveraLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="nilveraGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#E50914" />
-          <stop offset="1" stopColor="#8A001A" />
-        </linearGradient>
-      </defs>
-      <rect width="48" height="48" rx="14" fill="url(#nilveraGrad)" />
-      {/* Nilvera İkonik N Harfi */}
-      <path
-        d="M15 14H20.5L30 30V14H34V34H28.5L19 18V34H15V14Z"
-        fill="white"
+    <div
+      className={`relative flex items-center justify-center rounded-2xl bg-white p-1.5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0 overflow-hidden ${className}`}
+    >
+      <img
+        src="/integrators/nilvera.webp"
+        alt="Nilvera Logo"
+        className="w-full h-full object-contain"
+        onError={(e) => {
+          e.currentTarget.src = "/integrators/nilvera.png"
+        }}
       />
-      <circle cx="34" cy="14" r="2" fill="#FFD700" />
-    </svg>
+    </div>
   )
 }
 
-function BizimHesapLogo({ className = "w-8 h-8" }: { className?: string }) {
+function BizimHesapLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bizimGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#1877F2" />
-          <stop offset="1" stopColor="#0B4FB8" />
-        </linearGradient>
-      </defs>
-      <rect width="48" height="48" rx="14" fill="url(#bizimGrad)" />
-      {/* B Harfi ve Bulut Muhasebe Çizgisi */}
-      <path
-        d="M16 13H26C29.3137 13 32 15.6863 32 19C32 21.4 30.5 23.4 28.5 24.3C31 25.2 33 27.5 33 30.5C33 34.0899 30.0899 37 26.5 37H16V13ZM21 17.5V23H25.5C26.8807 23 28 21.8807 28 20.5C28 19.1193 26.8807 17.5 25.5 17.5H21ZM21 27.5V32.5H26.5C27.8807 32.5 29 31.3807 29 30C29 28.6193 27.8807 27.5 26.5 27.5H21Z"
-        fill="white"
+    <div
+      className={`relative flex items-center justify-center rounded-2xl bg-[#20554f] shadow-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0 overflow-hidden ${className}`}
+    >
+      <img
+        src="/integrators/bizimhesap.webp"
+        alt="BizimHesap Logo"
+        className="w-full h-full object-cover"
+        onError={(e) => {
+          e.currentTarget.src = "/integrators/bizimhesap.png"
+        }}
       />
-      <circle cx="33" cy="15" r="3" fill="#FF7A00" />
-    </svg>
+    </div>
   )
 }
 
-function KolayBiLogo({ className = "w-8 h-8" }: { className?: string }) {
+function KolayBiLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="kolaybiGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#6C5CE7" />
-          <stop offset="1" stopColor="#4834D4" />
-        </linearGradient>
-      </defs>
-      <rect width="48" height="48" rx="14" fill="url(#kolaybiGrad)" />
-      {/* KolayBi K Monogramı */}
-      <path
-        d="M17 14V34M17 24L31 14M22 20.5L32 34"
-        stroke="white"
-        strokeWidth="4.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+    <div
+      className={`relative flex items-center justify-center rounded-2xl bg-white p-1 shadow-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0 overflow-hidden ${className}`}
+    >
+      <img
+        src="/integrators/kolaybi.webp"
+        alt="KolayBi' Logo"
+        className="w-full h-full object-contain"
+        onError={(e) => {
+          e.currentTarget.src = "/integrators/kolaybi.png"
+        }}
       />
-      <circle cx="31" cy="14" r="2.5" fill="#00CEC9" />
-    </svg>
+    </div>
   )
 }
 
-function QnbFinansLogo({ className = "w-8 h-8" }: { className?: string }) {
+function QnbFinansLogo({ className = "w-10 h-10" }: { className?: string }) {
   return (
-    <svg className={className} viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="qnbGrad" x1="0" y1="0" x2="48" y2="48" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#8A0035" />
-          <stop offset="1" stopColor="#5E0024" />
-        </linearGradient>
-      </defs>
-      <rect width="48" height="48" rx="14" fill="url(#qnbGrad)" />
-      <path
-        d="M24 13C17.9249 13 13 17.9249 13 24C13 30.0751 17.9249 35 24 35C26.5 35 28.8 34.1 30.6 32.7L33.5 35.5L35.5 33.5L32.7 30.6C34.1 28.8 35 26.5 35 24C35 17.9249 30.0751 13 24 13ZM24 17C27.866 17 31 20.134 31 24C31 27.866 27.866 31 24 31C20.134 31 17 27.866 17 24C17 20.134 20.134 17 24 17Z"
-        fill="white"
+    <div
+      className={`relative flex items-center justify-center rounded-2xl bg-white p-1.5 shadow-sm border border-slate-200/80 dark:border-slate-700/80 shrink-0 overflow-hidden ${className}`}
+    >
+      <img
+        src="/integrators/qnb-efinans.webp"
+        alt="QNB e-Finans Logo"
+        className="w-full h-full object-contain"
+        onError={(e) => {
+          e.currentTarget.src = "/integrators/qnb-efinans.png"
+        }}
       />
-      <path d="M28 21L33 16" stroke="#E5B869" strokeWidth="2.5" strokeLinecap="round" />
-    </svg>
+    </div>
   )
 }
 
@@ -314,8 +300,17 @@ export function EInvoiceSettingsTab() {
     }
   }
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSave = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault()
+
+    if (provider !== "INTERNAL") {
+      const hasKey = Boolean(apiKey.trim() || maskedApiKey)
+      if (!hasKey) {
+        toast.warning(`${provider} entegrasyonu için lütfen API Anahtarını giriniz veya bağlantıyı test ediniz.`)
+        return
+      }
+    }
+
     setIsSaving(true)
     try {
       const updated = await apiClient.put<InvoiceSettingsResponse>("/settings/invoice", {
@@ -355,47 +350,6 @@ export function EInvoiceSettingsTab() {
       setIsSaving(false)
     }
   }
-
-  // Detect unsaved changes
-  const hasUnsavedChanges = React.useMemo(() => {
-    if (!initialSettings) return false
-    return (
-      provider !== initialSettings.provider ||
-      username !== initialSettings.username ||
-      companyTaxId !== initialSettings.companyTaxId ||
-      taxOffice !== initialSettings.taxOffice ||
-      seriesPrefix !== initialSettings.seriesPrefix ||
-      isTestMode !== initialSettings.isTestMode ||
-      autoSendOnCompletion !== initialSettings.autoSendOnCompletion ||
-      apiKey.trim() !== "" ||
-      apiSecret.trim() !== "" ||
-      password.trim() !== ""
-    )
-  }, [
-    initialSettings,
-    provider,
-    username,
-    companyTaxId,
-    taxOffice,
-    seriesPrefix,
-    isTestMode,
-    autoSendOnCompletion,
-    apiKey,
-    apiSecret,
-    password,
-  ])
-
-  // Browser reload/navigation warning
-  React.useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault()
-        e.returnValue = ""
-      }
-    }
-    window.addEventListener("beforeunload", handleBeforeUnload)
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-  }, [hasUnsavedChanges])
 
   // Reset all fields back to initial saved state
   const handleReset = () => {
@@ -677,9 +631,11 @@ export function EInvoiceSettingsTab() {
         <div className="p-6 sm:p-7 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 dark:border-slate-800 gap-2">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
-                <Key size={18} />
-              </div>
+              {provider === "PARASUT" && <ParasutLogo className="w-10 h-10 rounded-xl" />}
+              {provider === "NILVERA" && <NilveraLogo className="w-10 h-10 rounded-xl" />}
+              {provider === "BIZIMHESAP" && <BizimHesapLogo className="w-10 h-10 rounded-xl" />}
+              {provider === "KOLAYBI" && <KolayBiLogo className="w-10 h-10 rounded-xl" />}
+              {provider === "QNB_EFINANS" && <QnbFinansLogo className="w-10 h-10 rounded-xl" />}
               <div>
                 <h4 className="text-sm font-bold text-slate-900 dark:text-slate-100">
                   {provider === "PARASUT" && "Paraşüt API Kimlik Bilgileri"}
@@ -806,7 +762,7 @@ export function EInvoiceSettingsTab() {
 
           {/* Test Connection Action Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center gap-3">
               <Button
                 type="button"
                 variant="outline"
@@ -824,6 +780,25 @@ export function EInvoiceSettingsTab() {
                   <>
                     <RefreshCw size={15} />
                     <span>Bağlantıyı & Kontörü Test Et</span>
+                  </>
+                )}
+              </Button>
+
+              <Button
+                type="button"
+                onClick={() => handleSave()}
+                disabled={isSaving}
+                className="cursor-pointer gap-2 h-10 px-5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm"
+              >
+                {isSaving ? (
+                  <>
+                    <Loader2 className="animate-spin" size={15} />
+                    <span>Kaydediliyor...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={15} />
+                    <span>{provider} Entegrasyonunu Kaydet</span>
                   </>
                 )}
               </Button>
@@ -1066,34 +1041,39 @@ export function EInvoiceSettingsTab() {
         </div>
       </div>
 
-      {/* Save Button */}
-      <div className="flex items-center justify-end gap-3 pt-2">
-        <Button
-          type="submit"
-          disabled={isSaving}
-          className="h-11 px-6 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white cursor-pointer shadow-md shadow-sky-600/20 gap-2"
-        >
-          {isSaving ? (
-            <>
-              <Loader2 className="animate-spin" size={16} />
-              <span>Ayarlar Kaydediliyor...</span>
-            </>
-          ) : (
-            <>
-              <Check size={16} />
-              <span>Entegrasyon Ayarlarını Kaydet</span>
-            </>
-          )}
-        </Button>
+      {/* Bottom Global Save Bar */}
+      <div className="p-5 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <span>Aktif Sağlayıcı:</span>
+            <span className="text-sky-600 dark:text-sky-400 font-mono font-bold">{provider}</span>
+          </h4>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+            Fatura serisi, şirket vergi bilgileri ve otomatik gönderim ayarlarını kaydetmek için butona tıklayınız.
+          </p>
+        </div>
+        <div className="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleReset}
+            disabled={isSaving}
+            className="h-10 px-4 text-xs font-semibold rounded-xl cursor-pointer w-full sm:w-auto justify-center"
+          >
+            <Undo2 size={14} className="mr-1" />
+            <span>Sıfırla</span>
+          </Button>
+          <Button
+            type="button"
+            onClick={() => handleSave()}
+            disabled={isSaving}
+            className="h-10 px-5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl shadow-sm gap-1.5 cursor-pointer w-full sm:w-auto justify-center"
+          >
+            {isSaving ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+            <span>Fatura & Entegrasyon Ayarlarını Kaydet</span>
+          </Button>
+        </div>
       </div>
-
-      {/* Shopify tarzı yüzen kayıt barı — her zaman ekranın altında, içerikte ortalı */}
-      <UnsavedChangesBar
-        visible={hasUnsavedChanges}
-        onDiscard={handleReset}
-        isSaving={isSaving}
-        saveButtonType="submit"
-      />
     </form>
   )
 }

@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useRouter } from "next/navigation"
-import { Search, ArrowUpRight, Wrench, Send } from "lucide-react"
+import { Search, ArrowUpRight, Wrench, Send, CheckCircle2 } from "lucide-react"
 import { WorkOrder } from "../types"
 import { WorkOrderStatusBadge } from "./work-order-status-badge"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -140,6 +140,15 @@ export function WorkOrderListView({ orders, initialStatusFilter, onSendNotificat
 
                     <td className="py-4 px-4 sm:px-6 text-right">
                       <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {order.lastNotifiedAt && (
+                          <span
+                            className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/20"
+                            title={`Müşteriye son bildirim: ${new Date(order.lastNotifiedAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`}
+                          >
+                            <CheckCircle2 size={11} className="text-emerald-600 dark:text-emerald-400" />
+                            <span>Bildirildi ({new Date(order.lastNotifiedAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })})</span>
+                          </span>
+                        )}
                         {onSendNotification && (
                           <button
                             type="button"

@@ -83,10 +83,12 @@ export default function AppointmentsPage() {
           customerId: a.customerId,
           customerName: a.customer ? `${a.customer.firstName || a.customer.name || ""}`.trim() + " " + `${a.customer.lastName || a.customer.surname || ""}`.trim() : 'Müşteri',
           customerPhone: a.customer?.phone || '',
+          customerEmail: a.customer?.email || '',
           vehicleId: a.vehicleId,
           plate: a.vehicle?.plate || '34XX000',
           brand: a.vehicle?.brand || 'Araç',
           model: a.vehicle?.model || 'Model',
+          currentKm: Number(a.vehicle?.currentKm ?? a.vehicle?.kilometer ?? 0),
           services: a.service ? [{ id: a.service.id, name: a.service.name, durationMinutes: a.service.defaultDurationMin || 60, price: Number(a.service.basePrice ?? 0) }] : [],
           totalDurationMinutes: a.service?.defaultDurationMin || 60,
           totalEstimatedPrice: Number(a.service?.basePrice ?? 0),
@@ -244,7 +246,8 @@ export default function AppointmentsPage() {
     newDate: string,
     newTime: string,
     reason?: string,
-    notifyCustomer?: boolean
+    notifyCustomer?: boolean,
+    channels?: ("WHATSAPP" | "SMS" | "EMAIL")[]
   ) => {
     const targetApp = appointments.find((a) => a.id === id)
     const durationMin = targetApp?.totalDurationMinutes || 60
@@ -270,6 +273,7 @@ export default function AppointmentsPage() {
         assignedMechanicId: targetApp?.assignedStaffId,
         reason,
         notifyCustomer,
+        channels,
       })
     } catch (e) {
       console.error('API reschedule appointment error:', e)
@@ -316,7 +320,7 @@ export default function AppointmentsPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-16">
       {/* Header & Main Actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-tour="app-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -333,6 +337,7 @@ export default function AppointmentsPage() {
 
         <Button
           type="button"
+          data-tour="app-create"
           onClick={() => {
             setSelectedSlot(null)
             setIsCreateModalOpen(true)
@@ -388,7 +393,7 @@ export default function AppointmentsPage() {
       </div>
 
       {/* Controls Bar: Date Navigator + View Mode + Staff Filter */}
-      <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+      <div data-tour="app-nav" className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
         {/* Date Navigator */}
         <div className="flex items-center gap-2">
           <button
@@ -488,16 +493,18 @@ export default function AppointmentsPage() {
 
       {/* Main View: Calendar Grid OR List View */}
       {viewMode === "calendar" ? (
-        <CalendarGrid
-          currentWeekStart={currentWeekStart}
-          appointments={displayedAppointments}
-          onSelectAppointment={(app) => setActiveAppointment(app)}
-          onSlotClick={(date, time) => {
-            setSelectedSlot({ date, time })
-            setIsCreateModalOpen(true)
-          }}
-          onReschedule={handleReschedule}
-        />
+        <div data-tour="app-grid">
+          <CalendarGrid
+            currentWeekStart={currentWeekStart}
+            appointments={displayedAppointments}
+            onSelectAppointment={(app) => setActiveAppointment(app)}
+            onSlotClick={(date, time) => {
+              setSelectedSlot({ date, time })
+              setIsCreateModalOpen(true)
+            }}
+            onReschedule={handleReschedule}
+          />
+        </div>
       ) : (
         <ListView
           appointments={displayedAppointments}

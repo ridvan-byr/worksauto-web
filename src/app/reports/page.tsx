@@ -30,6 +30,8 @@ import { ExcelPreviewModal } from "@/features/dashboard/components/excel-preview
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
+import { RevenueTrendAreaChart } from "@/features/dashboard/components/revenue-trend-area-chart"
+import { PaymentDonutChart } from "@/features/dashboard/components/payment-donut-chart"
 
 export default function ReportsPage() {
   const { tenant, user } = useAuth()
@@ -132,7 +134,7 @@ export default function ReportsPage() {
       {/* ========================================================================= */}
       <div className="no-print space-y-6">
         {/* Header Action Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div data-tour="rep-header" className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2.5">
@@ -214,7 +216,7 @@ export default function ReportsPage() {
       {/* ========================================================================= */}
       {/* 3. DATE FILTER BAR (Hidden during print) */}
       {/* ========================================================================= */}
-      <div className="no-print p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+      <div data-tour="rep-filters" className="no-print p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col lg:flex-row lg:items-center justify-between gap-3">
         <div className="flex items-center gap-1.5 flex-wrap">
           <span className="text-xs font-bold text-slate-500 dark:text-slate-400 mr-1 flex items-center gap-1">
             <Calendar size={13} />
@@ -275,7 +277,7 @@ export default function ReportsPage() {
       {/* ========================================================================= */}
       {/* 4. 5 EXECUTIVE KPI CARDS */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+      <div data-tour="rep-cards" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         {/* KPI 1: Toplam Ciro */}
         <Card className="rounded-3xl border-slate-200/80 dark:border-slate-800 shadow-sm bg-gradient-to-br from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-950">
           <CardContent className="p-4 space-y-2">
@@ -380,164 +382,27 @@ export default function ReportsPage() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 5. VISUAL ANALYTICS BREAKDOWNS (Ciro Kompozisyonu & Kasa Dağılımı) */}
+      {/* 5. VISUAL ANALYTICS BREAKDOWNS (Ciro Trendi & Kasa / Gelir Dağılımı) */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Ciro Kompozisyonu (İşçilik vs Parça) */}
-        <Card className="rounded-3xl border-slate-200/80 dark:border-slate-800 shadow-sm p-5 space-y-4 bg-white dark:bg-slate-900">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Wrench size={16} className="text-sky-500" />
-              <span>Ciro Kompozisyonu (İşçilik vs. Parça)</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Hasılatın yüzde kaçı saf işçilikten, yüzde kaçı yedek parçadan oluşuyor?
-            </p>
-          </div>
+        {/* Left: Interactive Revenue & Profit Trend Area Chart (2 cols) */}
+        <div className="lg:col-span-2">
+          <RevenueTrendAreaChart
+            data={report?.dailyTrend || []}
+            title="Dönemsel Ciro ve Net Kâr Trendi"
+            subtitle="İş emri tamamlanan günlerin hasılat ve kârlılık eğrisi"
+          />
+        </div>
 
-          {/* Dual Segment Progress Bar */}
-          {summary && summary.totalRevenue > 0 ? (
-            <div className="space-y-3">
-              <div className="h-4 w-full rounded-full overflow-hidden flex bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <div
-                  style={{
-                    width: `${Math.round(((summary.totalLabourRevenue || 0) / summary.totalRevenue) * 100)}%`,
-                  }}
-                  className="bg-indigo-600 h-full transition-all duration-500"
-                  title={`İşçilik: %${Math.round(((summary.totalLabourRevenue || 0) / summary.totalRevenue) * 100)}`}
-                />
-                <div
-                  style={{
-                    width: `${Math.round(((summary.totalPartsRevenue || 0) / summary.totalRevenue) * 100)}%`,
-                  }}
-                  className="bg-emerald-600 h-full transition-all duration-500"
-                  title={`Yedek Parça: %${Math.round(((summary.totalPartsRevenue || 0) / summary.totalRevenue) * 100)}`}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 pt-1 text-xs">
-                <div className="p-2.5 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-200/60 dark:border-indigo-900/40">
-                  <div className="flex items-center gap-1.5 font-bold text-indigo-700 dark:text-indigo-400">
-                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
-                    <span>İşçilik Payı</span>
-                  </div>
-                  <p className="text-base font-bold font-mono text-indigo-900 dark:text-indigo-200 mt-1">
-                    ₺ {fmt(summary.totalLabourRevenue)}
-                  </p>
-                  <p className="text-[10px] text-indigo-600/80 dark:text-indigo-400">
-                    %{Math.round(((summary.totalLabourRevenue || 0) / summary.totalRevenue) * 100)} Hasılat Payı
-                  </p>
-                </div>
-
-                <div className="p-2.5 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-900/40">
-                  <div className="flex items-center gap-1.5 font-bold text-emerald-700 dark:text-emerald-400">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-                    <span>Yedek Parça</span>
-                  </div>
-                  <p className="text-base font-bold font-mono text-emerald-900 dark:text-emerald-200 mt-1">
-                    ₺ {fmt(summary.totalPartsRevenue)}
-                  </p>
-                  <p className="text-[10px] text-emerald-600/80 dark:text-emerald-400">
-                    Maliyet: ₺{fmt(summary.totalPartsCost)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 italic py-6 text-center">Bu dönemde tamamlanan iş emri bulunmuyor.</p>
-          )}
-        </Card>
-
-        {/* Kasa & Tahsilat Türleri Dağılımı */}
-        <Card className="rounded-3xl border-slate-200/80 dark:border-slate-800 shadow-sm p-5 space-y-4 bg-white dark:bg-slate-900">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <CreditCard size={16} className="text-emerald-500" />
-              <span>Kasa ve Tahsilat Yöntemleri</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Kasaya fiilen giren ödemelerin kanallara göre dökümü.
-            </p>
-          </div>
-
-          <div className="space-y-2.5">
-            {report?.paymentBreakdown && report.paymentBreakdown.length > 0 ? (
-              report.paymentBreakdown.map((item) => (
-                <div
-                  key={item.method}
-                  className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between text-xs"
-                >
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={cn(
-                        "w-2 h-2 rounded-full",
-                        item.method === "CASH"
-                          ? "bg-emerald-500"
-                          : item.method === "POS"
-                          ? "bg-sky-500"
-                          : item.method === "BANK_TRANSFER"
-                          ? "bg-indigo-500"
-                          : "bg-amber-500"
-                      )}
-                    />
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">
-                      {item.label}
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="font-mono font-bold text-slate-900 dark:text-slate-100">
-                      ₺ {fmt(item.amount)}
-                    </span>
-                    <span className="text-[10px] text-slate-400 ml-1.5 font-bold">
-                      (%{item.percentage})
-                    </span>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-slate-400 italic py-6 text-center">Bu dönemde tahsilat kaydı bulunmuyor.</p>
-            )}
-          </div>
-        </Card>
-
-        {/* Günlük Ciro & Kâr Trendi Mini Barları */}
-        <Card className="rounded-3xl border-slate-200/80 dark:border-slate-800 shadow-sm p-5 space-y-4 bg-white dark:bg-slate-900">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <TrendingUp size={16} className="text-purple-500" />
-              <span>Dönemsel Günlük Trend</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              İş emri tamamlanan günlerin ciro ve kâr seyri.
-            </p>
-          </div>
-
-          {report?.dailyTrend && report.dailyTrend.length > 0 ? (
-            <div className="space-y-2 max-h-[160px] overflow-y-auto pr-1">
-              {report.dailyTrend.map((d) => (
-                <div
-                  key={d.date}
-                  className="flex items-center justify-between text-xs p-2 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="px-1.5 py-0.5 rounded-md text-[10px] font-bold font-mono bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                      {d.label}
-                    </span>
-                    <span className="text-[11px] text-slate-500">{d.orderCount} İş Emri</span>
-                  </div>
-                  <div className="flex items-center gap-3 font-mono">
-                    <span className="text-slate-900 dark:text-slate-100 font-bold">₺{fmt(d.revenue)}</span>
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">
-                      +₺{fmt(d.profit)} kâr
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 italic py-6 text-center">Bu aralıkta günlük hareket verisi yok.</p>
-          )}
-        </Card>
+        {/* Right: Interactive Donut Chart for Payment & Income Sources (1 col) */}
+        <div className="lg:col-span-1">
+          <PaymentDonutChart
+            paymentBreakdown={report?.paymentBreakdown || []}
+            totalRevenue={summary?.totalRevenue || 0}
+            labourRevenue={summary?.totalLabourRevenue || 0}
+            partsRevenue={summary?.totalPartsRevenue || 0}
+          />
+        </div>
       </div>
 
       {/* ========================================================================= */}

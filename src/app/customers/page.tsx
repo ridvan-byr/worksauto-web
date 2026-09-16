@@ -200,7 +200,7 @@ export default function CustomersPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-12">
       {/* Header & Main Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-tour="cust-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -242,6 +242,7 @@ export default function CustomersPage() {
 
           <Button
             type="button"
+            data-tour="cust-create"
             onClick={() => setIsCreateModalOpen(true)}
             className="w-full sm:w-auto h-11 px-5 rounded-xl sm:rounded-2xl gap-2 font-semibold text-xs shadow-lg shadow-sky-500/20 cursor-pointer"
           >
@@ -299,7 +300,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
+      <div data-tour="cust-search" className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs">
         <div className="relative flex-1 max-w-md">
           <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -377,7 +378,7 @@ export default function CustomersPage() {
       </div>
 
       {/* Customer List Container */}
-      <div className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden">
+      <div data-tour="cust-table" className="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs overflow-hidden">
         {/* Desktop Table View */}
         <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left border-collapse">

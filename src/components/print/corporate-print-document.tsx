@@ -79,14 +79,22 @@ export function CorporatePrintDocument({
         {/* Sol: Firma Logosu & Resmi Bilgiler */}
         <div className="space-y-1.5 max-w-md text-left">
           <div className="flex items-center gap-2.5">
-            <Image
-              src="/brand/worksauto-logo-dark.png"
-              alt={companyName}
-              width={160}
-              height={34}
-              priority
-              className="h-8 w-auto object-contain"
-            />
+            {tenant?.logoUrl ? (
+              <img
+                src={tenant.logoUrl}
+                alt={companyName}
+                className="h-9 max-w-[160px] object-contain"
+              />
+            ) : (
+              <Image
+                src="/brand/worksauto-logo-dark.png"
+                alt={companyName}
+                width={160}
+                height={34}
+                priority
+                className="h-8 w-auto object-contain"
+              />
+            )}
             <span className="text-[11px] font-black text-slate-500 tracking-wider uppercase border-l-2 border-slate-300 pl-2.5 my-auto">
               {companyName}
             </span>
@@ -156,6 +164,18 @@ export function CorporatePrintDocument({
             <p className="text-[10px] text-slate-400">Teslim Eden / Teslim Alan İmza</p>
           </div>
         </div>
+
+        {/* Kurumsal Banka & Havale Bilgisi (Varsa) */}
+        {tenant?.iban && (
+          <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-[11px] font-mono flex flex-wrap items-center justify-between gap-2">
+            <span>
+              <strong>Banka:</strong> {tenant.bankName || "Banka"} • <strong>Hesap Sahibi:</strong> {tenant.accountHolder || officialTitle}
+            </span>
+            <span className="font-bold text-slate-800 tracking-wider">
+              IBAN: {tenant.iban}
+            </span>
+          </div>
+        )}
 
         {/* Kurumsal Alt Dipnot */}
         <div className="pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between text-[10px] text-slate-500 font-mono gap-2 text-center sm:text-left">

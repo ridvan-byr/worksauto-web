@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Wrench, CheckCircle2, Info } from "lucide-react"
+import { Wrench, CheckCircle2, Info, Loader2 } from "lucide-react"
 import { AppointmentServiceItem } from "../types"
 import { cn } from "@/lib/utils"
 
@@ -15,15 +15,19 @@ export const DEFAULT_APPOINTMENT_SERVICES: AppointmentServiceItem[] = [
 
 interface ServicePickerProps {
   services?: AppointmentServiceItem[]
+  isLoading?: boolean
   selectedServices: AppointmentServiceItem[]
   onToggleService: (service: AppointmentServiceItem) => void
 }
 
 export function ServicePicker({
-  services = DEFAULT_APPOINTMENT_SERVICES,
+  services,
+  isLoading = false,
   selectedServices,
   onToggleService,
 }: ServicePickerProps) {
+  const serviceList = services ?? []
+
   const totalDuration = React.useMemo(() => {
     return selectedServices.length > 0
       ? selectedServices.reduce((sum, s) => sum + s.durationMinutes, 0)
@@ -63,41 +67,54 @@ export function ServicePicker({
       </div>
 
       {/* Service Item List */}
-      <div className="grid grid-cols-1 gap-1.5">
-        {services.map((srv) => {
-          const isSelected = selectedServices.some((s) => s.id === srv.id)
-          return (
-            <button
-              key={srv.id}
-              type="button"
-              onClick={() => onToggleService(srv)}
-              className={cn(
-                "p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer text-xs focus:outline-none focus:ring-0 select-none",
-                isSelected
-                  ? "bg-sky-500/15 border-sky-500 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
-                  : "bg-slate-50/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-slate-200 active:bg-slate-200 dark:active:bg-slate-800"
-              )}
-            >
-              <div className="flex items-center gap-2 overflow-hidden">
-                <div
-                  className={cn(
-                    "w-4 h-4 rounded-md border flex items-center justify-center text-white shrink-0 transition-colors",
-                    isSelected ? "bg-sky-500 border-sky-500" : "border-slate-300 dark:border-slate-700"
-                  )}
-                >
-                  {isSelected && <CheckCircle2 size={12} />}
+      {isLoading ? (
+        <div className="py-4 flex items-center justify-center gap-2 text-xs text-slate-400">
+          <Loader2 size={16} className="animate-spin text-sky-500" />
+          <span>Hizmet tanımları yükleniyor...</span>
+        </div>
+      ) : serviceList.length === 0 ? (
+        <div className="p-3.5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center text-xs text-slate-500 dark:text-slate-400 bg-slate-50/40 dark:bg-slate-900/40">
+          Kayıtlı aktif hizmet bulunmuyor. Randevuyu hizmet seçimi yapmadan arıza tespiti olarak oluşturabilirsiniz.
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-1.5">
+          {serviceList.map((srv) => {
+            const isSelected = selectedServices.some((s) => s.id === srv.id)
+            return (
+              <button
+                key={srv.id}
+                type="button"
+                onClick={() => onToggleService(srv)}
+                className={cn(
+                  "p-2.5 rounded-xl border text-left flex items-center justify-between transition-all cursor-pointer text-xs focus:outline-none focus:ring-0 select-none",
+                  isSelected
+                    ? "bg-sky-500/15 border-sky-500 text-slate-900 dark:text-slate-100 shadow-sm font-semibold"
+                    : "bg-slate-50/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/70 hover:text-slate-900 dark:hover:text-slate-200 active:bg-slate-200 dark:active:bg-slate-800"
+                )}
+              >
+                <div className="flex items-center gap-2 overflow-hidden">
+                  <div
+                    className={cn(
+                      "w-4 h-4 rounded-md border flex items-center justify-center text-white shrink-0 transition-colors",
+                      isSelected ? "bg-sky-500 border-sky-500" : "border-slate-300 dark:border-slate-700"
+                    )}
+                  >
+                    {isSelected && <CheckCircle2 size={12} />}
+                  </div>
+                  <span className="truncate">{srv.name}</span>
                 </div>
-                <span className="truncate">{srv.name}</span>
-              </div>
 
-              <div className="flex items-center gap-3 font-mono text-[11px] shrink-0">
-                <span className="text-slate-400">{srv.durationMinutes} dk</span>
-                <span className="font-bold text-sky-600 dark:text-sky-400">{srv.price} ₺</span>
-              </div>
-            </button>
-          )
-        })}
-      </div>
+                <div className="flex items-center gap-3 font-mono text-[11px] shrink-0">
+                  <span className="text-slate-400">{srv.durationMinutes} dk</span>
+                  <span className="font-bold text-sky-600 dark:text-sky-400">
+                    {srv.price.toLocaleString("tr-TR")} ₺
+                  </span>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

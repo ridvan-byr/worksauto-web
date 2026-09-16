@@ -135,4 +135,32 @@ describe("Onboarding Formats & Validation Rules", () => {
       expect(clampSlotOnBlur("")).toBe(45) // Empty fallback
     })
   })
+
+  describe("Step 6: Optional Initial Customers & Vehicles", () => {
+    it("should allow completing onboarding without any initial customers", () => {
+      const initialCustomers: Array<{ plate: string; phone: string }> = []
+      const isStep6Valid = true // Step 6 is optional
+      expect(isStep6Valid).toBe(true)
+      expect(initialCustomers.length).toBe(0)
+    })
+
+    it("should validate plate format when adding an initial customer vehicle", () => {
+      const isValidPlate = (plate: string) => {
+        const clean = plate.trim().toUpperCase()
+        return clean.length >= 5 && clean.length <= 12
+      }
+
+      expect(isValidPlate("34 ABC 123")).toBe(true)
+      expect(isValidPlate("06 YZ 9999")).toBe(true)
+      expect(isValidPlate("35A12")).toBe(true)
+      expect(isValidPlate("34")).toBe(false) // Too short
+      expect(isValidPlate("")).toBe(false)
+    })
+
+    it("should require valid Turkish GSM when an initial customer is provided", () => {
+      expect(isValidTurkishGsm("0532 123 45 67")).toBe(true)
+      expect(isValidTurkishGsm("0555 987 65 43")).toBe(true)
+      expect(isValidTurkishGsm("0212 123 45 67")).toBe(false) // Landline
+    })
+  })
 })

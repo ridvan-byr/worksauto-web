@@ -43,6 +43,7 @@ export interface RescheduleAppointmentInput {
   assignedLift?: string;
   reason?: string;
   notifyCustomer?: boolean;
+  channels?: ('WHATSAPP' | 'SMS' | 'EMAIL')[];
 }
 
 export function useRescheduleAppointment() {

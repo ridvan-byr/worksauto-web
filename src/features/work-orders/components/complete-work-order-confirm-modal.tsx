@@ -1,6 +1,7 @@
 "use client"
 
-import React from "react"
+import React, { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { CheckCircle2, AlertTriangle, X, ShieldAlert } from "lucide-react"
 import { WorkOrder } from "../types"
 import { Button } from "@/components/ui/button"
@@ -20,11 +21,36 @@ export function CompleteWorkOrderConfirmModal({
   onConfirm,
   isLoading = false,
 }: CompleteWorkOrderConfirmModalProps) {
-  if (!isOpen || !workOrder) return null
+  const [mounted, setMounted] = useState(false)
 
-  return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden"
+      return () => {
+        document.body.style.overflow = "auto"
+      }
+    }
+  }, [isOpen])
+
+  if (!isOpen || !workOrder || !mounted) return null
+
+  const modalContent = (
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isLoading) onClose()
+      }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        className="relative w-full max-w-md my-auto rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/60">
           <div className="flex items-center gap-3">
@@ -106,4 +132,6 @@ export function CompleteWorkOrderConfirmModal({
       </div>
     </div>
   )
+
+  return createPortal(modalContent, document.body)
 }

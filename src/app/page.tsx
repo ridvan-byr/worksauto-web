@@ -18,7 +18,8 @@ import {
   Plus,
   ArrowRight,
   ChevronRight,
-  } from "lucide-react"
+  CreditCard,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -27,6 +28,7 @@ import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-ord
 import { useWorkOrders } from "@/features/work-orders/api/use-work-orders"
 import type { WorkOrder, WorkOrderStatus } from "@/features/work-orders/types"
 import { useAuth } from "@/features/auth/auth-context"
+import { cn } from "@/lib/utils"
 
 interface DashboardRecentOrder {
   id: string
@@ -64,29 +66,7 @@ export default function DashboardPage() {
   }, [])
 
   const userRole = (user?.role || "").toUpperCase()
-  const isTechnician = userRole === "TECHNICIAN" || userRole === "TECHNICIAN"
-  const isOwner = userRole === "OWNER" || userRole === "TENANT_ADMIN"
-  const isServiceManager = userRole === "SERVICE_MANAGER" || userRole === "SERVICE_ADVISOR"
-  const isCashier = userRole === "CASHIER"
-  const isWarehouse = userRole === "WAREHOUSE_KEEPER"
-
-  const roleBadgeLabel = React.useMemo(() => {
-    if (isTechnician) return "Atölye Teknisyeni"
-    if (isOwner) return "İşletme Sahibi"
-    if (isServiceManager) return "Servis Müdürü"
-    if (isCashier) return "Ön Büro & Vezne"
-    if (isWarehouse) return "Depo & Envanter"
-    return "Servis Yetkilisi"
-  }, [isTechnician, isOwner, isServiceManager, isCashier, isWarehouse])
-
-  const roleBadgeColor = React.useMemo(() => {
-    if (isTechnician) return "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25"
-    if (isOwner) return "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/25"
-    if (isServiceManager) return "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25"
-    if (isCashier) return "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25"
-    if (isWarehouse) return "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/25"
-    return "bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/25"
-  }, [isTechnician, isOwner, isServiceManager, isCashier, isWarehouse])
+  const isTechnician = userRole === "TECHNICIAN"
 
   const greetingInfo = React.useMemo(() => {
     if (currentHour >= 5 && currentHour < 12) {
@@ -155,6 +135,8 @@ export default function DashboardPage() {
   const criticalStock = summary?.criticalStockCount ?? 0
   const openInvoicesCount = summary?.unpaidInvoicesCount ?? 0
   const totalReceivables = summary?.unpaidTotal ?? 0
+  const todayRevenue = summary?.todayRevenue ?? 0
+  const monthlyRevenue = summary?.monthlyRevenue ?? 0
 
   return (
     <div className="space-y-6 pb-12">
@@ -195,9 +177,6 @@ export default function DashboardPage() {
                   {greetingInfo.icon}
                 </span>
               </h1>
-              <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${roleBadgeColor}`}>
-                {roleBadgeLabel}
-              </span>
             </div>
 
             {/* Dynamic Briefing Subtext */}
@@ -265,7 +244,35 @@ export default function DashboardPage() {
       </div>
 
       {/* Live Dynamic KPI Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <div
+        data-tour="tour-kpis"
+        className={cn(
+          "grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5",
+          isTechnician ? "lg:grid-cols-4" : "lg:grid-cols-5"
+        )}
+      >
+        {/* Daily Cash & Revenue Card (for Service Managers / Owners) */}
+        {!isTechnician && (
+          <Link href="/reports" className="group">
+            <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full bg-gradient-to-br from-emerald-50/20 via-white to-white dark:from-emerald-950/10 dark:via-slate-900 dark:to-slate-900">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bugünkü Kasa / Ciro</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                    ₺ {todayRevenue.toLocaleString("tr-TR")}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
+                    <TrendingUp size={12} className="text-emerald-500" /> Bu ay: ₺{monthlyRevenue.toLocaleString("tr-TR")}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                  <CreditCard size={22} />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
         {/* Appointments Card */}
         <Link href="/appointments" className="group">
           <Card className="hover:border-sky-500/40 transition-all cursor-pointer h-full">
@@ -308,18 +315,38 @@ export default function DashboardPage() {
 
         {/* Critical Stock Alert Card */}
         <Link href="/inventory" className="group">
-          <Card className="hover:border-rose-500/40 transition-all cursor-pointer h-full">
+          <Card
+            className={cn(
+              "transition-all cursor-pointer h-full",
+              criticalStock > 0 ? "hover:border-rose-500/40" : "hover:border-emerald-500/40"
+            )}
+          >
             <CardContent className="p-5 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Kritik Stok Uyarısı</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {criticalStock > 0 ? "Kritik Stok Uyarısı" : "Stok Durumu"}
+                </p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
                   {criticalStock} Parça
                 </p>
-                <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
-                  <AlertCircle size={12} /> Sipariş eşiği aşıldı
-                </p>
+                {criticalStock > 0 ? (
+                  <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
+                    <AlertCircle size={12} /> Sipariş eşiği aşıldı
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                    <CheckCircle2 size={12} /> Stok seviyeleri yeterli
+                  </p>
+                )}
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20 group-hover:scale-105 transition-transform">
+              <div
+                className={cn(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center border group-hover:scale-105 transition-transform",
+                  criticalStock > 0
+                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                )}
+              >
                 <Package size={22} />
               </div>
             </CardContent>
@@ -348,7 +375,7 @@ export default function DashboardPage() {
           </Link>
         ) : (
           <Link href="/invoices" className="group">
-            <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full">
+            <Card className="hover:border-indigo-500/40 transition-all cursor-pointer h-full">
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bekleyen Alacak</p>
@@ -359,7 +386,7 @@ export default function DashboardPage() {
                     <TrendingUp size={12} /> {openInvoicesCount} açık fatura
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 group-hover:scale-105 transition-transform">
                   <Receipt size={22} />
                 </div>
               </CardContent>
@@ -371,7 +398,7 @@ export default function DashboardPage() {
       {/* Quick Launch & Active Work Orders Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Active Vehicles in Workshop */}
-        <div className="lg:col-span-2 space-y-4">
+        <div data-tour="tour-work-orders" className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">

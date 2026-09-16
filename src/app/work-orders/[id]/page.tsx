@@ -42,6 +42,7 @@ import {
   Ban,
   Printer,
   Send,
+  Star,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SendStatusNotificationModal } from "@/features/work-orders/components/send-status-notification-modal"
@@ -212,6 +213,9 @@ export default function WorkOrderDetailPage() {
         grandTotal: Number(apiOrder.grandTotal ?? (computedLaborTotal + computedPartsTotal) * 1.2),
         invoice: apiOrder.invoice || null,
         estimatedCompletionTime: apiOrder.targetCompletionDate || '18:00',
+        customerRating: apiOrder.customerRating ?? null,
+        customerComment: apiOrder.customerComment ?? null,
+        customerRatedAt: apiOrder.customerRatedAt ?? null,
         createdAt: apiOrder.createdAt,
         updatedAt: apiOrder.updatedAt,
       })
@@ -748,6 +752,31 @@ export default function WorkOrderDetailPage() {
                 <>
                   <span>•</span>
                   <span className="font-mono text-[11px] text-slate-400">Şasi: {order.vin}</span>
+                </>
+              )}
+              {Boolean(order.customerRating) && (
+                <>
+                  <span>•</span>
+                  <div
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs font-bold"
+                    title={order.customerComment ? `Müşteri Yorumu: "${order.customerComment}"` : undefined}
+                  >
+                    <div className="flex items-center gap-0.5 text-amber-500">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          size={12}
+                          className={i < (order.customerRating || 0) ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-600"}
+                        />
+                      ))}
+                    </div>
+                    <span>{order.customerRating}/5 Puan</span>
+                    {order.customerComment && (
+                      <span className="text-slate-600 dark:text-slate-300 font-normal italic">
+                        &quot;{order.customerComment}&quot;
+                      </span>
+                    )}
+                  </div>
                 </>
               )}
             </div>

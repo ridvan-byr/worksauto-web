@@ -28,10 +28,12 @@ export interface Appointment {
   customerId: string
   customerName: string
   customerPhone: string
+  customerEmail?: string
   vehicleId: string
   plate: string
   brand: string
   model: string
+  currentKm?: number
   // Services
   services: AppointmentServiceItem[]
   totalDurationMinutes: number
@@ -65,12 +67,15 @@ export interface AppointmentRecord {
     name?: string;
     surname?: string;
     phone?: string;
+    email?: string;
   };
   vehicleId: string;
   vehicle?: {
     plate?: string;
     brand?: string;
     model?: string;
+    currentKm?: number;
+    kilometer?: number;
   };
   service?: {
     id: string;

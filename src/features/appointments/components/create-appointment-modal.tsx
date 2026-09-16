@@ -19,7 +19,7 @@ import { toast } from "sonner"
 import { Appointment, AppointmentServiceItem } from "../types"
 import { useCustomers, type QuickLeadResponse } from "@/features/customers/api/use-customers"
 import { useCreateAppointment } from "@/features/appointments/api/use-appointments"
-import { useStaff, type StaffRecord } from "@/features/settings/api/use-settings"
+import { useStaff, useServices, type StaffRecord, type ServiceRecord } from "@/features/settings/api/use-settings"
 import { useAuth } from "@/features/auth/auth-context"
 import { cn } from "@/lib/utils"
 
@@ -53,10 +53,7 @@ import {
   CustomerOption,
 } from "./customer-search-select"
 import { QuickLeadSubForm } from "./quick-lead-sub-form"
-import {
-  ServicePicker,
-  DEFAULT_APPOINTMENT_SERVICES,
-} from "./service-picker"
+import { ServicePicker } from "./service-picker"
 
 interface CreateAppointmentModalProps {
   isOpen: boolean
@@ -77,7 +74,19 @@ export function CreateAppointmentModal({
   const { tenant } = useAuth()
   const { data: apiCustomers } = useCustomers()
   const { data: staffList = [] } = useStaff()
+  const { data: tenantServices = [], isLoading: isLoadingServices } = useServices({ isActive: true })
   const createAppointmentMutation = useCreateAppointment()
+
+  const availableServices: AppointmentServiceItem[] = React.useMemo(() => {
+    return (tenantServices || [])
+      .filter((s: ServiceRecord) => s.isActive !== false)
+      .map((s: ServiceRecord) => ({
+        id: s.id,
+        name: s.name,
+        durationMinutes: s.defaultDurationMin ?? s.estimatedMinutes ?? 60,
+        price: Number(s.basePrice || 0),
+      }))
+  }, [tenantServices])
 
   // Filter actual workshop technicians / mechanics (exclude administrative OWNER/CASHIER)
   const mechanicStaffList = React.useMemo(() => {
@@ -151,6 +160,7 @@ export function CreateAppointmentModal({
       const t = initialTime || getDefaultTimeForDate(d)
       setValue("date", d)
       setValue("time", t)
+      setSelectedServices([])
     }
   }, [isOpen, initialDate, initialTime, setValue])
 
@@ -282,8 +292,16 @@ export function CreateAppointmentModal({
   }
 
   const modalContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-2xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] animate-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-3">
@@ -422,7 +440,8 @@ export function CreateAppointmentModal({
 
           {/* SECTION 3: REQUESTED SERVICES (OPTIONAL) */}
           <ServicePicker
-            services={DEFAULT_APPOINTMENT_SERVICES}
+            services={availableServices}
+            isLoading={isLoadingServices}
             selectedServices={selectedServices}
             onToggleService={handleToggleService}
           />

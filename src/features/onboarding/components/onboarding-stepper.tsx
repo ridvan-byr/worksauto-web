@@ -7,6 +7,7 @@ import {
   Wrench,
   Users,
   Settings2,
+  Car,
   CheckCircle2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -17,6 +18,7 @@ export const STEPS = [
   { id: 3, title: "Hizmetler", desc: "İşçilik ve servis kataloğu", icon: Wrench },
   { id: 4, title: "Usta & Kadro", desc: "İlk teknisyen tanımları", icon: Users },
   { id: 5, title: "Atölye Kapasitesi", desc: "Lift, slot ve stok ayarları", icon: Settings2 },
+  { id: 6, title: "Müşteri & Araç", desc: "İlk kayıtlar (İsteğe bağlı)", icon: Car },
 ]
 
 interface OnboardingStepperProps {
@@ -65,13 +67,13 @@ export function OnboardingStepper({
             </div>
           </div>
           <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 shrink-0">
-            {currentStep} / 5
+            {currentStep} / {STEPS.length}
           </span>
         </div>
       </div>
 
-      {/* Desktop Stepper Grid (5 Columns) */}
-      <div className="hidden md:grid md:grid-cols-5 gap-2 text-center">
+      {/* Desktop Stepper Grid (6 Columns) */}
+      <div className="hidden md:grid md:grid-cols-6 gap-2 text-center">
         {STEPS.map((s) => {
           const Icon = s.icon
           const isCompleted = s.id < currentStep

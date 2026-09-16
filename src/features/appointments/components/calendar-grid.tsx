@@ -13,7 +13,14 @@ interface CalendarGridProps {
   appointments: Appointment[]
   onSelectAppointment: (app: Appointment) => void
   onSlotClick: (date: string, time: string) => void
-  onReschedule?: (id: string, newDate: string, newTime: string, reason?: string, notifyCustomer?: boolean) => Promise<void> | void
+  onReschedule?: (
+    id: string,
+    newDate: string,
+    newTime: string,
+    reason?: string,
+    notifyCustomer?: boolean,
+    channels?: ("WHATSAPP" | "SMS" | "EMAIL")[]
+  ) => Promise<void> | void
 }
 
 const TIME_SLOTS = [
@@ -77,9 +84,11 @@ export function CalendarGrid({
   const handleConfirmReschedule = async ({
     reason,
     notifyCustomer,
+    channels,
   }: {
     reason: string
     notifyCustomer: boolean
+    channels?: ("WHATSAPP" | "SMS" | "EMAIL")[]
   }) => {
     if (!rescheduleModalData) return
     const { appointment, targetDate, targetTime } = rescheduleModalData
@@ -92,7 +101,7 @@ export function CalendarGrid({
 
     try {
       if (onReschedule) {
-        await onReschedule(appointment.id, targetDate, targetTime, reason, notifyCustomer)
+        await onReschedule(appointment.id, targetDate, targetTime, reason, notifyCustomer, channels)
       } else {
         await rescheduleMutation.mutateAsync({
           id: appointment.id,
@@ -102,6 +111,7 @@ export function CalendarGrid({
           assignedMechanicId: appointment.assignedStaffId,
           reason,
           notifyCustomer,
+          channels,
         })
       }
       setRescheduleModalData(null)

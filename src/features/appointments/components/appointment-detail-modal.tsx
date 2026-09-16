@@ -17,6 +17,11 @@ import {
   Fuel,
   Warehouse,
   ExternalLink,
+  AlertTriangle,
+  MessageSquare,
+  Send,
+  Mail,
+  Smartphone,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -35,6 +40,14 @@ export interface CheckInFormData {
   assignedLift?: string
 }
 
+const RESCHEDULE_REASONS = [
+  { id: "parts", label: "Yedek parça tedarik süreci", icon: "📦" },
+  { id: "repair_delay", label: "Önceki araç onarımı uzadı", icon: "🔧" },
+  { id: "customer_request", label: "Müşteri erteleme talep etti", icon: "📞" },
+  { id: "bay_busy", label: "Atölye / Lift yoğunluğu", icon: "👨‍🔧" },
+  { id: "custom", label: "Diğer (Özel Gerekçe)", icon: "✏️" },
+]
+
 const CANCELLATION_REASON_LABELS: Record<string, string> = {
   CUSTOMER_REQUEST: "Müşteri randevuyu iptal etti / vazgeçti",
   PARTS_UNAVAILABLE: "Gerekli yedek parça temin edilemedi",
@@ -51,7 +64,14 @@ interface AppointmentDetailModalProps {
     id: string,
     checkInData: CheckInFormData
   ) => Promise<{ success: boolean; workOrderNumber: string; workOrderId?: string }> | { success: boolean; workOrderNumber: string; workOrderId?: string }
-  onReschedule: (id: string, newDate: string, newTime: string) => void
+  onReschedule: (
+    id: string,
+    newDate: string,
+    newTime: string,
+    reason?: string,
+    notifyCustomer?: boolean,
+    channels?: ("WHATSAPP" | "SMS" | "EMAIL")[]
+  ) => void
   onCancel: (id: string, reason: CancellationReason, note?: string) => void
   onMarkNoShow: (id: string) => void
 }
@@ -108,6 +128,10 @@ export function AppointmentDetailModal({
   // Reschedule State
   const [rescheduleDate, setRescheduleDate] = React.useState("")
   const [rescheduleTime, setRescheduleTime] = React.useState("")
+  const [rescheduleReasonChip, setRescheduleReasonChip] = React.useState("parts")
+  const [rescheduleCustomReason, setRescheduleCustomReason] = React.useState("Yedek parça tedarik süreci")
+  const [notifyCustomerOnReschedule, setNotifyCustomerOnReschedule] = React.useState(true)
+  const [selectedChannels, setSelectedChannels] = React.useState<("WHATSAPP" | "SMS" | "EMAIL")[]>(["WHATSAPP", "EMAIL"])
 
   const todayStr = React.useMemo(() => {
     const d = new Date()
@@ -135,11 +159,21 @@ export function AppointmentDetailModal({
     if (appointment) {
       setRescheduleDate(appointment.date)
       setRescheduleTime(appointment.time)
+      setRescheduleReasonChip("parts")
+      setRescheduleCustomReason("Yedek parça tedarik süreci")
+      const hasPhone = Boolean(appointment.customerPhone)
+      const hasEmail = Boolean(appointment.customerEmail)
+      setNotifyCustomerOnReschedule(hasPhone || hasEmail)
+      const defaultChannels: ("WHATSAPP" | "SMS" | "EMAIL")[] = []
+      if (hasPhone) defaultChannels.push("WHATSAPP")
+      if (hasEmail) defaultChannels.push("EMAIL")
+      if (defaultChannels.length === 0 && hasPhone) defaultChannels.push("SMS")
+      setSelectedChannels(defaultChannels.length > 0 ? defaultChannels : ["WHATSAPP"])
       setCreatedWONumber(appointment.workOrderNumber || null)
       setCreatedWorkOrderId(appointment.workOrderId || null)
       setAssignedMechanicId(appointment.assignedStaffId || "")
       setAssignedLift("")
-      setInitialKm("")
+      setInitialKm(appointment.currentKm && appointment.currentKm > 0 ? appointment.currentKm : "")
       setFuelLevel("")
       setViewMode("detail")
     }
@@ -157,7 +191,7 @@ export function AppointmentDetailModal({
   if (!isOpen || !mounted || !appointment) return null
 
   const handleConfirmCheckIn = async () => {
-    const kmValue = initialKm === "" ? 0 : Number(initialKm)
+    const kmValue = initialKm === "" ? (appointment.currentKm || 0) : Number(initialKm)
     if (kmValue < 0) {
       toast.error("Kilometre 0'dan küçük olamaz.")
       return
@@ -184,11 +218,18 @@ export function AppointmentDetailModal({
     }
   }
 
+  const toggleChannel = (ch: "WHATSAPP" | "SMS" | "EMAIL") => {
+    setSelectedChannels((prev) =>
+      prev.includes(ch) ? prev.filter((c) => c !== ch) : [...prev, ch]
+    )
+  }
+
   const handleConfirmReschedule = () => {
     if (!rescheduleDate || !rescheduleTime) {
       toast.error("Lütfen yeni tarih ve saat seçiniz.")
       return
     }
+
     const [h, m] = rescheduleTime.split(":").map(Number)
     const [yr, mo, dy] = rescheduleDate.split("-").map(Number)
     const targetDt = new Date(yr, mo - 1, dy, h || 0, m || 0, 0, 0)
@@ -196,7 +237,26 @@ export function AppointmentDetailModal({
       toast.error("Geçmiş bir tarih veya saate randevu ertelenemez.")
       return
     }
-    onReschedule(appointment.id, rescheduleDate, rescheduleTime)
+    const selectedObj = RESCHEDULE_REASONS.find((r) => r.id === rescheduleReasonChip)
+    const finalReason =
+      rescheduleReasonChip === "custom"
+        ? rescheduleCustomReason.trim() || "Randevu saati güncellendi"
+        : selectedObj?.label || rescheduleCustomReason.trim()
+
+    onReschedule(
+      appointment.id,
+      rescheduleDate,
+      rescheduleTime,
+      finalReason,
+      notifyCustomerOnReschedule && selectedChannels.length > 0,
+      selectedChannels
+    )
+    toast.success(
+      "Randevu saati güncellendi" +
+        (notifyCustomerOnReschedule && selectedChannels.length > 0
+          ? ` ve müşteriye bildirim (${selectedChannels.join(", ")}) iletildi.`
+          : ".")
+    )
     setViewMode("detail")
   }
 
@@ -211,8 +271,16 @@ export function AppointmentDetailModal({
   }
 
   const modalContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh]"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-3">
@@ -453,17 +521,39 @@ export function AppointmentDetailModal({
                 <span className="flex items-center gap-1.5">
                   <Gauge size={13} className="text-sky-500" />
                   <span>Giriş Kilometresi</span>
+                  {appointment.currentKm && appointment.currentKm > 0 ? (
+                    <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">
+                      Son Kayıt: {appointment.currentKm.toLocaleString("tr-TR")} km
+                    </span>
+                  ) : null}
                 </span>
                 <span className="text-[10px] text-slate-400 font-normal">İsteğe Bağlı</span>
               </label>
               <input
                 type="number"
                 min={0}
-                placeholder="Bilinmiyorsa boş bırakılabilir (Varsayılan: 0)"
+                placeholder={
+                  appointment.currentKm && appointment.currentKm > 0
+                    ? `Son Bilinen: ${appointment.currentKm} km (Mevcut km korunur)`
+                    : "Bilinmiyorsa boş bırakılabilir (Varsayılan: 0)"
+                }
                 value={initialKm}
                 onChange={(e) => setInitialKm(e.target.value === "" ? "" : Number(e.target.value))}
-                className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className={cn(
+                  "w-full h-11 px-3.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2",
+                  appointment.currentKm && Number(initialKm) > 0 && Number(initialKm) < appointment.currentKm
+                    ? "border-amber-400 focus:ring-amber-500"
+                    : "border-slate-200 dark:border-slate-800 focus:ring-emerald-500"
+                )}
               />
+              {appointment.currentKm && Number(initialKm) > 0 && Number(initialKm) < appointment.currentKm ? (
+                <p className="text-[10px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
+                  <AlertTriangle size={11} className="shrink-0" />
+                  <span>
+                    Dikkat: Girdiğiniz km ({Number(initialKm).toLocaleString("tr-TR")}), aracın son kayıtlı kilometresinden ({appointment.currentKm.toLocaleString("tr-TR")} km) düşüktür.
+                  </span>
+                </p>
+              ) : null}
             </div>
 
             {/* Yakıt Seviyesi */}
@@ -613,14 +703,14 @@ export function AppointmentDetailModal({
 
         {/* VIEW 3: RESCHEDULE FORM */}
         {viewMode === "reschedule" && (
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <CalendarClock size={16} className="text-purple-500" />
-                <span>Randevu Saatini Ertele</span>
+                <span>Randevu Saatini Ertele & Müşteriyi Bilgilendir</span>
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Müşteri ile teyit edilen yeni tarih ve saati belirleyin.
+                Müşteri ile mutabık kalınan yeni randevu zamanını ve erteleme gerekçesini belirleyin.
               </p>
             </div>
 
@@ -632,7 +722,7 @@ export function AppointmentDetailModal({
                   min={todayStr}
                   value={rescheduleDate}
                   onChange={(e) => setRescheduleDate(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
 
@@ -644,9 +734,222 @@ export function AppointmentDetailModal({
                   min={rescheduleDate === todayStr ? currentTimeStr : undefined}
                   value={rescheduleTime}
                   onChange={(e) => setRescheduleTime(e.target.value)}
-                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-purple-500"
                 />
               </div>
+            </div>
+
+            {/* Erteleme Gerekçesi Çipleri */}
+            <div className="space-y-2">
+              <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                <span>Erteleme Gerekçesi</span>
+                <span className="text-[10px] text-slate-400">Bildirime eklenecektir</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {RESCHEDULE_REASONS.map((reason) => (
+                  <button
+                    key={reason.id}
+                    type="button"
+                    onClick={() => {
+                      setRescheduleReasonChip(reason.id)
+                      if (reason.id !== "custom") {
+                        setRescheduleCustomReason(reason.label)
+                      }
+                    }}
+                    className={cn(
+                      "flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer",
+                      rescheduleReasonChip === reason.id
+                        ? "bg-purple-500/10 border-purple-500 text-purple-700 dark:text-purple-300 font-semibold shadow-xs"
+                        : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
+                    )}
+                  >
+                    <span>{reason.icon}</span>
+                    <span className="truncate text-[11px]">{reason.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Özel Gerekçe Alanı */}
+              {rescheduleReasonChip === "custom" && (
+                <input
+                  type="text"
+                  placeholder="Özel gerekçe yazınız (örn: Müşteri seyahatte vb.)..."
+                  value={rescheduleCustomReason}
+                  onChange={(e) => setRescheduleCustomReason(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500 mt-1"
+                />
+              )}
+            </div>
+
+            {/* Müşteri Bildirim Seçenekleri & Kanal Seçici */}
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between select-none">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                    <Send size={13} />
+                  </div>
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                      Müşteriye Otomatik Bildir
+                    </span>
+                    <p className="text-[10px] text-slate-400">
+                      Yeni tarih ve saat müşteriye seçilen kanallarla gönderilir
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={notifyCustomerOnReschedule}
+                  disabled={!appointment.customerPhone && !appointment.customerEmail}
+                  onChange={(e) => setNotifyCustomerOnReschedule(e.target.checked)}
+                  className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer disabled:opacity-50"
+                />
+              </div>
+
+              {!appointment.customerPhone && !appointment.customerEmail && (
+                <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1.5 bg-amber-50 dark:bg-amber-950/40 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900">
+                  <AlertTriangle size={13} className="shrink-0" />
+                  <span>Müşterinin sistemde kayıtlı iletişim bilgisi (telefon veya e-posta) bulunmamaktadır.</span>
+                </p>
+              )}
+
+              {notifyCustomerOnReschedule && (appointment.customerPhone || appointment.customerEmail) && (
+                <div className="space-y-2.5 pt-2 border-t border-slate-200/80 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300">İletim Kanalları:</span>
+                    <span className="text-[10px] text-slate-400">İstediğiniz kanalları seçin</span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2">
+                    {/* WhatsApp */}
+                    <button
+                      type="button"
+                      disabled={!appointment.customerPhone}
+                      onClick={() => toggleChannel("WHATSAPP")}
+                      className={cn(
+                        "p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-1 cursor-pointer",
+                        !appointment.customerPhone
+                          ? "opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900"
+                          : selectedChannels.includes("WHATSAPP")
+                          ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300 shadow-2xs"
+                          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 hover:border-slate-300"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold flex items-center gap-1">
+                          <MessageSquare size={13} className={appointment.customerPhone && selectedChannels.includes("WHATSAPP") ? "text-emerald-600" : "text-slate-400"} />
+                          <span>WhatsApp</span>
+                        </span>
+                        {appointment.customerPhone && selectedChannels.includes("WHATSAPP") && (
+                          <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[9px] font-bold">✓</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400 truncate font-mono">
+                        {appointment.customerPhone || "Telefon Yok"}
+                      </span>
+                    </button>
+
+                    {/* SMS */}
+                    <button
+                      type="button"
+                      disabled={!appointment.customerPhone}
+                      onClick={() => toggleChannel("SMS")}
+                      className={cn(
+                        "p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-1 cursor-pointer",
+                        !appointment.customerPhone
+                          ? "opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900"
+                          : selectedChannels.includes("SMS")
+                          ? "bg-indigo-500/10 border-indigo-500 text-indigo-700 dark:text-indigo-300 shadow-2xs"
+                          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 hover:border-slate-300"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold flex items-center gap-1">
+                          <Smartphone size={13} className={appointment.customerPhone && selectedChannels.includes("SMS") ? "text-indigo-600" : "text-slate-400"} />
+                          <span>SMS</span>
+                        </span>
+                        {appointment.customerPhone && selectedChannels.includes("SMS") && (
+                          <span className="w-3.5 h-3.5 rounded-full bg-indigo-500 text-white flex items-center justify-center text-[9px] font-bold">✓</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400 truncate font-mono">
+                        {appointment.customerPhone || "Telefon Yok"}
+                      </span>
+                    </button>
+
+                    {/* E-Posta */}
+                    <button
+                      type="button"
+                      disabled={!appointment.customerEmail}
+                      onClick={() => toggleChannel("EMAIL")}
+                      className={cn(
+                        "p-2.5 rounded-xl border text-left transition-all flex flex-col justify-between gap-1 cursor-pointer",
+                        !appointment.customerEmail
+                          ? "opacity-40 cursor-not-allowed border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900"
+                          : selectedChannels.includes("EMAIL")
+                          ? "bg-sky-500/10 border-sky-500 text-sky-700 dark:text-sky-300 shadow-2xs"
+                          : "border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-600 hover:border-slate-300"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold flex items-center gap-1">
+                          <Mail size={13} className={appointment.customerEmail && selectedChannels.includes("EMAIL") ? "text-sky-600" : "text-slate-400"} />
+                          <span>E-Posta</span>
+                        </span>
+                        {appointment.customerEmail && selectedChannels.includes("EMAIL") && (
+                          <span className="w-3.5 h-3.5 rounded-full bg-sky-500 text-white flex items-center justify-center text-[9px] font-bold">✓</span>
+                        )}
+                      </div>
+                      <span className="text-[10px] text-slate-400 truncate font-mono" title={appointment.customerEmail || undefined}>
+                        {appointment.customerEmail || "E-Posta Yok"}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Bildirim Önizlemesi */}
+                  <div className="p-3 rounded-xl bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between text-slate-400 font-medium">
+                      <span className="text-[10px] uppercase font-bold flex items-center gap-1.5">
+                        <Send size={11} className="text-purple-500" />
+                        <span>Müşteriye Gidecek Bildirim Önizlemesi</span>
+                      </span>
+                      <span className="text-[10px] font-semibold text-purple-600 dark:text-purple-400">
+                        {selectedChannels.join(", ") || "Kanal seçilmedi"}
+                      </span>
+                    </div>
+                    <p className="text-[11px] font-mono text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-900 p-2.5 rounded-lg border border-slate-200/80 dark:border-slate-800 leading-relaxed">
+                      {(() => {
+                        let dateText = rescheduleDate
+                        try {
+                          if (rescheduleDate) {
+                            const [yr, mo, dy] = rescheduleDate.split("-").map(Number)
+                            dateText = new Date(yr, mo - 1, dy).toLocaleDateString("tr-TR", {
+                              day: "numeric",
+                              month: "long",
+                              year: "numeric",
+                              weekday: "long",
+                            })
+                          }
+                        } catch {}
+                        return (
+                          <>
+                            Sayın {appointment.customerName || "Müşterimiz"},{" "}
+                            {appointment.plate ? `${appointment.plate} plakalı ` : ""}
+                            aracınızın servis randevusu{" "}
+                            <strong>
+                              {dateText} saat {rescheduleTime}
+                            </strong>{" "}
+                            olarak güncellenmiştir.
+                            {rescheduleCustomReason.trim()
+                              ? ` (Erteleme Nedeni: ${rescheduleCustomReason.trim()})`
+                              : ""}
+                          </>
+                        )
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800/80 flex justify-end gap-2">
@@ -661,9 +964,10 @@ export function AppointmentDetailModal({
               <Button
                 type="button"
                 onClick={handleConfirmReschedule}
-                className="h-9 px-4 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                className="h-9 px-4 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white cursor-pointer gap-1.5"
               >
-                Yeni Saati Onayla
+                <CalendarClock size={14} />
+                <span>Yeni Saati ve Bildirimi Onayla</span>
               </Button>
             </div>
           </div>

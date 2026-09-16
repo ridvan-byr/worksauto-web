@@ -100,6 +100,10 @@ export interface WorkOrder {
   }
   customerName: string
   customerPhone: string
+  customerEmail?: string
+  customerRating?: number | null
+  customerComment?: string | null
+  customerRatedAt?: string | null
 
   vehicleId: string
   vehicle?: {
@@ -156,5 +160,6 @@ export interface WorkOrder {
   createdAt: string
   updatedAt: string
   completedAt?: string
+  lastNotifiedAt?: string
   invoice?: WorkOrderInvoice | null
 }

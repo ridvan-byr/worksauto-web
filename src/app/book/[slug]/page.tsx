@@ -22,6 +22,8 @@ interface PublicService {
   name: string
   durationMinutes: number
   laborPrice: number
+  defaultDurationMin?: number
+  basePrice?: number | string
   price?: number
   category?: string
 }
@@ -34,7 +36,7 @@ interface PublicTenant {
   city?: string
   district?: string
   logoUrl?: string
-  services: PublicService[]
+  services: Array<Partial<PublicService> & { id: string; name: string }>
 }
 
 const DEFAULT_SLOTS = [
@@ -95,8 +97,15 @@ export default function PublicBookingPage() {
         if (data) {
           setTenant(data)
           if (data.services && data.services.length > 0) {
-            setServices(data.services)
-            setSelectedServiceId(data.services[0].id)
+            const mapped: PublicService[] = data.services.map((s) => ({
+              id: s.id,
+              name: s.name,
+              durationMinutes: Number(s.durationMinutes ?? s.defaultDurationMin ?? 30),
+              laborPrice: Number(s.laborPrice ?? s.basePrice ?? s.price ?? 0),
+              category: s.category,
+            }))
+            setServices(mapped)
+            setSelectedServiceId(mapped[0].id)
           } else {
             setSelectedServiceId(FALLBACK_SERVICES[0].id)
           }
