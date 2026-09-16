@@ -32,7 +32,14 @@ export interface RescheduleAppointmentModalProps {
   isPending?: boolean
 }
 
-const QUICK_REASONS = [
+const EARLIER_REASONS = [
+  { id: "customer_request", label: "Müşteri erken teslim / giriş talep etti", icon: "📞" },
+  { id: "bay_available", label: "Erken boşalan lift & teknisyen imkanı", icon: "⚡" },
+  { id: "parts_ready", label: "Yedek parçalar erkenden temin edildi", icon: "📦" },
+  { id: "custom", label: "Diğer (Özel Gerekçe)", icon: "✏️" },
+]
+
+const POSTPONE_REASONS = [
   { id: "parts", label: "Yedek parça tedarik süreci", icon: "📦" },
   { id: "repair_delay", label: "Önceki araç onarımı uzadı", icon: "🔧" },
   { id: "customer_request", label: "Müşteri erteleme talep etti", icon: "📞" },
@@ -50,8 +57,27 @@ export function RescheduleAppointmentModal({
   isPending = false,
 }: RescheduleAppointmentModalProps) {
   const [mounted, setMounted] = React.useState(false)
-  const [selectedChip, setSelectedChip] = React.useState<string>("parts")
-  const [customReason, setCustomReason] = React.useState<string>("Yedek parça tedarik süreci")
+
+  // Detect whether appointment is being moved earlier or later
+  const isEarlier = React.useMemo(() => {
+    if (!appointment?.date || !appointment?.time || !targetDate || !targetTime) return false
+    try {
+      const oldDateTime = `${appointment.date}T${appointment.time.slice(0, 5)}`
+      const newDateTime = `${targetDate}T${targetTime.slice(0, 5)}`
+      return newDateTime < oldDateTime
+    } catch {
+      return false
+    }
+  }, [appointment, targetDate, targetTime])
+
+  const activeReasons = isEarlier ? EARLIER_REASONS : POSTPONE_REASONS
+
+  const [selectedChip, setSelectedChip] = React.useState<string>(
+    isEarlier ? "customer_request" : "parts"
+  )
+  const [customReason, setCustomReason] = React.useState<string>(
+    isEarlier ? "Müşteri erken teslim / giriş talep etti" : "Yedek parça tedarik süreci"
+  )
   const [notifyCustomer, setNotifyCustomer] = React.useState<boolean>(true)
   const [selectedChannels, setSelectedChannels] = React.useState<("WHATSAPP" | "SMS" | "EMAIL")[]>(["WHATSAPP", "EMAIL"])
 
@@ -59,11 +85,16 @@ export function RescheduleAppointmentModal({
     setMounted(true)
   }, [])
 
-  // Reset defaults whenever modal opens for an appointment
+  // Reset defaults whenever modal opens or direction changes
   React.useEffect(() => {
     if (isOpen && appointment) {
-      setSelectedChip("parts")
-      setCustomReason("Yedek parça tedarik süreci")
+      if (isEarlier) {
+        setSelectedChip("customer_request")
+        setCustomReason("Müşteri erken teslim / giriş talep etti")
+      } else {
+        setSelectedChip("parts")
+        setCustomReason("Yedek parça tedarik süreci")
+      }
       const hasPhone = Boolean(appointment.customerPhone)
       const hasEmail = Boolean(appointment.customerEmail)
       setNotifyCustomer(hasPhone || hasEmail)
@@ -74,7 +105,7 @@ export function RescheduleAppointmentModal({
       if (defaultChannels.length === 0 && hasPhone) defaultChannels.push("SMS")
       setSelectedChannels(defaultChannels.length > 0 ? defaultChannels : ["WHATSAPP"])
     }
-  }, [isOpen, appointment])
+  }, [isOpen, appointment, isEarlier])
 
   if (!mounted || !isOpen || !appointment) return null
 
@@ -103,11 +134,11 @@ export function RescheduleAppointmentModal({
       const diffDays = Math.round((dNew - dOld) / (1000 * 60 * 60 * 24))
 
       if (diffDays === 0) {
-        return "Aynı Gün (Saat Değişimi)"
+        return isEarlier ? "Aynı Gün (Erkene Çekildi)" : "Aynı Gün (İleri Alındı)"
       } else if (diffDays > 0) {
         return `+${diffDays} Gün İleri Alındı`
       } else {
-        return `${diffDays} Gün Öne Çekildi`
+        return `${Math.abs(diffDays)} Gün Öne Çekildi`
       }
     } catch {
       return "Tarih Güncellendi"
@@ -155,9 +186,13 @@ export function RescheduleAppointmentModal({
     formattedDatePreview = targetDate
   }
 
-  const previewMessage = `Sayın ${appointment.customerName || "Müşterimiz"}, ${appointment.plate ? `${appointment.plate} plakalı ` : ""}aracınızın servis randevusu ${formattedDatePreview || targetDate} saat ${targetTime} olarak güncellenmiştir.${
-    customReason.trim() ? ` (Erteleme Nedeni: ${customReason.trim()})` : ""
-  }`
+  const previewMessage = isEarlier
+    ? `Sayın ${appointment.customerName || "Müşterimiz"}, ${appointment.plate ? `${appointment.plate} plakalı ` : ""}aracınızın servis randevusu talebiniz/oluşan müsaitlik doğrultusunda ${formattedDatePreview || targetDate} saat ${targetTime} olarak erkene alınmıştır.${
+        customReason.trim() ? ` (${customReason.trim()})` : ""
+      }`
+    : `Sayın ${appointment.customerName || "Müşterimiz"}, ${appointment.plate ? `${appointment.plate} plakalı ` : ""}aracınızın servis randevusu ${formattedDatePreview || targetDate} saat ${targetTime} olarak güncellenmiştir.${
+        customReason.trim() ? ` (Erteleme Nedeni: ${customReason.trim()})` : ""
+      }`
 
   return createPortal(
     <div
@@ -173,20 +208,36 @@ export function RescheduleAppointmentModal({
         {/* Header */}
         <div className="p-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-sky-500/15 text-sky-600 dark:text-sky-400 flex items-center justify-center shrink-0">
+            <div
+              className={cn(
+                "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 transition-colors",
+                isEarlier
+                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                  : "bg-sky-500/15 text-sky-600 dark:text-sky-400"
+              )}
+            >
               <CalendarClock size={20} />
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-base text-slate-900 dark:text-white">
-                  Randevuyu Yeniden Planla
+                  {isEarlier ? "Randevuyu Erkene Al" : "Randevuyu Yeniden Planla / Ertele"}
                 </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20">
-                  Drag & Drop
+                <span
+                  className={cn(
+                    "px-2 py-0.5 rounded-full text-[10px] font-semibold border",
+                    isEarlier
+                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                      : "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/20"
+                  )}
+                >
+                  {isEarlier ? "⚡ Erkene Alma" : "Drag & Drop"}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Taşınan randevu için saat onayını ve bilgilendirme detayını belirleyin.
+                {isEarlier
+                  ? "Müşteri talebi veya boşalan lift kontenjanı için yeni saat onayı."
+                  : "Taşınan randevu için saat onayını ve bilgilendirme detayını belirleyin."}
               </p>
             </div>
           </div>
@@ -202,6 +253,16 @@ export function RescheduleAppointmentModal({
 
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
+          {/* Parça / Stok Erken Randevu Hatırlatması (Yalnızca erkene alırken) */}
+          {isEarlier && (
+            <div className="p-3 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/60 flex items-start gap-2.5">
+              <span className="text-sm shrink-0">💡</span>
+              <div className="text-[11px] text-emerald-900 dark:text-emerald-300 leading-relaxed">
+                <span className="font-bold">Erken Randevu Hatırlatması:</span> Bu aracın işleminde kullanılacak harici/özel yedek parçalar varsa, depoda hazır olduğunu teyit ediniz.
+              </div>
+            </div>
+          )}
+
           {/* Target Customer & Vehicle Mini Banner */}
           <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -230,7 +291,14 @@ export function RescheduleAppointmentModal({
           </div>
 
           {/* Before ➔ After Visual Transition Card */}
-          <div className="p-3.5 rounded-2xl bg-linear-to-r from-slate-100 via-sky-50/40 to-sky-100/60 dark:from-slate-800/60 dark:via-slate-800/40 dark:to-sky-950/30 border border-slate-200/90 dark:border-slate-800 flex items-center justify-between gap-2">
+          <div
+            className={cn(
+              "p-3.5 rounded-2xl border flex items-center justify-between gap-2 transition-colors",
+              isEarlier
+                ? "bg-linear-to-r from-slate-100 via-emerald-50/40 to-emerald-100/60 dark:from-slate-800/60 dark:via-slate-800/40 dark:to-emerald-950/30 border-emerald-200/80 dark:border-emerald-900/50"
+                : "bg-linear-to-r from-slate-100 via-sky-50/40 to-sky-100/60 dark:from-slate-800/60 dark:via-slate-800/40 dark:to-sky-950/30 border-slate-200/90 dark:border-slate-800"
+            )}
+          >
             {/* Eski */}
             <div className="flex-1 min-w-0">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
@@ -247,23 +315,56 @@ export function RescheduleAppointmentModal({
 
             {/* Arrow & Badge */}
             <div className="flex flex-col items-center justify-center shrink-0 px-2">
-              <div className="w-7 h-7 rounded-full bg-sky-500 text-white flex items-center justify-center shadow-xs">
+              <div
+                className={cn(
+                  "w-7 h-7 rounded-full text-white flex items-center justify-center shadow-xs",
+                  isEarlier ? "bg-emerald-500" : "bg-sky-500"
+                )}
+              >
                 <ArrowRight size={14} />
               </div>
-              <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 mt-1">
+              <span
+                className={cn(
+                  "text-[10px] font-bold mt-1",
+                  isEarlier
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-sky-600 dark:text-sky-400"
+                )}
+              >
                 {getDayDiffText()}
               </span>
             </div>
 
             {/* Yeni */}
             <div className="flex-1 min-w-0 text-right">
-              <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider block">
-                Yeni Planlama
+              <span
+                className={cn(
+                  "text-[10px] font-bold uppercase tracking-wider block",
+                  isEarlier
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-sky-600 dark:text-sky-400"
+                )}
+              >
+                {isEarlier ? "Erken Planlama" : "Yeni Planlama"}
               </span>
-              <p className="text-xs font-bold text-sky-950 dark:text-sky-100 mt-0.5 truncate">
+              <p
+                className={cn(
+                  "text-xs font-bold mt-0.5 truncate",
+                  isEarlier
+                    ? "text-emerald-950 dark:text-emerald-100"
+                    : "text-sky-950 dark:text-sky-100"
+                )}
+              >
                 {formatDateDisplay(targetDate)}
               </p>
-              <div className="flex items-center justify-end gap-1 text-xs font-mono font-black text-sky-600 dark:text-sky-400 mt-0.5">
+              <div
+                className={cn(
+                  "flex items-center justify-end gap-1 text-xs font-mono font-black mt-0.5",
+                  isEarlier
+                    ? "text-emerald-600 dark:text-emerald-400"
+                    : "text-sky-600 dark:text-sky-400"
+                )}
+              >
                 <Clock size={11} />
                 <span>{targetTime}</span>
               </div>
@@ -274,14 +375,14 @@ export function RescheduleAppointmentModal({
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
-                <span>Erteleme / Yeniden Planlama Nedeni:</span>
+                <span>{isEarlier ? "Erkene Alma / Güncelleme Gerekçesi:" : "Erteleme / Yeniden Planlama Nedeni:"}</span>
                 <span className="text-rose-500">*</span>
               </label>
               <span className="text-[11px] text-slate-400">Tek tıkla seçin veya düzenleyin</span>
             </div>
 
             <div className="flex flex-wrap gap-1.5">
-              {QUICK_REASONS.map((chip) => {
+              {activeReasons.map((chip) => {
                 const isSelected = selectedChip === chip.id
                 return (
                   <button
@@ -291,7 +392,9 @@ export function RescheduleAppointmentModal({
                     className={cn(
                       "px-2.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 border",
                       isSelected
-                        ? "bg-sky-500 text-white border-sky-500 shadow-2xs font-semibold"
+                        ? isEarlier
+                          ? "bg-emerald-600 text-white border-emerald-600 shadow-2xs font-semibold"
+                          : "bg-sky-500 text-white border-sky-500 shadow-2xs font-semibold"
                         : "bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                     )}
                   >
@@ -307,10 +410,13 @@ export function RescheduleAppointmentModal({
               <textarea
                 value={customReason}
                 onChange={(e) => setCustomReason(e.target.value)}
-                placeholder="Randevu erteleme gerekçesini belirtiniz..."
+                placeholder={isEarlier ? "Randevuyu erkene alma gerekçesini belirtiniz..." : "Randevu erteleme gerekçesini belirtiniz..."}
                 rows={2}
                 required
-                className="w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/60 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-sky-500 resize-none transition-shadow"
+                className={cn(
+                  "w-full px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/60 text-xs text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 resize-none transition-shadow",
+                  isEarlier ? "focus:ring-emerald-500" : "focus:ring-sky-500"
+                )}
               />
             </div>
           </div>
@@ -473,7 +579,12 @@ export function RescheduleAppointmentModal({
             <Button
               type="submit"
               disabled={isPending || !customReason.trim()}
-              className="h-10 px-5 rounded-xl text-xs font-bold gap-1.5 cursor-pointer bg-sky-600 hover:bg-sky-500 text-white shadow-xs shadow-sky-500/20"
+              className={cn(
+                "h-10 px-5 rounded-xl text-xs font-bold gap-1.5 cursor-pointer text-white shadow-xs transition-all",
+                isEarlier
+                  ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-500/20"
+                  : "bg-sky-600 hover:bg-sky-500 shadow-sky-500/20"
+              )}
             >
               {isPending ? (
                 <>
@@ -483,7 +594,7 @@ export function RescheduleAppointmentModal({
               ) : (
                 <>
                   <CalendarClock size={14} />
-                  <span>Onayla ve Randevuyu Taşı</span>
+                  <span>{isEarlier ? "Onayla ve Randevuyu Erkene Al" : "Onayla ve Randevuyu Taşı"}</span>
                 </>
               )}
             </Button>
