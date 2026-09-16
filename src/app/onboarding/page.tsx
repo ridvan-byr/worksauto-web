@@ -12,8 +12,10 @@ import { StepWorkingHours } from "@/features/onboarding/components/step-working-
 import { StepServices } from "@/features/onboarding/components/step-services"
 import { StepStaff } from "@/features/onboarding/components/step-staff"
 import { StepWorkshopSettings } from "@/features/onboarding/components/step-workshop-settings"
+import { StepInitialCustomers, type InitialCustomerVehicle } from "@/features/onboarding/components/step-initial-customers"
 import { OnboardingSuccessModal } from "@/features/onboarding/components/onboarding-success-modal"
 import { useTenantSettings } from "@/features/settings/api/use-settings"
+import { apiClient } from "@/lib/api-client"
 import { isValidTurkishGsm } from "@/lib/phone-utils"
 import { validatePersonName } from "@/lib/name-utils"
 
@@ -53,6 +55,7 @@ export default function OnboardingPage() {
     notifyAppointmentReminder: tenant?.notifyAppointmentReminder ?? true,
     notifyReadyForPickup: tenant?.notifyReadyForPickup ?? true,
     criticalStockThreshold: tenant?.criticalStockThreshold || 5,
+    initialCustomers: [] as InitialCustomerVehicle[],
   })
 
   // Prefill from server tenant if available (Superadmin entries)
@@ -200,13 +203,17 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     if (validateCurrentStep()) {
-      if (currentStep < 5) {
+      if (currentStep < 6) {
         setCurrentStep((prev) => prev + 1)
         window.scrollTo({ top: 0, behavior: "smooth" })
       } else {
         setIsSuccessModalOpen(true)
       }
     }
+  }
+
+  const handleSkipStep6 = () => {
+    setIsSuccessModalOpen(true)
   }
 
   const handlePrev = () => {
@@ -217,13 +224,45 @@ export default function OnboardingPage() {
     }
   }
 
-  const handleFinish = () => {
+  const handleFinish = async () => {
     try {
       localStorage.removeItem(ONBOARDING_STORAGE_KEY)
     } catch {
       // ignore
     }
-    completeOnboarding(formData)
+
+    // If initial customers and vehicles were added, save them via quick-lead API
+    if (formData.initialCustomers && formData.initialCustomers.length > 0) {
+      for (const cust of formData.initialCustomers) {
+        try {
+          await apiClient.post("/customers/quick-lead", {
+            firstName: cust.firstName,
+            lastName: cust.lastName,
+            phone: cust.phone,
+            plate: cust.plate,
+            brand: cust.brand,
+            model: cust.model,
+            year: cust.year,
+          })
+        } catch (err) {
+          console.warn("Could not save initial customer:", cust.plate, err)
+        }
+      }
+    }
+
+    const { initialCustomers: _initialCustomers, ...tenantData } = formData
+    completeOnboarding(tenantData)
+  }
+
+  // Customer & Vehicle helper handlers
+  const handleAddCustomer = (customer: InitialCustomerVehicle) => {
+    updateForm({ initialCustomers: [...(formData.initialCustomers || []), customer] })
+  }
+
+  const handleRemoveCustomer = (id: string) => {
+    updateForm({
+      initialCustomers: (formData.initialCustomers || []).filter((c) => c.id !== id),
+    })
   }
 
   // Service helper handlers
@@ -272,7 +311,7 @@ export default function OnboardingPage() {
     updateForm({ staff: formData.staff.filter((s) => s.id !== id) })
   }
 
-  const progressPercent = Math.round((currentStep / 5) * 100)
+  const progressPercent = Math.round((currentStep / 6) * 100)
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100 flex flex-col justify-between">
@@ -287,7 +326,7 @@ export default function OnboardingPage() {
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3 text-xs text-slate-500 dark:text-slate-400">
-          <span className="font-medium">Adım <strong>{currentStep}</strong>/5</span>
+          <span className="font-medium">Adım <strong>{currentStep}</strong>/6</span>
           <div className="w-16 sm:w-32 h-2 rounded-full bg-slate-200 dark:bg-slate-800 overflow-hidden">
             <div
               className="h-full bg-slate-900 dark:bg-slate-100 transition-all duration-300 rounded-full"
@@ -354,6 +393,15 @@ export default function OnboardingPage() {
             <StepWorkshopSettings data={formData} onChange={updateForm} errors={errors} />
           )}
 
+          {currentStep === 6 && (
+            <StepInitialCustomers
+              initialCustomers={formData.initialCustomers || []}
+              onAddCustomer={handleAddCustomer}
+              onRemoveCustomer={handleRemoveCustomer}
+              onSkip={handleSkipStep6}
+            />
+          )}
+
           {/* Navigation Footer Buttons */}
           <div className="pt-5 border-t border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between gap-2 sm:gap-3">
             <Button
@@ -367,23 +415,40 @@ export default function OnboardingPage() {
               <span>Geri</span>
             </Button>
 
-            <Button
-              type="button"
-              onClick={handleNext}
-              className="h-11 px-5 sm:px-6 gap-1.5 text-xs font-semibold cursor-pointer shadow-sm flex-1 sm:flex-none justify-center bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-950"
-            >
-              {currentStep === 5 ? (
-                <>
-                  <Sparkles size={15} />
-                  <span>Kurulumu Tamamla</span>
-                </>
-              ) : (
-                <>
-                  <span>Sonraki Adım</span>
-                  <ArrowRight size={15} />
-                </>
+            <div className="flex items-center gap-2">
+              {currentStep === 6 && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleSkipStep6}
+                  className="h-11 px-4 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 cursor-pointer"
+                >
+                  Şimdilik Atla
+                </Button>
               )}
-            </Button>
+
+              <Button
+                type="button"
+                onClick={handleNext}
+                className="h-11 px-5 sm:px-6 gap-1.5 text-xs font-semibold cursor-pointer shadow-sm flex-1 sm:flex-none justify-center bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 text-white dark:text-slate-950"
+              >
+                {currentStep === 6 ? (
+                  <>
+                    <Sparkles size={15} />
+                    <span>
+                      {(formData.initialCustomers?.length ?? 0) > 0
+                        ? `Kaydet & Kurulumu Tamamla (${formData.initialCustomers.length})`
+                        : "Kurulumu Tamamla"}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span>Sonraki Adım</span>
+                    <ArrowRight size={15} />
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
       </main>

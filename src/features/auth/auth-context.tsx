@@ -23,6 +23,7 @@ interface AuthContextType {
   logout: () => void
   completeOnboarding: (data: Partial<Tenant>) => void
   completeB2bConsent: (updatedTenant: Partial<Tenant>) => void
+  updateTenant: (data: Partial<Tenant>) => void
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined)
@@ -452,6 +453,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     router.replace("/")
   }, [router])
 
+  const updateTenant = React.useCallback((data: Partial<Tenant>) => {
+    setTenant((prev) => {
+      if (!prev) return null
+      const updated = { ...prev, ...data }
+      try {
+        const saved = localStorage.getItem(AUTH_STORAGE_KEY)
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          parsed.tenant = updated
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed))
+        }
+      } catch {
+        // ignore
+      }
+      return updated
+    })
+  }, [])
+
   const value = React.useMemo(
     () => ({
       user,
@@ -464,8 +483,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       logout,
       completeOnboarding,
       completeB2bConsent,
+      updateTenant,
     }),
-    [user, tenant, isLoading, sendOtp, verifyOtp, login, logout, completeOnboarding, completeB2bConsent]
+    [user, tenant, isLoading, sendOtp, verifyOtp, login, logout, completeOnboarding, completeB2bConsent, updateTenant]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

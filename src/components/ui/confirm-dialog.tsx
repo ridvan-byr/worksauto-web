@@ -46,7 +46,12 @@ export function ConfirmDialog({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isLoading) onClose()
+      }}
+      className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-200"
+    >
       <div
         className="w-full max-w-sm rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-6 space-y-4 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}

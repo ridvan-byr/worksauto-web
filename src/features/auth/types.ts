@@ -46,6 +46,15 @@ export interface Tenant {
   phone?: string
   email?: string
   logo?: string
+  logoUrl?: string
+  logoWidth?: number | null
+  logoHeight?: number | null
+  bankName?: string
+  iban?: string
+  accountHolder?: string
+  paytrMerchantId?: string
+  paytrMerchantKey?: string
+  paytrMerchantSalt?: string
   primaryColor?: string
   slogan?: string
   // Working hours

@@ -39,7 +39,11 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   async rewrites() {
-    const backendBase = (process.env.API_INTERNAL_URL || "http://localhost:4000/api/v1").replace(/\/$/, "");
+    const isDocker = Boolean(process.env.HOSTNAME === "0.0.0.0" || process.env.API_INTERNAL_URL);
+    const backendBase = (
+      process.env.API_INTERNAL_URL ||
+      (isDocker ? "http://api:4000/api/v1" : "http://localhost:4000/api/v1")
+    ).replace(/\/$/, "");
     return [
       {
         source: "/api/v1/:path*",

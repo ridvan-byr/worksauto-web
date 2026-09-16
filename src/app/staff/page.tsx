@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Users, Calendar, History, Plus, UserCheck } from "lucide-react";
+import { Users, Calendar, History, Plus, UserCheck, Clock, Briefcase } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   useStaffList,
@@ -18,11 +18,13 @@ import { StaffRecord as SettingsStaffRecord } from "@/features/settings/api/use-
 import { StaffListTab } from "@/features/staff/components/staff-list-tab";
 import { StaffLeaveTab } from "@/features/staff/components/staff-leave-tab";
 import { StaffAuditTab } from "@/features/staff/components/staff-audit-tab";
+import { StaffShiftTab } from "@/features/staff/components/staff-shift-tab";
 import { CreateLeaveModal } from "@/features/staff/components/create-leave-modal";
 import { StaffModal } from "@/features/settings/components/staff-modal";
 import { StaffDeleteModal } from "@/features/settings/components/staff-delete-modal";
+import { PositionManagementModal } from "@/features/staff/components/position-management-modal";
 
-type ActiveTab = "staff" | "leaves" | "audit";
+type ActiveTab = "staff" | "shifts" | "leaves" | "audit";
 
 export default function StaffPage() {
   const [activeTab, setActiveTab] = React.useState<ActiveTab>("staff");
@@ -31,6 +33,7 @@ export default function StaffPage() {
   const [isStaffModalOpen, setIsStaffModalOpen] = React.useState(false);
   const [editingStaff, setEditingStaff] = React.useState<StaffRecord | null>(null);
   const [deletingStaff, setDeletingStaff] = React.useState<StaffRecord | null>(null);
+  const [isPositionModalOpen, setIsPositionModalOpen] = React.useState(false);
 
   const [isLeaveModalOpen, setIsLeaveModalOpen] = React.useState(false);
   const [leavePreselectedUserId, setLeavePreselectedUserId] = React.useState<string | null>(null);
@@ -61,8 +64,8 @@ export default function StaffPage() {
     setDeletingStaff(staff);
   };
 
-  const handleDefineLeave = (staffId: string) => {
-    setLeavePreselectedUserId(staffId);
+  const handleDefineLeave = (staffId?: string) => {
+    setLeavePreselectedUserId(staffId || null);
     setIsLeaveModalOpen(true);
   };
 
@@ -108,9 +111,9 @@ export default function StaffPage() {
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6 animate-in fade-in duration-200">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-tour="staff-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400">
               <UserCheck className="h-5 w-5" />
             </div>
@@ -127,11 +130,21 @@ export default function StaffPage() {
           <Button
             type="button"
             variant="outline"
+            data-tour="staff-positions"
+            onClick={() => setIsPositionModalOpen(true)}
+            className="rounded-xl text-xs h-9 font-semibold text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+          >
+            <Briefcase className="h-4 w-4 mr-1.5 text-sky-500" />
+            Pozisyonları Yönet
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
             onClick={() => {
               setLeavePreselectedUserId(null);
               setIsLeaveModalOpen(true);
             }}
-            className="rounded-xl text-xs h-9 font-semibold text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/40"
+            className="rounded-xl text-xs h-9 font-semibold text-amber-600 dark:text-amber-400 border-amber-200 dark:border-amber-800/60 hover:bg-amber-50 dark:hover:bg-amber-950/40 cursor-pointer"
           >
             <Calendar className="h-4 w-4 mr-1.5" />
             İzin Girişi
@@ -139,7 +152,7 @@ export default function StaffPage() {
           <Button
             type="button"
             onClick={handleOpenCreateStaff}
-            className="rounded-xl text-xs h-9 font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
+            className="rounded-xl text-xs h-9 font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-xs cursor-pointer"
           >
             <Plus className="h-4 w-4 mr-1.5" />
             Yeni Personel Ekle
@@ -148,7 +161,7 @@ export default function StaffPage() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 w-fit max-w-full overflow-x-auto border border-slate-200/60 dark:border-slate-700/60">
+      <div data-tour="staff-tabs" className="flex items-center p-1 rounded-2xl bg-slate-100 dark:bg-slate-800/80 w-fit max-w-full overflow-x-auto border border-slate-200/60 dark:border-slate-700/60">
         <button
           type="button"
           onClick={() => setActiveTab("staff")}
@@ -162,6 +175,22 @@ export default function StaffPage() {
           <span>Kadro & Ustalar</span>
           <span className="ml-1 px-1.5 py-0.2 rounded-md bg-slate-200/60 dark:bg-slate-800 text-[10px] font-semibold">
             {staffList.filter((s) => s.isActive !== false).length}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("shifts")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === "shifts"
+              ? "bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-xs font-black"
+              : "text-slate-500 hover:text-slate-900 dark:hover:text-slate-200"
+          }`}
+        >
+          <Clock className="h-4 w-4 text-emerald-500" />
+          <span>Vardiya & Çalışma Çizelgesi</span>
+          <span className="ml-1 px-1.5 py-0.2 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+            Haftalık
           </span>
         </button>
 
@@ -212,6 +241,14 @@ export default function StaffPage() {
         />
       )}
 
+      {activeTab === "shifts" && (
+        <StaffShiftTab
+          staffList={staffList}
+          leaves={leaves}
+          onOpenLeaveModal={handleDefineLeave}
+        />
+      )}
+
       {activeTab === "leaves" && (
         <StaffLeaveTab
           leaves={leaves}
@@ -256,6 +293,11 @@ export default function StaffPage() {
         preselectedUserId={leavePreselectedUserId}
         onSubmit={handleCreateLeaveSubmit}
         isPending={createLeaveMutation.isPending}
+      />
+
+      <PositionManagementModal
+        isOpen={isPositionModalOpen}
+        onClose={() => setIsPositionModalOpen(false)}
       />
     </div>
   );

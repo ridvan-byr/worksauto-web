@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Send,
   X,
@@ -25,21 +26,39 @@ export function SendStatusNotificationModal({
   isOpen,
   onClose,
 }: SendStatusNotificationModalProps) {
+  const [mounted, setMounted] = useState(false);
   const notifyMutation = useNotifyWorkOrderStatus();
 
   const customer = workOrder?.customer;
   const vehicle = workOrder?.vehicle;
 
-  const hasEmail = Boolean(customer?.email);
-  const hasPhone = Boolean(customer?.phone);
+  const customerPhone = customer?.phone || workOrder?.customerPhone || '';
+  const customerEmail = customer?.email || workOrder?.customerEmail || '';
+
+  const hasEmail = Boolean(customerEmail);
+  const hasPhone = Boolean(customerPhone);
 
   const [sendEmail, setSendEmail] = useState(true);
   const [sendWhatsApp, setSendWhatsApp] = useState(true);
   const [sendSms, setSendSms] = useState(false);
   const [customMessage, setCustomMessage] = useState('');
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Prevent background scrolling while modal is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = 'auto';
+      };
+    }
+  }, [isOpen]);
+
   // Reset when modal opens
-  React.useEffect(() => {
+  useEffect(() => {
     if (isOpen) {
       setSendEmail(hasEmail);
       setSendWhatsApp(hasPhone);
@@ -48,12 +67,15 @@ export function SendStatusNotificationModal({
     }
   }, [isOpen, hasEmail, hasPhone]);
 
-  if (!isOpen || !workOrder) return null;
+  if (!isOpen || !workOrder || !mounted) return null;
 
-  const customerFullName = customer
-    ? `${customer.firstName} ${customer.lastName || ''}`.trim()
-    : 'Değerli Müşterimiz';
-  const plate = vehicle?.plate || 'Belirtilmedi';
+  const customerFullName =
+    (customer
+      ? `${customer.firstName || customer.name || ''} ${customer.lastName || customer.surname || ''}`.trim()
+      : '') ||
+    workOrder.customerName ||
+    'Değerli Müşterimiz';
+  const plate = vehicle?.plate || workOrder.plate || 'Belirtilmedi';
   const statusLabel = WORK_ORDER_STATUS_MAP[workOrder.status] || workOrder.status;
 
   const handleSend = async () => {
@@ -83,17 +105,28 @@ export function SendStatusNotificationModal({
     (sendWhatsApp && hasPhone) ||
     (sendSms && hasPhone);
 
-  return (
-    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col my-8 animate-in zoom-in-95 duration-200">
+  const modalContent = (
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !notifyMutation.isPending) onClose();
+      }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="send-status-notification-title"
+        className="relative w-full max-w-lg my-auto rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[92vh]"
+      >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center">
               <Send size={18} />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-slate-900 dark:text-slate-100">
+              <h2 id="send-status-notification-title" className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 Müşteriye Durum Bildirimi Gönder
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">
@@ -102,8 +135,9 @@ export function SendStatusNotificationModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             <X size={18} />
           </button>
@@ -123,12 +157,12 @@ export function SendStatusNotificationModal({
             </div>
             <div className="flex items-center justify-between text-xs text-slate-500">
               <span>Telefon:</span>
-              <span className="font-mono">{customer?.phone || 'Yok'}</span>
+              <span className="font-mono">{customerPhone || 'Yok'}</span>
             </div>
-            {customer?.email && (
+            {customerEmail && (
               <div className="flex items-center justify-between text-xs text-slate-500">
                 <span>E-Posta:</span>
-                <span className="font-mono">{customer.email}</span>
+                <span className="font-mono">{customerEmail}</span>
               </div>
             )}
             <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between">
@@ -264,12 +298,12 @@ export function SendStatusNotificationModal({
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3 bg-slate-50/50 dark:bg-slate-900/50">
+        <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-3 bg-slate-50/50 dark:bg-slate-900/50 shrink-0">
           <button
             type="button"
             onClick={onClose}
             disabled={notifyMutation.isPending}
-            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
           >
             Vazgeç
           </button>
@@ -295,4 +329,6 @@ export function SendStatusNotificationModal({
       </div>
     </div>
   );
+
+  return createPortal(modalContent, document.body);
 }

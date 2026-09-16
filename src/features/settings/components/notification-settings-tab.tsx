@@ -72,7 +72,7 @@ export function NotificationSettingsTab() {
 
   // 6563 ETK Commercial Communication State
   const [marketingAccepted, setMarketingAccepted] = React.useState<boolean>(true)
-  const [isUpdatingMarketing, setIsUpdatingMarketing] = React.useState<boolean>(false)
+  const [initialMarketingAccepted, setInitialMarketingAccepted] = React.useState<boolean>(true)
 
   React.useEffect(() => {
     setMounted(true)
@@ -252,9 +252,9 @@ export function NotificationSettingsTab() {
           setInitialSettings(notifRes.value)
         }
         if (legalRes.status === "fulfilled" && legalRes.value?.latestConsent) {
-          setMarketingAccepted(
-            legalRes.value.latestConsent.marketingAccepted ?? true
-          )
+          const accepted = legalRes.value.latestConsent.marketingAccepted ?? true
+          setMarketingAccepted(accepted)
+          setInitialMarketingAccepted(accepted)
         }
         if (waRes.status === "fulfilled" && waRes.value) {
           setWaConnected(waRes.value.connected)
@@ -270,39 +270,38 @@ export function NotificationSettingsTab() {
     loadSettings()
   }, [])
 
-  const handleToggleMarketingConsent = async (checked: boolean | "indeterminate") => {
-    const newValue = !!checked
-    setIsUpdatingMarketing(true)
-    try {
-      await apiClient.patch("/legal/marketing-consent", { marketingAccepted: newValue })
-      setMarketingAccepted(newValue)
-      toast.success(
-        newValue
-          ? "Ticari elektronik ileti izniniz aktif edildi."
-          : "Ticari elektronik ileti izniniz iptal edildi (Ret talebiniz işlendi)."
-      )
-    } catch {
-      toast.error("Tercih güncellenirken bir hata oluştu.")
-    } finally {
-      setIsUpdatingMarketing(false)
-    }
+  const handleToggleMarketingConsent = (checked: boolean | "indeterminate") => {
+    setMarketingAccepted(!!checked)
   }
 
   const handleSave = async () => {
     if (!settings) return
     setIsSaving(true)
     try {
-      const res = await apiClient.patch<NotificationSettingsData>("/tenants/notification-settings", {
-        strategy: settings.strategy,
-        channelPriority: settings.channelPriority,
-        singleChannel: settings.singleChannel,
-        whatsappEnabled: settings.whatsappEnabled,
-        emailEnabled: settings.emailEnabled,
-        smsEnabled: settings.smsEnabled,
-        whatsappDeviceId: settings.whatsappDeviceId,
-      })
-      setSettings(res)
-      setInitialSettings(res)
+      const promises: Promise<unknown>[] = [
+        apiClient.patch<NotificationSettingsData>("/tenants/notification-settings", {
+          strategy: settings.strategy,
+          channelPriority: settings.channelPriority,
+          singleChannel: settings.singleChannel,
+          whatsappEnabled: settings.whatsappEnabled,
+          emailEnabled: settings.emailEnabled,
+          smsEnabled: settings.smsEnabled,
+          whatsappDeviceId: settings.whatsappDeviceId,
+        }),
+      ]
+
+      if (marketingAccepted !== initialMarketingAccepted) {
+        promises.push(
+          apiClient.patch("/legal/marketing-consent", { marketingAccepted })
+        )
+      }
+
+      const [notifRes] = await Promise.all(promises)
+      if (notifRes) {
+        setSettings(notifRes as NotificationSettingsData)
+        setInitialSettings(notifRes as NotificationSettingsData)
+      }
+      setInitialMarketingAccepted(marketingAccepted)
       toast.success("İletişim ve bildirim tercihleri başarıyla kaydedildi!")
     } catch {
       toast.error("Ayarlar kaydedilirken bir hata oluştu.")
@@ -320,9 +319,10 @@ export function NotificationSettingsTab() {
       settings.whatsappEnabled !== initialSettings.whatsappEnabled ||
       settings.emailEnabled !== initialSettings.emailEnabled ||
       settings.smsEnabled !== initialSettings.smsEnabled ||
-      JSON.stringify(settings.channelPriority) !== JSON.stringify(initialSettings.channelPriority)
+      JSON.stringify(settings.channelPriority) !== JSON.stringify(initialSettings.channelPriority) ||
+      marketingAccepted !== initialMarketingAccepted
     )
-  }, [settings, initialSettings])
+  }, [settings, initialSettings, marketingAccepted, initialMarketingAccepted])
 
   // Browser navigation warning
   React.useEffect(() => {
@@ -340,6 +340,7 @@ export function NotificationSettingsTab() {
   const handleReset = () => {
     if (!initialSettings) return
     setSettings(initialSettings)
+    setMarketingAccepted(initialMarketingAccepted)
     toast.info("Değişiklikler geri alındı.")
   }
 
@@ -400,13 +401,6 @@ export function NotificationSettingsTab() {
               Araç kabul fişi, ek parça onay talebi, randevu erteleme ve faturaların müşteriye hangi kanalla iletileceğini yönetin.
             </p>
           </div>
-          <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-4 py-2 rounded-xl shadow-xs shrink-0 cursor-pointer"
-          >
-            {isSaving ? "Kaydediliyor..." : "Tercihleri Kaydet"}
-          </Button>
         </div>
 
         {/* Section 1: Active Channels Status */}
@@ -898,13 +892,13 @@ export function NotificationSettingsTab() {
               id="marketingConsentToggle"
               checked={marketingAccepted}
               onCheckedChange={handleToggleMarketingConsent}
-              disabled={isUpdatingMarketing}
+              disabled={isSaving}
               className="mt-0.5"
             />
             <label htmlFor="marketingConsentToggle" className="text-xs text-slate-800 dark:text-slate-200 cursor-pointer select-none leading-snug">
               <strong>WorksAuto ticari ve tanıtım iletilerini almak istiyorum.</strong>
               <span className="block text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                İşareti kaldırdığınızda ticari ileti izniniz anında iptal edilir ve ret bildiriminiz yasal mevzuat uyarınca sisteme işlenir.
+                İşareti kaldırdığınızda ticari ileti izniniz iptal edilir ve değişiklikleri kaydettiğinizde ret bildiriminiz yasal mevzuat uyarınca sisteme işlenir.
               </span>
             </label>
           </div>

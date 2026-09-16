@@ -257,7 +257,7 @@ function InventoryPageContent() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-tour="inv-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -274,6 +274,7 @@ function InventoryPageContent() {
 
         <Button
           type="button"
+          data-tour="inv-create"
           onClick={() => {
             setTargetCellForNewProduct(null)
             setIsCreateModalOpen(true)
@@ -286,7 +287,7 @@ function InventoryPageContent() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="inv-alerts" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Kritik Stok Uyarısı</p>
@@ -362,20 +363,22 @@ function InventoryPageContent() {
       </div>
 
       {/* Main Content: Tab'a Göre Render */}
-      {activeTab === "LIST" ? (
-        <ProductTable
-          products={products}
-          onOpenMovement={handleOpenMovement}
-          onOpenHistory={handleOpenHistory}
-          onEditProduct={(p) => setEditingProduct(p)}
-          onDeleteProduct={handleDeleteProduct}
-        />
-      ) : (
-        <ShelfMatrixView
-          products={products}
-          onCreateProductForCell={handleOpenCreateForCell}
-        />
-      )}
+      <div data-tour="inv-table">
+        {activeTab === "LIST" ? (
+          <ProductTable
+            products={products}
+            onOpenMovement={handleOpenMovement}
+            onOpenHistory={handleOpenHistory}
+            onEditProduct={(p) => setEditingProduct(p)}
+            onDeleteProduct={handleDeleteProduct}
+          />
+        ) : (
+          <ShelfMatrixView
+            products={products}
+            onCreateProductForCell={handleOpenCreateForCell}
+          />
+        )}
+      </div>
 
       {/* Edit Product Modal */}
       <EditProductModal

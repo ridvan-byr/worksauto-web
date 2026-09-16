@@ -52,12 +52,11 @@ function useContentOffset(): number {
 interface UnsavedChangesBarProps {
   visible: boolean
   onDiscard: () => void
-  /** `saveButtonType="button"` iken zorunludur; form içi `submit` kullanımında verilmez. */
   onSave?: (e: React.SyntheticEvent) => void | Promise<void>
   isSaving?: boolean
   saveLabel?: string
-  /** Form içi kullanımda native validasyonu korumak için "submit" verin. */
   saveButtonType?: "button" | "submit"
+  formId?: string
 }
 
 /**
@@ -76,6 +75,7 @@ export function UnsavedChangesBar({
   isSaving = false,
   saveLabel = "Kaydet",
   saveButtonType = "button",
+  formId,
 }: UnsavedChangesBarProps) {
   const contentOffset = useContentOffset()
   const [mounted, setMounted] = React.useState(false)
@@ -117,7 +117,10 @@ export function UnsavedChangesBar({
             </button>
             <button
               type={saveButtonType}
-              onClick={saveButtonType === "button" ? onSave : undefined}
+              form={formId}
+              onClick={(e) => {
+                if (onSave) onSave(e)
+              }}
               disabled={isSaving}
               className="inline-flex h-9 cursor-pointer items-center gap-1.5 rounded-xl bg-emerald-500 px-4 text-[13px] font-bold text-white shadow-lg shadow-emerald-950/40 transition-colors hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
             >

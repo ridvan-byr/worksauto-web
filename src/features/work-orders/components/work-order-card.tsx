@@ -12,6 +12,8 @@ import {
   ChevronDown,
   AlertCircle,
   RotateCcw,
+  Send,
+  Star,
 } from "lucide-react"
 import { WorkOrder, WorkOrderStatus } from "../types"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -24,6 +26,7 @@ interface WorkOrderCardProps {
   activeDraggedId?: string | null
   activeDraggedStatus?: WorkOrderStatus | null
   onStatusChange: (id: string, newStatus: WorkOrderStatus) => void
+  onSendNotification?: (order: WorkOrder) => void
   onMoveUp?: () => void
   onMoveDown?: () => void
   isFirst?: boolean
@@ -41,6 +44,7 @@ export function WorkOrderCard({
   activeDraggedId,
   activeDraggedStatus: _activeDraggedStatus,
   onStatusChange,
+  onSendNotification,
   onMoveUp,
   onMoveDown,
   isFirst = false,
@@ -146,6 +150,34 @@ export function WorkOrderCard({
             {order.workOrderNumber}
           </span>
 
+          {order.lastNotifiedAt && (
+            <span
+              className="h-6 px-1.5 rounded-md flex items-center gap-1 text-[9px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 shrink-0"
+              title={`Müşteriye son bildirim: ${new Date(order.lastNotifiedAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}`}
+            >
+              <CheckCircle2 size={10} className="text-emerald-600 dark:text-emerald-400" />
+              <span className="hidden sm:inline">Bildirildi</span>
+              <span className="font-mono text-[9px] opacity-80">
+                {new Date(order.lastNotifiedAt).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            </span>
+          )}
+
+          {onSendNotification && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation()
+                onSendNotification(order)
+              }}
+              className="h-6 px-1.5 rounded-md flex items-center gap-1 text-[10px] font-semibold text-slate-500 hover:text-sky-600 dark:hover:text-sky-400 bg-slate-100 dark:bg-slate-800 hover:bg-sky-50 dark:hover:bg-sky-950/40 transition-colors cursor-pointer shrink-0"
+              title="Müşteriye SMS/WhatsApp Durum Bildirimi Gönder"
+            >
+              <Send size={11} className="text-sky-500" />
+              <span className="hidden sm:inline">Bildir</span>
+            </button>
+          )}
+
           {/* Up & Down Reorder Micro Buttons */}
           {(onMoveUp || onMoveDown) && (
             <div
@@ -201,9 +233,20 @@ export function WorkOrderCard({
         <p className="text-xs font-bold text-slate-900 dark:text-slate-100 group-hover:text-sky-600 dark:group-hover:text-sky-400 transition-colors truncate">
           {order.brand} {order.model}
         </p>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-          {order.customerName}
-        </p>
+        <div className="flex items-center justify-between gap-1 mt-0.5">
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+            {order.customerName}
+          </p>
+          {Boolean(order.customerRating) && (
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/40 text-amber-700 dark:text-amber-300 text-[10px] font-bold shrink-0"
+              title={order.customerComment ? `Müşteri Yorumu: "${order.customerComment}"` : `Müşteri Puanı: ${order.customerRating}/5`}
+            >
+              <Star size={10} className="fill-amber-400 text-amber-400" />
+              <span>{order.customerRating}/5</span>
+            </span>
+          )}
+        </div>
       </div>
 
       {/* Services List Preview */}

@@ -264,6 +264,16 @@ export interface TenantSettings {
   autoInvoiceOnComplete?: boolean;
   latitude?: number | null;
   longitude?: number | null;
+  logoUrl?: string | null;
+  logoWidth?: number | null;
+  logoHeight?: number | null;
+  googleReviewUrl?: string | null;
+  bankName?: string | null;
+  iban?: string | null;
+  accountHolder?: string | null;
+  paytrMerchantId?: string | null;
+  paytrMerchantKey?: string | null;
+  paytrMerchantSalt?: string | null;
 }
 
 export function useTenantSettings() {

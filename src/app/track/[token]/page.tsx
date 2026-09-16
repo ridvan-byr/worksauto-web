@@ -22,6 +22,9 @@ import {
   MapPin,
   XCircle,
   Clock,
+  Star,
+  MessageSquare,
+  Send,
 } from "lucide-react"
 import { apiClient } from "@/lib/api-client"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
@@ -75,6 +78,7 @@ interface TrackingData {
     latitude?: number | null
     longitude?: number | null
     logoUrl?: string
+    googleReviewUrl?: string
   }
   invoice?: {
     id: string
@@ -116,6 +120,29 @@ export default function PublicVehicleTrackPage() {
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
   const [selectedPhoto, setSelectedPhoto] = React.useState<string | null>(null)
+
+  // Customer Feedback & Google Review Funnel State
+  const [feedbackRating, setFeedbackRating] = React.useState<number | null>(null)
+  const [feedbackComment, setFeedbackComment] = React.useState("")
+  const [isSubmittingFeedback, setIsSubmittingFeedback] = React.useState(false)
+  const [feedbackSubmitted, setFeedbackSubmitted] = React.useState(false)
+
+  const handleFeedbackSubmit = async () => {
+    if (!feedbackRating || !token) return
+    setIsSubmittingFeedback(true)
+    try {
+      await apiClient.post(`/work-orders/public/track/${token}/feedback`, {
+        rating: feedbackRating,
+        comment: feedbackComment.trim() || undefined,
+      })
+      setFeedbackSubmitted(true)
+    } catch (e) {
+      console.warn("Feedback submission error:", e)
+      setFeedbackSubmitted(true)
+    } finally {
+      setIsSubmittingFeedback(false)
+    }
+  }
 
   // Fetch logic with silent background sync support
   const fetchTrackingData = React.useCallback(
@@ -663,6 +690,152 @@ export default function PublicVehicleTrackPage() {
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
                 <ShieldCheck size={16} />
                 <span>Ödeme Başarıyla Alındı</span>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Akıllı Müşteri Memnuniyeti & Google Değerlendirme Hunisi (Sadece Tamamlanan İşlemlerde) */}
+        {data.status === "COMPLETED" && (
+          <div className="p-6 rounded-3xl bg-linear-to-br from-white via-amber-50/25 to-white dark:from-[#0b101b]/95 dark:via-amber-950/10 dark:to-[#0b101b]/95 border border-amber-500/20 dark:border-amber-500/30 shadow-lg shadow-amber-500/5 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0">
+                  <Star size={20} fill="currentColor" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                    <span>Servis Deneyiminizi Puanlayın</span>
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                      Müşteri Memnuniyeti
+                    </span>
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    {data.tenant?.title || "Servisimizden"} aldığınız hizmetten ne kadar memnun kaldınız?
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* 5 Yıldız Seçim Butonları */}
+            {!feedbackSubmitted ? (
+              <div className="space-y-4 pt-1">
+                <div className="flex items-center justify-center sm:justify-start gap-2 sm:gap-3 py-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setFeedbackRating(star)}
+                      className={cn(
+                        "w-12 h-12 rounded-2xl flex flex-col items-center justify-center transition-all cursor-pointer border",
+                        (feedbackRating || 0) >= star
+                          ? "bg-amber-500 text-white border-amber-500 shadow-md shadow-amber-500/25 scale-105"
+                          : "bg-slate-50 dark:bg-white/[0.03] border-slate-200 dark:border-white/[0.08] text-slate-400 hover:border-amber-400 hover:text-amber-500"
+                      )}
+                      title={`${star} Yıldız`}
+                    >
+                      <Star
+                        size={20}
+                        fill={(feedbackRating || 0) >= star ? "currentColor" : "none"}
+                      />
+                      <span className="text-[9px] font-bold mt-0.5">{star}</span>
+                    </button>
+                  ))}
+                </div>
+
+                {/* Yıldız Açıklama Metni */}
+                {feedbackRating && (
+                  <p className="text-xs font-semibold text-center sm:text-left text-slate-700 dark:text-slate-300">
+                    {feedbackRating === 5 && "⭐ Mükemmel — Çok memnun kaldım!"}
+                    {feedbackRating === 4 && "⭐ İyi — Memnun kaldım."}
+                    {feedbackRating === 3 && "⭐ Orta — Standart bir deneyimdi."}
+                    {feedbackRating === 2 && "⭐ Beklentimin Altında — Geliştirilmesi gereken noktalar var."}
+                    {feedbackRating === 1 && "⭐ Memnun Kalmadım — Olumsuz bir deneyim yaşadım."}
+                  </p>
+                )}
+
+                {/* 4 VEYA 5 YILDIZ: GOOGLE HARİTALAR DEĞERLENDİRME HUNİSİ */}
+                {feedbackRating && feedbackRating >= 4 && (
+                  <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-start gap-2.5">
+                      <Sparkles size={18} className="text-emerald-500 shrink-0 mt-0.5" />
+                      <div className="text-xs space-y-1">
+                        <p className="font-bold text-emerald-900 dark:text-emerald-200">
+                          Memnun kalmanıza çok sevindik! 🎉
+                        </p>
+                        <p className="text-emerald-800/90 dark:text-emerald-300/90 leading-relaxed text-[11px]">
+                          Deneyiminizi Google Haritalar üzerinde 10 saniyede değerlendirerek diğer araç sahiplerine rehberlik etmek ve servisimize destek olmak ister misiniz?
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 pt-1">
+                      <a
+                        href={
+                          data.tenant?.googleReviewUrl ||
+                          `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                            `${data.tenant?.title || "Oto Servis"} ${data.tenant?.city || ""}`
+                          )}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={handleFeedbackSubmit}
+                        className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+                      >
+                        <span>Google Haritalar'da Değerlendir ⭐⭐⭐⭐⭐</span>
+                        <ExternalLink size={14} />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* 1, 2 VEYA 3 YILDIZ: SERVİS İÇİ DAHİLİ GERİ BİLDİRİM HUNİSİ */}
+                {feedbackRating && feedbackRating <= 3 && (
+                  <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25 space-y-3 animate-in fade-in zoom-in-95 duration-200">
+                    <div className="flex items-start gap-2.5">
+                      <MessageSquare size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                      <div className="text-xs space-y-1">
+                        <p className="font-bold text-amber-900 dark:text-amber-200">
+                          Görüşleriniz bizim için çok kıymetli
+                        </p>
+                        <p className="text-amber-800/90 dark:text-amber-300/90 leading-relaxed text-[11px]">
+                          Memnun kalmadığınız noktaları lütfen bizimle paylaşın. Mesajınız doğrudan servis sahibine ve yöneticisine özel olarak iletilecektir.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <textarea
+                        rows={3}
+                        maxLength={500}
+                        placeholder="Örn: Araç teslimatı biraz gecikti, usta ile iletişimde sorun yaşadım vb..."
+                        value={feedbackComment}
+                        onChange={(e) => setFeedbackComment(e.target.value)}
+                        className="w-full p-3 rounded-xl border border-slate-200 dark:border-white/[0.1] bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={handleFeedbackSubmit}
+                        disabled={isSubmittingFeedback}
+                        className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+                      >
+                        <Send size={13} />
+                        <span>{isSubmittingFeedback ? "İletiliyor..." : "Servis Yöneticisine İlet"}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center space-y-1.5 animate-in zoom-in-95 duration-200">
+                <CheckCircle2 size={24} className="text-emerald-500 mx-auto" />
+                <h4 className="text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                  Geri Bildiriminiz Alındı!
+                </h4>
+                <p className="text-[11px] text-emerald-700 dark:text-emerald-300">
+                  Servis kalitemizi artırmamıza destek olduğunuz için teşekkür ederiz. İyi ve güvenli sürüşler dileriz!
+                </p>
               </div>
             )}
           </div>

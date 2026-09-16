@@ -18,7 +18,8 @@ import {
   Plus,
   ArrowRight,
   ChevronRight,
-  } from "lucide-react"
+  CreditCard,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -27,6 +28,7 @@ import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-ord
 import { useWorkOrders } from "@/features/work-orders/api/use-work-orders"
 import type { WorkOrder, WorkOrderStatus } from "@/features/work-orders/types"
 import { useAuth } from "@/features/auth/auth-context"
+import { cn } from "@/lib/utils"
 
 interface DashboardRecentOrder {
   id: string
@@ -47,9 +49,54 @@ export default function DashboardPage() {
   const { data: summary } = useDashboardSummary()
   const { data: apiWorkOrders } = useWorkOrders()
 
-  const userName = user ? `${user.name} ${user.surname || ""}`.trim() : "Yetkili"
+  const [currentHour, setCurrentHour] = React.useState<number>(() => new Date().getHours())
+  const [formattedDate, setFormattedDate] = React.useState<string>("")
+
+  React.useEffect(() => {
+    const now = new Date()
+    setCurrentHour(now.getHours())
+    setFormattedDate(
+      new Intl.DateTimeFormat("tr-TR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        weekday: "long",
+      }).format(now)
+    )
+  }, [])
+
   const userRole = (user?.role || "").toUpperCase()
   const isTechnician = userRole === "TECHNICIAN"
+
+  const greetingInfo = React.useMemo(() => {
+    if (currentHour >= 5 && currentHour < 12) {
+      return { text: "Günaydın", icon: "☀️" }
+    }
+    if (currentHour >= 12 && currentHour < 18) {
+      return { text: "İyi günler", icon: "🌤️" }
+    }
+    if (currentHour >= 18 && currentHour < 22) {
+      return { text: "İyi akşamlar", icon: "🌅" }
+    }
+    return { text: "İyi çalışmalar", icon: "🌙" }
+  }, [currentHour])
+
+  // Technician personal assigned active orders
+  const myAssignedOrdersCount = React.useMemo(() => {
+    if (!isTechnician || !apiWorkOrders || !user) return 0
+    const nameLower = (user.name || "").toLowerCase()
+    return apiWorkOrders.filter((w: WorkOrder) => {
+      const isActive = w.status === "IN_PROGRESS" || w.status === "PENDING"
+      if (!isActive) return false
+      const mechUserId = (w as { assignedMechanic?: { user?: { id?: string }; userId?: string } }).assignedMechanic?.userId ||
+        (w as { assignedMechanic?: { user?: { id?: string } } }).assignedMechanic?.user?.id
+      if (mechUserId && mechUserId === user.id) return true
+      const mechName = (w.assignedMechanicName || "").toLowerCase()
+      return mechName.length > 0 && mechName.includes(nameLower)
+    }).length
+  }, [isTechnician, apiWorkOrders, user])
+
+  const displayName = user ? user.name : "Yetkili"
 
   // Map real database work orders
   const recentOrders: DashboardRecentOrder[] = React.useMemo(() => {
@@ -88,42 +135,88 @@ export default function DashboardPage() {
   const criticalStock = summary?.criticalStockCount ?? 0
   const openInvoicesCount = summary?.unpaidInvoicesCount ?? 0
   const totalReceivables = summary?.unpaidTotal ?? 0
+  const todayRevenue = summary?.todayRevenue ?? 0
+  const monthlyRevenue = summary?.monthlyRevenue ?? 0
 
   return (
     <div className="space-y-6 pb-12">
       {/* Premium Hero Banner */}
       <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 dark:border-slate-800/80 bg-white/70 dark:bg-slate-900/50 backdrop-blur-md p-6 sm:p-8 shadow-xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-3">
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
-                Hoş Geldiniz, {userName}
-              </h1>
-              <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold border ${
-                isTechnician
-                  ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25"
-                  : "bg-sky-500/10 text-sky-600 dark:text-sky-400 border-sky-500/25"
-              }`}>
-                {isTechnician ? "Atölye Teknisyeni" : "Servis Yöneticisi"}
+          <div className="space-y-2">
+            {/* Live Operational Pulse & Date Bar */}
+            <div className="flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20 text-[11px] font-semibold">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                Servis Operasyonu Aktif
               </span>
+              {formattedDate && (
+                <>
+                  <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+                  <span className="text-slate-600 dark:text-slate-400 text-xs flex items-center gap-1">
+                    <Calendar size={13} className="text-slate-400" />
+                    {formattedDate}
+                  </span>
+                </>
+              )}
             </div>
-            <p className="text-slate-600 dark:text-slate-400 text-sm max-w-xl">
+
+            {/* Greeting Title with Role Accent */}
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <span>{greetingInfo.text}, {displayName}</span>
+                {isTechnician && (
+                  <span className="text-amber-600 dark:text-amber-400 font-black">
+                    Usta
+                  </span>
+                )}
+                <span className="text-xl sm:text-2xl select-none" role="img" aria-label="günün zamanı">
+                  {greetingInfo.icon}
+                </span>
+              </h1>
+            </div>
+
+            {/* Dynamic Briefing Subtext */}
+            <p className="text-slate-600 dark:text-slate-400 text-sm max-w-2xl leading-relaxed">
               {(() => {
-                const parts: string[] = [];
-                if (inProgressCount > 0 && queueCount > 0) {
-                  parts.push(`Atölyede şu an liftte ${inProgressCount} araç işlem görüyor, ${queueCount} araç sırada bekliyor.`);
-                } else if (inProgressCount > 0) {
-                  parts.push(`Atölyede şu an liftte ${inProgressCount} araç işlem görüyor.`);
-                } else if (queueCount > 0) {
-                  parts.push(`Atölyede şu an sırada bekleyen ${queueCount} araç bulunuyor.`);
-                } else {
-                  parts.push(`Atölyede şu an bekleyen veya işlem gören araç bulunmuyor.`);
+                if (isTechnician) {
+                  if (myAssignedOrdersCount > 0) {
+                    return `Bugün senin üzerinde ${myAssignedOrdersCount} aktif iş emri bulunuyor, lift seni bekliyor. Atölyede toplam ${inProgressCount} araç işlemde, ${queueCount} araç sırada bekliyor.`;
+                  }
+                  return `Şu an üzerine doğrudan atanmış aktif iş emri bulunmuyor. Atölyede ${inProgressCount} araç işlemde, sıradaki ${queueCount} aracı inceleyebilirsin.`;
                 }
 
-                if (!isTechnician && criticalStock > 0) {
-                  parts.push(`${criticalStock} adet kritik stok uyarısı ve ${todayAppCount} kayıtlı randevu bulunuyor.`);
+                const parts: string[] = [];
+                if (currentHour >= 5 && currentHour < 12) {
+                  parts.push(`Bugün ${todayAppCount} randevu planlandı.`);
+                  if (inProgressCount > 0 || queueCount > 0) {
+                    parts.push(`Atölyede ${inProgressCount} araç işlemde, ${queueCount} araç sırada. Verimli bir gün dileriz!`);
+                  } else {
+                    parts.push("Atölye yeni güne hazır. Verimli bir çalışma günü dileriz!");
+                  }
+                } else if (currentHour >= 12 && currentHour < 18) {
+                  if (inProgressCount > 0 && queueCount > 0) {
+                    parts.push(`Atölyede yoğun mesai: ${inProgressCount} araç liftte işlem görüyor, ${queueCount} araç sırada bekliyor.`);
+                  } else if (inProgressCount > 0) {
+                    parts.push(`Atölyede şu an ${inProgressCount} araç işlem görüyor.`);
+                  } else {
+                    parts.push(`Atölyede bekleyen araç bulunmuyor.`);
+                  }
+                  if (criticalStock > 0) {
+                    parts.push(`${criticalStock} adet parça kritik stok seviyesinde.`);
+                  } else {
+                    parts.push(`${todayAppCount} kayıtlı randevu takip ediliyor.`);
+                  }
                 } else {
-                  parts.push(`${todayAppCount} kayıtlı randevu planlandı.`);
+                  if (inProgressCount > 0) {
+                    parts.push(`Günün son işlemleri: Atölyede ${inProgressCount} araç işlem görmeye devam ediyor.`);
+                  } else {
+                    parts.push(`Günün atölye işlemleri büyük ölçüde tamamlandı.`);
+                  }
+                  parts.push(`Gün sonu teslimatlarını, kasayı ve açık faturaları inceleyebilirsiniz.`);
                 }
                 return parts.join(" ");
               })()}
@@ -151,7 +244,35 @@ export default function DashboardPage() {
       </div>
 
       {/* Live Dynamic KPI Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+      <div
+        data-tour="tour-kpis"
+        className={cn(
+          "grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5",
+          isTechnician ? "lg:grid-cols-4" : "lg:grid-cols-5"
+        )}
+      >
+        {/* Daily Cash & Revenue Card (for Service Managers / Owners) */}
+        {!isTechnician && (
+          <Link href="/reports" className="group">
+            <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full bg-gradient-to-br from-emerald-50/20 via-white to-white dark:from-emerald-950/10 dark:via-slate-900 dark:to-slate-900">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bugünkü Kasa / Ciro</p>
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                    ₺ {todayRevenue.toLocaleString("tr-TR")}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
+                    <TrendingUp size={12} className="text-emerald-500" /> Bu ay: ₺{monthlyRevenue.toLocaleString("tr-TR")}
+                  </p>
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                  <CreditCard size={22} />
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        )}
+
         {/* Appointments Card */}
         <Link href="/appointments" className="group">
           <Card className="hover:border-sky-500/40 transition-all cursor-pointer h-full">
@@ -194,18 +315,38 @@ export default function DashboardPage() {
 
         {/* Critical Stock Alert Card */}
         <Link href="/inventory" className="group">
-          <Card className="hover:border-rose-500/40 transition-all cursor-pointer h-full">
+          <Card
+            className={cn(
+              "transition-all cursor-pointer h-full",
+              criticalStock > 0 ? "hover:border-rose-500/40" : "hover:border-emerald-500/40"
+            )}
+          >
             <CardContent className="p-5 flex items-center justify-between">
               <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Kritik Stok Uyarısı</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                  {criticalStock > 0 ? "Kritik Stok Uyarısı" : "Stok Durumu"}
+                </p>
                 <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
                   {criticalStock} Parça
                 </p>
-                <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
-                  <AlertCircle size={12} /> Sipariş eşiği aşıldı
-                </p>
+                {criticalStock > 0 ? (
+                  <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
+                    <AlertCircle size={12} /> Sipariş eşiği aşıldı
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                    <CheckCircle2 size={12} /> Stok seviyeleri yeterli
+                  </p>
+                )}
               </div>
-              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-500/20 group-hover:scale-105 transition-transform">
+              <div
+                className={cn(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center border group-hover:scale-105 transition-transform",
+                  criticalStock > 0
+                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                )}
+              >
                 <Package size={22} />
               </div>
             </CardContent>
@@ -234,7 +375,7 @@ export default function DashboardPage() {
           </Link>
         ) : (
           <Link href="/invoices" className="group">
-            <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full">
+            <Card className="hover:border-indigo-500/40 transition-all cursor-pointer h-full">
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bekleyen Alacak</p>
@@ -245,7 +386,7 @@ export default function DashboardPage() {
                     <TrendingUp size={12} /> {openInvoicesCount} açık fatura
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 group-hover:scale-105 transition-transform">
                   <Receipt size={22} />
                 </div>
               </CardContent>
@@ -257,7 +398,7 @@ export default function DashboardPage() {
       {/* Quick Launch & Active Work Orders Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left: Active Vehicles in Workshop */}
-        <div className="lg:col-span-2 space-y-4">
+        <div data-tour="tour-work-orders" className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">

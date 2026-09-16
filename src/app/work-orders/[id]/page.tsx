@@ -42,9 +42,11 @@ import {
   Ban,
   Printer,
   Send,
+  Star,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { SendStatusNotificationModal } from "@/features/work-orders/components/send-status-notification-modal"
+import { CompleteWorkOrderConfirmModal } from "@/features/work-orders/components/complete-work-order-confirm-modal"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { useAuth } from "@/features/auth/auth-context"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
@@ -116,6 +118,7 @@ export default function WorkOrderDetailPage() {
   const [isReopenModalOpen, setIsReopenModalOpen] = React.useState(false)
   const [isInvoiceDetailOpen, setIsInvoiceDetailOpen] = React.useState(false)
   const [isNotificationModalOpen, setIsNotificationModalOpen] = React.useState(false)
+  const [isCompleteConfirmOpen, setIsCompleteConfirmOpen] = React.useState(false)
   const addItemMutation = useAddWorkOrderItem()
   const updateStatusMutation = useUpdateWorkOrderStatus()
   const removeItemMutation = useRemoveWorkOrderItem()
@@ -210,6 +213,9 @@ export default function WorkOrderDetailPage() {
         grandTotal: Number(apiOrder.grandTotal ?? (computedLaborTotal + computedPartsTotal) * 1.2),
         invoice: apiOrder.invoice || null,
         estimatedCompletionTime: apiOrder.targetCompletionDate || '18:00',
+        customerRating: apiOrder.customerRating ?? null,
+        customerComment: apiOrder.customerComment ?? null,
+        customerRatedAt: apiOrder.customerRatedAt ?? null,
         createdAt: apiOrder.createdAt,
         updatedAt: apiOrder.updatedAt,
       })
@@ -332,17 +338,50 @@ export default function WorkOrderDetailPage() {
     }
   }
 
+  const executeStatusUpdate = async (status: WorkOrderStatus) => {
+    if (!order) return
+    try {
+      await updateStatusMutation.mutateAsync({ id: order.id, status })
+      setOrder((prev) => (prev ? { ...prev, status } : null))
+
+      if (status === "COMPLETED") {
+        toast.success(`#${order.workOrderNumber} numaralı iş emri tamamlandı!`, {
+          description: "Müşteriye aracın hazır olduğuna dair SMS/WhatsApp bildirimi göndermek ister misiniz?",
+          action: {
+            label: "Bildirim Gönder",
+            onClick: () => setIsNotificationModalOpen(true),
+          },
+          duration: 9000,
+        })
+      } else if (status === "IN_PROGRESS") {
+        toast.success("İş emri işlemde / onarımda", {
+          description: "Müşteriye işleme başlandığına dair bildirim göndermek ister misiniz?",
+          action: {
+            label: "Bildirim Gönder",
+            onClick: () => setIsNotificationModalOpen(true),
+          },
+          duration: 7000,
+        })
+      }
+    } catch (e: unknown) {
+      const err = e as Error
+      console.warn('API status update error:', err)
+      toast.error(err?.message || "Durum güncellenirken bir hata oluştu.")
+    }
+  }
+
   const handleStatusUpdate = async (status: WorkOrderStatus) => {
     if (status === "IN_PROGRESS" && activeInvoice) {
       handleOpenReopenModal()
       return
     }
-    try {
-      await updateStatusMutation.mutateAsync({ id: order.id, status })
-    } catch (e) {
-      console.warn('API status update error:', e)
+
+    if (status === "COMPLETED" && order?.status !== "COMPLETED") {
+      setIsCompleteConfirmOpen(true)
+      return
     }
-    setOrder((prev) => (prev ? { ...prev, status } : null))
+
+    await executeStatusUpdate(status)
   }
 
   const handleCancelWorkOrder = async () => {
@@ -713,6 +752,31 @@ export default function WorkOrderDetailPage() {
                 <>
                   <span>•</span>
                   <span className="font-mono text-[11px] text-slate-400">Şasi: {order.vin}</span>
+                </>
+              )}
+              {Boolean(order.customerRating) && (
+                <>
+                  <span>•</span>
+                  <div
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-800/40 text-amber-800 dark:text-amber-300 text-xs font-bold"
+                    title={order.customerComment ? `Müşteri Yorumu: "${order.customerComment}"` : undefined}
+                  >
+                    <div className="flex items-center gap-0.5 text-amber-500">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          size={12}
+                          className={i < (order.customerRating || 0) ? "fill-amber-400 text-amber-400" : "text-slate-300 dark:text-slate-600"}
+                        />
+                      ))}
+                    </div>
+                    <span>{order.customerRating}/5 Puan</span>
+                    {order.customerComment && (
+                      <span className="text-slate-600 dark:text-slate-300 font-normal italic">
+                        &quot;{order.customerComment}&quot;
+                      </span>
+                    )}
+                  </div>
                 </>
               )}
             </div>
@@ -1619,6 +1683,18 @@ export default function WorkOrderDetailPage() {
         isOpen={isInvoiceDetailOpen}
         invoice={mappedInvoiceForModal}
         onClose={() => setIsInvoiceDetailOpen(false)}
+      />
+
+      {/* Complete Work Order Confirmation Modal */}
+      <CompleteWorkOrderConfirmModal
+        isOpen={isCompleteConfirmOpen}
+        workOrder={order}
+        onClose={() => setIsCompleteConfirmOpen(false)}
+        onConfirm={async () => {
+          setIsCompleteConfirmOpen(false)
+          await executeStatusUpdate("COMPLETED")
+        }}
+        isLoading={updateStatusMutation.isPending}
       />
 
       {/* Manual Customer Status Notification Modal */}

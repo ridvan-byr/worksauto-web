@@ -335,8 +335,16 @@ export function CreateCustomerModal({ isOpen, onClose, onCreated }: CreateCustom
   }
 
   const modalContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
-      <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl relative flex flex-col animate-in zoom-in-95 duration-200 overflow-visible my-auto">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose()
+      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl relative flex flex-col animate-in zoom-in-95 duration-200 overflow-visible my-auto"
+      >
         
         {/* Modal Header */}
         <div className="px-6 py-4 rounded-t-3xl border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">

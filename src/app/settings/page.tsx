@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Building2, Wrench, Users, Shield, Check, Layers, MessageSquare, Receipt } from "lucide-react"
+import { Building2, Wrench, Shield, Check, Layers, MessageSquare, Receipt, CreditCard } from "lucide-react"
 import { toast } from "@/components/ui/sonner"
 import { useAuth } from "@/features/auth/auth-context"
 import {
@@ -11,29 +11,22 @@ import {
   useCreateService,
   useUpdateService,
   useDeleteService,
-  useStaff,
-  useCreateStaff,
-  useUpdateStaff,
-  useDeleteStaff,
   useWorkshopBays,
   useCreateWorkshopBay,
   useUpdateWorkshopBay,
   useDeleteWorkshopBay,
   type TenantSettings,
   type ServiceRecord,
-  type StaffRecord,
-  type CreateStaffInput,
-  type UpdateStaffInput,
 } from "@/features/settings/api/use-settings"
 import { TenantProfileTab } from "@/features/settings/components/tenant-profile-tab"
 import { ServicesTab } from "@/features/settings/components/services-tab"
-import { StaffTab } from "@/features/settings/components/staff-tab"
 import { WorkshopBaysTab } from "@/features/settings/components/workshop-bays-tab"
 import { NotificationSettingsTab } from "@/features/settings/components/notification-settings-tab"
 import { EInvoiceSettingsTab } from "@/features/settings/components/einvoice-settings-tab"
+import { PaymentSettingsTab } from "@/features/settings/components/payment-settings-tab"
 
-type SettingsTab = "profile" | "services" | "staff" | "bays" | "notifications" | "einvoice"
-const VALID_TABS: readonly SettingsTab[] = ["profile", "services", "staff", "bays", "notifications", "einvoice"] as const
+type SettingsTab = "profile" | "services" | "bays" | "notifications" | "einvoice" | "payments"
+const VALID_TABS: readonly SettingsTab[] = ["profile", "services", "bays", "notifications", "einvoice", "payments"] as const
 
 export default function SettingsPage() {
   const { user } = useAuth()
@@ -49,11 +42,6 @@ export default function SettingsPage() {
   const updateServiceMutation = useUpdateService()
   const deleteServiceMutation = useDeleteService()
 
-  const { data: staffData } = useStaff()
-  const createStaffMutation = useCreateStaff()
-  const updateStaffMutation = useUpdateStaff()
-  const deleteStaffMutation = useDeleteStaff()
-
   const { data: baysData } = useWorkshopBays()
   const createBayMutation = useCreateWorkshopBay()
   const updateBayMutation = useUpdateWorkshopBay()
@@ -65,7 +53,6 @@ export default function SettingsPage() {
 
   // Local soft-delete tracking
   const [deletedServiceIds, setDeletedServiceIds] = React.useState<string[]>([])
-  const [deletedStaffIds, setDeletedStaffIds] = React.useState<string[]>([])
 
   // Sayfa yenilendiğinde veya URL'de tab parametresi olduğunda aktif sekmeyi koru
   React.useEffect(() => {
@@ -204,82 +191,11 @@ export default function SettingsPage() {
     }
   }
 
-  // Staff handlers
-  const handleCreateStaff = async (data: CreateStaffInput) => {
-    try {
-      await createStaffMutation.mutateAsync({
-        name: data.name,
-        surname: data.surname,
-        phone: data.phone,
-        email: data.email || undefined,
-        role: data.role,
-        assignedLift: data.role === "TECHNICIAN" ? data.assignedLift : undefined,
-        specialty: data.specialty,
-      })
-      toast.success(`${data.name} personele eklendi`)
-    } catch (err: unknown) {
-      console.error("Personel ekleme hatası:", err)
-      const msg = err instanceof Error ? err.message : "Personel eklenirken hata oluştu."
-      toast.error(msg)
-    }
-  }
-
-  const handleUpdateStaff = async (id: string, data: UpdateStaffInput) => {
-    try {
-      await updateStaffMutation.mutateAsync({
-        id,
-        data: {
-          name: data.name,
-          surname: data.surname,
-          phone: data.phone,
-          email: data.email || undefined,
-          role: data.role,
-          assignedLift: data.role === "TECHNICIAN" ? data.assignedLift : null,
-          specialty: data.specialty,
-          isActive: data.isActive,
-        },
-      })
-      toast.success("Personel bilgileri başarıyla güncellendi")
-    } catch (err: unknown) {
-      console.error("Personel güncelleme hatası:", err)
-      const msg = err instanceof Error ? err.message : "Personel güncellenirken bir hata oluştu"
-      toast.error(msg)
-    }
-  }
-
-  const handleDeleteStaff = async (id: string) => {
-    setDeletedStaffIds((prev) => [...prev, id])
-    try {
-      await deleteStaffMutation.mutateAsync(id)
-      toast.success("Personel pasife alındı")
-    } catch (err: unknown) {
-      console.error("Personel silme hatası:", err)
-      setDeletedStaffIds((prev) => prev.filter((item) => item !== id))
-      const msg = err instanceof Error ? err.message : "Personel silinirken hata oluştu."
-      toast.error(msg)
-    }
-  }
-
-  const handleReactivateStaff = async (st: StaffRecord) => {
-    const u = st.user || st
-    setDeletedStaffIds((prev) => prev.filter((id) => id !== u.id))
-    try {
-      await updateStaffMutation.mutateAsync({
-        id: u.id,
-        data: { isActive: true },
-      })
-      toast.success(`${u.name} tekrar aktif personellere alındı`)
-    } catch (err: unknown) {
-      console.error("Personel aktifleştirme hatası:", err)
-      const msg = err instanceof Error ? err.message : "Personel aktifleştirilemedi."
-      toast.error(msg)
-    }
-  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300 pb-16">
       {/* Header Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-tour="set-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -307,6 +223,7 @@ export default function SettingsPage() {
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scrollbar-none py-1">
           <button
             type="button"
+            data-tour="set-profile"
             onClick={() => setActiveTab("profile")}
             className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
               activeTab === "profile"
@@ -320,6 +237,7 @@ export default function SettingsPage() {
 
           <button
             type="button"
+            data-tour="set-services"
             onClick={() => setActiveTab("services")}
             className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
               activeTab === "services"
@@ -333,19 +251,7 @@ export default function SettingsPage() {
 
           <button
             type="button"
-            onClick={() => setActiveTab("staff")}
-            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
-              activeTab === "staff"
-                ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25"
-                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-slate-100/60 dark:bg-slate-900/60 sm:bg-transparent"
-            }`}
-          >
-            <Users size={15} className="shrink-0" />
-            <span>Personel & Atölye Ustaları</span>
-          </button>
-
-          <button
-            type="button"
+            data-tour="set-bays"
             onClick={() => setActiveTab("bays")}
             className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
               activeTab === "bays"
@@ -359,6 +265,7 @@ export default function SettingsPage() {
 
           <button
             type="button"
+            data-tour="set-notifications"
             onClick={() => setActiveTab("notifications")}
             className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
               activeTab === "notifications"
@@ -372,6 +279,7 @@ export default function SettingsPage() {
 
           <button
             type="button"
+            data-tour="set-einvoice"
             onClick={() => setActiveTab("einvoice")}
             className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
               activeTab === "einvoice"
@@ -381,6 +289,20 @@ export default function SettingsPage() {
           >
             <Receipt size={15} className="shrink-0" />
             <span>E-Fatura / Entegratör</span>
+          </button>
+
+          <button
+            type="button"
+            data-tour="set-payments"
+            onClick={() => setActiveTab("payments")}
+            className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 transition-all cursor-pointer select-none ${
+              activeTab === "payments"
+                ? "bg-sky-500 text-white shadow-sm shadow-sky-500/25 font-bold"
+                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/80 bg-slate-100/60 dark:bg-slate-900/60 sm:bg-transparent"
+            }`}
+          >
+            <CreditCard size={15} className="shrink-0 text-emerald-500" />
+            <span>Ödeme Alma & PayTR</span>
           </button>
         </div>
       </div>
@@ -408,21 +330,6 @@ export default function SettingsPage() {
         />
       )}
 
-      {activeTab === "staff" && (
-        <StaffTab
-          staff={staffData || []}
-          deletedStaffIds={deletedStaffIds}
-          currentUserId={user?.id}
-          currentUserPhone={user?.phone}
-          onCreateStaff={handleCreateStaff}
-          onUpdateStaff={handleUpdateStaff}
-          onDeleteStaff={handleDeleteStaff}
-          onReactivateStaff={handleReactivateStaff}
-          isCreating={createStaffMutation.isPending}
-          isUpdating={updateStaffMutation.isPending}
-          isDeleting={deleteStaffMutation.isPending}
-        />
-      )}
 
       {activeTab === "bays" && (
         <WorkshopBaysTab
@@ -448,6 +355,14 @@ export default function SettingsPage() {
 
       {activeTab === "einvoice" && (
         <EInvoiceSettingsTab />
+      )}
+
+      {activeTab === "payments" && (
+        <PaymentSettingsTab
+          initialData={tenantData}
+          onSave={handleSaveProfile}
+          isSaving={updateTenantMutation.isPending}
+        />
       )}
     </div>
   )

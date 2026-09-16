@@ -8,6 +8,7 @@ import { WorkOrderCard } from "./work-order-card"
 interface KanbanBoardProps {
   orders: WorkOrder[]
   onStatusChange: (id: string, newStatus: WorkOrderStatus) => void
+  onSendNotification?: (order: WorkOrder) => void
   onReorderOrders?: (newOrders: WorkOrder[]) => void
 }
 
@@ -19,7 +20,12 @@ const PRIORITY_WEIGHT: Record<string, number> = {
 
 const STORAGE_KEY = "worksauto_work_orders_sequence"
 
-export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorderOrders }: KanbanBoardProps) {
+export function KanbanBoard({
+  orders,
+  onStatusChange,
+  onSendNotification,
+  onReorderOrders: _onReorderOrders,
+}: KanbanBoardProps) {
   const [dragOverColumn, setDragOverColumn] = React.useState<WorkOrderStatus | null>(null)
 
   // Live Drag State (tracks active dragged order, its origin status and slot index)
@@ -362,6 +368,7 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
                   activeDraggedId={activeDraggedId}
                   activeDraggedStatus={activeDraggedStatus}
                   onStatusChange={onStatusChange}
+                  onSendNotification={onSendNotification}
                   isFirst={idx === 0}
                   isLast={idx === pendingOrders.length - 1}
                   onMoveUp={() => handleMoveWithinColumn(order.id, "up", pendingOrders)}
@@ -449,6 +456,7 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
                   activeDraggedId={activeDraggedId}
                   activeDraggedStatus={activeDraggedStatus}
                   onStatusChange={onStatusChange}
+                  onSendNotification={onSendNotification}
                   isFirst={idx === 0}
                   isLast={idx === inProgressOrders.length - 1}
                   onMoveUp={() => handleMoveWithinColumn(order.id, "up", inProgressOrders)}
@@ -536,6 +544,7 @@ export function KanbanBoard({ orders, onStatusChange, onReorderOrders: _onReorde
                   activeDraggedId={activeDraggedId}
                   activeDraggedStatus={activeDraggedStatus}
                   onStatusChange={onStatusChange}
+                  onSendNotification={onSendNotification}
                   isFirst={idx === 0}
                   isLast={idx === completedOrders.length - 1}
                   onMoveUp={() => handleMoveWithinColumn(order.id, "up", completedOrders)}

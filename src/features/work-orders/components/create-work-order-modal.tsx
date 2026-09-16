@@ -5,8 +5,9 @@ import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
-import { X, Wrench, Play, ArrowRight, ArrowLeft, User, Search, UserPlus, AlertTriangle, ExternalLink } from "lucide-react"
+import { X, Wrench, Play, ArrowRight, ArrowLeft, User, Search, UserPlus, AlertTriangle, ExternalLink, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useAuth } from "@/features/auth/auth-context"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { WorkOrder } from "../types"
@@ -46,6 +47,12 @@ export function CreateWorkOrderModal({
   const [step, setStep] = React.useState<1 | 2>(1)
   const [customerMode, setCustomerMode] = React.useState<"search" | "quick-lead">("search")
   const [isSubmitting, setIsSubmitting] = React.useState(false)
+
+  const { user } = useAuth()
+  const canEditLaborPrice = React.useMemo(() => {
+    const role = (user?.role || "").toUpperCase()
+    return role === "OWNER" || role === "SERVICE_MANAGER" || role === "TENANT_ADMIN"
+  }, [user?.role])
 
   const { data: apiCustomers } = useCustomers()
   const { data: allWorkOrders = [] } = useWorkOrders()
@@ -286,8 +293,16 @@ export function CreateWorkOrderModal({
   }
 
   const modalContent = (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+    <div
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isSubmitting) handleClose()
+      }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+      >
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/50">
           <div className="flex items-center gap-3">
@@ -628,29 +643,57 @@ export function CreateWorkOrderModal({
                   <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">
                     Taban İşçilik (TL) <span className="text-rose-500">*</span>
                   </label>
-                  <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400">
-                    Önerilen Fiyat
-                  </span>
+                  {canEditLaborPrice ? (
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                      Önerilen Fiyat
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                      <Lock className="h-2.5 w-2.5" />
+                      Katalog Fiyatı (Kilitli)
+                    </span>
+                  )}
                 </div>
                 <div className="relative">
                   <input
                     type="number"
                     min="0"
                     step="50"
+                    readOnly={!canEditLaborPrice}
+                    tabIndex={!canEditLaborPrice ? -1 : undefined}
                     {...register("laborPrice", { valueAsNumber: true })}
-                    className="w-full h-10 px-3 pr-14 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono font-bold focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    className={cn(
+                      "w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-mono font-bold focus:outline-none",
+                      !canEditLaborPrice
+                        ? "bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 cursor-not-allowed select-none pr-8"
+                        : "bg-slate-50 dark:bg-slate-900 pr-14 focus:ring-2 focus:ring-sky-500"
+                    )}
                   />
-                  <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setValue("laborPrice", 0, { shouldValidate: true })}
-                      className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-amber-100 dark:hover:bg-amber-950 hover:text-amber-700 transition-colors cursor-pointer"
-                      title="Garanti veya ücretsiz kontrol için 0 TL yap"
+                  {!canEditLaborPrice ? (
+                    <div
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
+                      title="İşçilik fiyatı sadece servis yöneticisi tarafından düzenlenebilir."
                     >
-                      0 ₺
-                    </button>
-                  </div>
+                      <Lock className="h-3.5 w-3.5" />
+                    </div>
+                  ) : (
+                    <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => setValue("laborPrice", 0, { shouldValidate: true })}
+                        className="px-1.5 py-0.5 text-[9px] font-bold rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-amber-100 dark:hover:bg-amber-950 hover:text-amber-700 transition-colors cursor-pointer"
+                        title="Garanti veya ücretsiz kontrol için 0 TL yap"
+                      >
+                        0 ₺
+                      </button>
+                    </div>
+                  )}
                 </div>
+                {!canEditLaborPrice && (
+                  <p className="text-[10px] text-slate-400">
+                    İşçilik fiyatı servis kataloğundan otomatik çekilir ve personel tarafından değiştirilemez.
+                  </p>
+                )}
                 {errors.laborPrice && (
                   <p className="text-[10px] text-rose-500">{errors.laborPrice.message}</p>
                 )}

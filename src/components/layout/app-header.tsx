@@ -19,6 +19,7 @@ import { useVehicles, type VehicleRecord } from "@/features/vehicles/api/use-veh
 import { restartPageAnimation } from "@/lib/animation"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { NotificationPopover } from "@/features/notifications/components/notification-popover"
+import { resolveMediaUrl } from "@/lib/utils"
 
 
 interface AppHeaderProps {
@@ -29,13 +30,18 @@ interface AppHeaderProps {
 export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, tenant } = useAuth()
   const { data: apiVehicles } = useVehicles()
 
   // Global Quick Search State
   const [searchQuery, setSearchQuery] = React.useState("")
   const [isOpen, setIsOpen] = React.useState(false)
+  const [logoFailed, setLogoFailed] = React.useState(false)
   const searchRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => {
+    setLogoFailed(false)
+  }, [tenant?.logoUrl, tenant?.logo])
 
   // Close on outside click
   React.useEffect(() => {
@@ -96,7 +102,7 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200/80 bg-white/80 dark:border-slate-800/80 dark:bg-[#070b12]/80 px-4 lg:px-8 backdrop-blur-md transition-colors">
-      {/* Left: Mobile Toggle & Title */}
+      {/* Left: Mobile Toggle & Desktop Tenant Corporate Brand Card */}
       <div className="flex items-center gap-3">
         <button
           onClick={onOpenMobile}
@@ -118,10 +124,56 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
             }}
           />
         </div>
+
+        {/* Desktop Tenant Brand & Logo (Left of Header) */}
+        {(() => {
+          const resolvedLogo = resolveMediaUrl(tenant?.logoUrl || tenant?.logo)
+          return (
+            <Link
+              href="/settings"
+              data-tour="tour-brand"
+              className="hidden lg:flex items-center gap-2.5 px-2.5 py-1.5 -ml-2 rounded-2xl hover:bg-slate-100/80 dark:hover:bg-slate-800/60 transition-colors group cursor-pointer"
+              title="İşletme Ayarları ve Profili"
+            >
+              {resolvedLogo && !logoFailed ? (
+                <img
+                  src={resolvedLogo}
+                  alt={tenant?.title || tenant?.name || "Servis"}
+                  onError={() => setLogoFailed(true)}
+                  style={{
+                    maxHeight: `${Math.min(Math.max(tenant?.logoHeight ?? 36, 20), 52)}px`,
+                    maxWidth: `${Math.min(Math.max(tenant?.logoWidth ?? 120, 20), 240)}px`,
+                    width: "auto",
+                    height: "auto",
+                  }}
+                  className="object-contain shrink-0 group-hover:scale-105 transition-all"
+                />
+              ) : (
+                /* WorksAuto Official Logo Fallback */
+                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-slate-900 via-sky-950 to-slate-900 dark:from-slate-800 dark:to-slate-950 border border-sky-500/25 flex items-center justify-center p-1.5 shrink-0 shadow-xs shadow-sky-500/20 group-hover:scale-105 transition-transform">
+                  <img
+                    src="/brand/worksauto-icon-white-tight.png"
+                    alt="WorksAuto"
+                    className="w-full h-full object-contain drop-shadow-[0_1px_4px_rgba(56,189,248,0.5)]"
+                  />
+                </div>
+              )}
+              <div className="flex flex-col text-left">
+                <span className="text-xs font-bold text-slate-900 dark:text-slate-100 whitespace-nowrap group-hover:text-sky-500 transition-colors">
+                  {tenant?.title || tenant?.name || "WorksAuto Servis"}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium leading-none mt-0.5 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                  {tenant?.city ? `${tenant.city}${tenant.district ? ` / ${tenant.district}` : ""}` : "Oto Servis"}
+                </span>
+              </div>
+            </Link>
+          )
+        })()}
       </div>
 
       {/* Center: Global Fast Plate & Customer Search Bar */}
-      <div ref={searchRef} className="relative hidden md:flex items-center flex-1 max-w-md mx-6">
+      <div ref={searchRef} data-tour="tour-search" className="relative hidden md:flex items-center flex-1 max-w-md mx-6">
         <div className="relative w-full">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
           <input
@@ -206,6 +258,7 @@ export function AppHeader({ onOpenMobile, onForceRetrigger }: AppHeaderProps) {
       <div className="flex items-center gap-2 sm:gap-3">
         <Link
           href="/customers"
+          data-tour="tour-quick-lead"
           draggable={false}
           onDragStart={(e) => e.preventDefault()}
           className="hidden sm:flex items-center gap-1.5 h-9 px-3 rounded-xl bg-sky-500/10 text-sky-600 hover:bg-sky-500/20 dark:bg-sky-500/20 dark:text-sky-400 dark:hover:bg-sky-500/30 text-xs font-semibold transition-colors cursor-pointer select-none"

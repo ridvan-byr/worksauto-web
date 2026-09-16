@@ -24,6 +24,9 @@ import { KanbanBoard } from "@/features/work-orders/components/kanban-board"
 import { WorkOrderListView } from "@/features/work-orders/components/work-order-list-view"
 import { CreateWorkOrderModal, type CreateWorkOrderModalValues } from "@/features/work-orders/components/create-work-order-modal"
 import { CancelledWorkOrdersModal } from "@/features/work-orders/components/cancelled-work-orders-modal"
+import { CompleteWorkOrderConfirmModal } from "@/features/work-orders/components/complete-work-order-confirm-modal"
+import { SendStatusNotificationModal } from "@/features/work-orders/components/send-status-notification-modal"
+import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
 
 interface ApiWorkOrderInput {
@@ -31,11 +34,15 @@ interface ApiWorkOrderInput {
   tenantId?: string
   workOrderNumber?: string
   customerId?: string
-  customer?: { firstName?: string; lastName?: string; name?: string; surname?: string; phone?: string }
+  customer?: { id?: string; firstName?: string; lastName?: string; name?: string; surname?: string; phone?: string; email?: string }
   customerName?: string
   customerPhone?: string
+  customerEmail?: string
+  customerRating?: number | null
+  customerComment?: string | null
+  customerRatedAt?: string | null
   vehicleId?: string
-  vehicle?: { plate?: string; brand?: string; model?: string; year?: number; currentKm?: number; mileage?: number }
+  vehicle?: { id?: string; plate?: string; brand?: string; model?: string; year?: number; currentKm?: number; mileage?: number; vin?: string }
   plate?: string
   brand?: string
   model?: string
@@ -134,6 +141,39 @@ function mapApiWorkOrderToWorkOrder(input: unknown): WorkOrder {
       uploadedAt: p.uploadedAt || new Date().toISOString(),
       type: (p.type || 'CHECKIN') as 'CHECKIN' | 'DAMAGE' | 'COMPLETED',
     })),
+    customer: w.customer
+      ? {
+          id: w.customer.id || w.customerId || '',
+          firstName: w.customer.firstName || w.customer.name || '',
+          lastName: w.customer.lastName || w.customer.surname || '',
+          name: w.customer.name || w.customer.firstName || '',
+          surname: w.customer.surname || w.customer.lastName || '',
+          phone: w.customer.phone || w.customerPhone || '',
+          email: w.customer.email || '',
+        }
+      : w.customerId
+      ? {
+          id: w.customerId,
+          firstName: w.customerName || '',
+          phone: w.customerPhone || '',
+          email: '',
+        }
+      : undefined,
+    customerEmail: w.customer?.email || '',
+    vehicle: w.vehicle
+      ? {
+          id: w.vehicle.id || w.vehicleId || '',
+          plate: w.vehicle.plate || w.plate || '',
+          brand: w.vehicle.brand || w.brand || '',
+          model: w.vehicle.model || w.model || '',
+          year: w.vehicle.year || w.year,
+          currentKm: w.vehicle.currentKm ?? w.vehicle.mileage ?? w.initialKm ?? w.kilometer,
+          mileage: w.vehicle.mileage ?? w.vehicle.currentKm ?? w.initialKm ?? w.kilometer,
+        }
+      : undefined,
+    customerRating: w.customerRating ?? null,
+    customerComment: w.customerComment ?? null,
+    customerRatedAt: w.customerRatedAt ?? null,
     invoice: (w.invoice as WorkOrder['invoice']) || null,
   }
 }
@@ -148,6 +188,8 @@ export default function WorkOrdersPage() {
   const [cloneInitialData, setCloneInitialData] = React.useState<Partial<CreateWorkOrderModalValues> | null>(null)
   const [isCancelledModalOpen, setIsCancelledModalOpen] = React.useState(false)
   const [listInitialFilter, setListInitialFilter] = React.useState<string>("all")
+  const [orderToComplete, setOrderToComplete] = React.useState<WorkOrder | null>(null)
+  const [orderForNotification, setOrderForNotification] = React.useState<WorkOrder | null>(null)
 
   const { data: apiOrders } = useWorkOrders()
   const { data: staffMembers = [] } = useStaff()
@@ -162,27 +204,77 @@ export default function WorkOrdersPage() {
     }
   }, [apiOrders])
 
+  const executeStatusUpdate = async (targetOrder: WorkOrder, newStatus: WorkOrderStatus) => {
+    const backendStatus = (newStatus as string) === "PENDING" ? "QUEUE" : newStatus
+    try {
+      await updateStatusMutation.mutateAsync({ id: targetOrder.id, status: backendStatus })
+      setOrders((prev) => prev.map((o) => (o.id === targetOrder.id ? { ...o, status: newStatus } : o)))
+
+      // Durum değişikliğinde müşteriye bildirim gönderme hatırlatıcısı
+      if (newStatus === "COMPLETED") {
+        toast.success(`#${targetOrder.workOrderNumber} numaralı iş emri tamamlandı!`, {
+          description: `${targetOrder.plate} müşterisine aracın hazır olduğuna dair bildirim göndermek ister misiniz?`,
+          action: {
+            label: "Bildirim Gönder",
+            onClick: () => setOrderForNotification(targetOrder),
+          },
+          duration: 9000,
+        })
+      } else if (newStatus === "IN_PROGRESS") {
+        toast.success(`${targetOrder.plate} aracı lifte / onarıma alındı`, {
+          description: "Müşteriye işleme başlandığına dair bildirim göndermek ister misiniz?",
+          action: {
+            label: "Bildirim Gönder",
+            onClick: () => setOrderForNotification(targetOrder),
+          },
+          duration: 7000,
+        })
+      }
+    } catch (e: unknown) {
+      const err = e as Error
+      console.error("API status update error:", err)
+      toast.error("Durum güncellenemedi", {
+        description: err?.message || "Sunucu yanıt vermedi.",
+      })
+    }
+  }
+
   const handleStatusChange = async (id: string, newStatus: WorkOrderStatus) => {
     const targetOrder = orders.find((o) => o.id === id)
+    if (!targetOrder) return
 
     // COMPLETED -> IN_PROGRESS transition requires rollback endpoint in domain
-    if (targetOrder?.status === "COMPLETED" && newStatus === "IN_PROGRESS") {
+    if (targetOrder.status === "COMPLETED" && newStatus === "IN_PROGRESS") {
       try {
         await rollbackMutation.mutateAsync(id)
         setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: "IN_PROGRESS" } : o)))
-      } catch (e) {
-        console.error("Rollback hatası:", e)
+        toast.success(`#${targetOrder.workOrderNumber} iş emri geri alındı`, {
+          description: "İş emri tekrar 'Liftte / İşlemde' durumuna getirildi.",
+        })
+      } catch (e: unknown) {
+        const err = e as Error
+        console.error("Rollback hatası:", err)
+        toast.error("İş emri geri alınamadı", {
+          description: err?.message || "Yalnızca Servis Müdürü ve İşletme Sahibi geri alabilir.",
+        })
       }
       return
     }
 
-    const backendStatus = (newStatus as string) === "PENDING" ? "QUEUE" : newStatus
-    try {
-      await updateStatusMutation.mutateAsync({ id, status: backendStatus })
-      setOrders((prev) => prev.map((o) => (o.id === id ? { ...o, status: newStatus } : o)))
-    } catch (e) {
-      console.error("API status update error:", e)
+    // Tamamlandı durumuna geçerken yanlışlıkları önleyen onay modalı aç
+    if (newStatus === "COMPLETED" && targetOrder.status !== "COMPLETED") {
+      setOrderToComplete(targetOrder)
+      return
     }
+
+    await executeStatusUpdate(targetOrder, newStatus)
+  }
+
+  const handleConfirmComplete = async (orderId: string) => {
+    const target = orders.find((o) => o.id === orderId)
+    if (!target) return
+    setOrderToComplete(null)
+    await executeStatusUpdate(target, "COMPLETED")
   }
 
   const handleCreatedOrder = (newOrder: WorkOrder) => {
@@ -328,7 +420,7 @@ export default function WorkOrdersPage() {
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-16">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div data-tour="wo-header" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
@@ -345,6 +437,7 @@ export default function WorkOrdersPage() {
 
         <Button
           type="button"
+          data-tour="wo-create"
           onClick={() => setIsCreateModalOpen(true)}
           className="h-11 px-5 rounded-2xl gap-2 font-semibold text-xs shadow-lg shadow-sky-500/20 cursor-pointer self-start sm:self-auto"
         >
@@ -354,7 +447,7 @@ export default function WorkOrdersPage() {
       </div>
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div data-tour="wo-stats" className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800/80 shadow-xs flex items-center justify-between">
           <div className="space-y-1">
             <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Liftte / İşlemde</p>
@@ -524,11 +617,37 @@ export default function WorkOrdersPage() {
       </div>
 
       {/* Main View */}
-      {viewMode === "kanban" ? (
-        <KanbanBoard orders={displayedOrders} onStatusChange={handleStatusChange} />
-      ) : (
-        <WorkOrderListView orders={displayedOrders} initialStatusFilter={listInitialFilter} />
-      )}
+      <div data-tour="wo-table">
+        {viewMode === "kanban" ? (
+          <KanbanBoard
+            orders={displayedOrders}
+            onStatusChange={handleStatusChange}
+            onSendNotification={(order) => setOrderForNotification(order)}
+          />
+        ) : (
+          <WorkOrderListView
+            orders={displayedOrders}
+            initialStatusFilter={listInitialFilter}
+            onSendNotification={(order) => setOrderForNotification(order)}
+          />
+        )}
+      </div>
+
+      {/* Complete Work Order Confirmation Modal */}
+      <CompleteWorkOrderConfirmModal
+        isOpen={Boolean(orderToComplete)}
+        workOrder={orderToComplete}
+        onClose={() => setOrderToComplete(null)}
+        onConfirm={handleConfirmComplete}
+        isLoading={updateStatusMutation.isPending}
+      />
+
+      {/* Send Status Notification Modal */}
+      <SendStatusNotificationModal
+        isOpen={Boolean(orderForNotification)}
+        workOrder={orderForNotification}
+        onClose={() => setOrderForNotification(null)}
+      />
 
       {/* Cancelled Work Orders Modal */}
       <CancelledWorkOrdersModal
