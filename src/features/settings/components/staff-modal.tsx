@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, CheckCircle2, Lock, Shield, Settings2 } from "lucide-react"
+import { X, CheckCircle2, Lock, Shield, Settings2, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DEFAULT_LIFTS } from "@/lib/workshop-constants"
@@ -65,6 +65,8 @@ export function StaffModal({
   const [positions, setPositions] = React.useState<WorkshopPosition[]>([])
   const [isPosModalOpen, setIsPosModalOpen] = React.useState(false)
 
+  const [showAdvancedRoles, setShowAdvancedRoles] = React.useState(false)
+
   React.useEffect(() => {
     if (isOpen) {
       setPositions(getTenantPositions())
@@ -111,6 +113,7 @@ export function StaffModal({
       setSpecialty("Genel Mekanik")
       setIsActive(true)
     }
+    setShowAdvancedRoles(false)
   }, [editingStaff, isOpen])
 
   if (!isOpen || typeof document === "undefined") return null
@@ -154,6 +157,9 @@ export function StaffModal({
     })
   }
 
+  const roleMeta =
+    ROLE_PERMISSIONS[role as BaseSystemRole] || ROLE_PERMISSIONS.TECHNICIAN
+
   return createPortal(
     <div
       className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/70 backdrop-blur-xs p-4 overflow-y-auto animate-in fade-in duration-200"
@@ -178,51 +184,67 @@ export function StaffModal({
         <form onSubmit={handleSubmit} className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium">Ad *</label>
+              <label className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                Ad <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="text"
                 required
                 value={name}
                 onChange={(e) => {
                   setName(filterPersonNameInput(e.target.value))
-                  if (nameError) setNameError(null)
+                  setNameError(null)
                 }}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                placeholder="Ahmet"
+                className={cn(
+                  "w-full h-9 px-3 text-xs rounded-xl border bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500",
+                  nameError
+                    ? "border-rose-500"
+                    : "border-slate-200 dark:border-slate-800"
+                )}
+                placeholder="Örn: Ahmet"
               />
+              {nameError && (
+                <p className="text-[11px] text-rose-500">{nameError}</p>
+              )}
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-medium">Soyad</label>
+              <label className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                Soyad (İsteğe bağlı)
+              </label>
               <input
                 type="text"
                 value={surname}
                 onChange={(e) => {
                   setSurname(filterPersonNameInput(e.target.value))
-                  if (nameError) setNameError(null)
+                  setNameError(null)
                 }}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
-                placeholder="Yılmaz"
+                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                placeholder="Örn: Yılmaz"
               />
             </div>
           </div>
-          {nameError && (
-            <p className="text-[11px] text-rose-500">{nameError}</p>
-          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
-              <label className="text-xs font-medium">Cep Telefonu *</label>
+              <label className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                Telefon <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="tel"
                 required
                 value={phone}
                 onChange={(e) => {
                   setPhone(formatSmartPhone(e.target.value))
-                  if (phoneError) setPhoneError(null)
+                  setPhoneError(null)
                 }}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 font-mono"
-                placeholder="05XX XXX XX XX veya +90..."
+                className={cn(
+                  "w-full h-9 px-3 text-xs rounded-xl border bg-white dark:bg-slate-900 font-mono text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500",
+                  phoneError
+                    ? "border-rose-500"
+                    : "border-slate-200 dark:border-slate-800"
+                )}
+                placeholder="0532 123 45 67"
               />
               {phoneError && (
                 <p className="text-[11px] text-rose-500">{phoneError}</p>
@@ -241,11 +263,12 @@ export function StaffModal({
             </div>
           </div>
 
-          {/* Görev / Pozisyon / Uzmanlık */}
-          <div className="space-y-1.5">
+          {/* 1. TEK VE NET ADIM: GÖREV / POZİSYON SEÇİMİ */}
+          <div className="space-y-2 p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/80">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                Görev / Pozisyon / Uzmanlık <span className="text-rose-500">*</span>
+              <label className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                <span>Personelin Görevi / Pozisyonu</span>
+                <span className="text-rose-500">*</span>
               </label>
               <button
                 type="button"
@@ -253,19 +276,20 @@ export function StaffModal({
                 className="text-[11px] text-sky-600 dark:text-sky-400 font-semibold hover:underline flex items-center gap-1 cursor-pointer"
               >
                 <Settings2 size={12} />
-                <span>Pozisyonları Yönet</span>
+                <span>Pozisyonları Düzenle</span>
               </button>
             </div>
+
             <input
               type="text"
               value={specialty}
               onChange={(e) => setSpecialty(e.target.value)}
-              className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              placeholder="Örn: Baş Usta, Motor & Mekanik, Servis Danışmanı..."
+              className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              placeholder="Örn: Motor & Mekanik Ustası, Servis Danışmanı..."
             />
 
-            {/* Dinamik Pozisyon Çipleri */}
-            <div className="flex flex-wrap gap-1.5 pt-0.5">
+            {/* Hızlı Seçim Pozisyon Çipleri (Tıklanınca Rolü Otomatik Belirler) */}
+            <div className="flex flex-wrap gap-1.5 pt-0.5 max-h-24 overflow-y-auto pr-0.5">
               {positions.map((pos) => {
                 const isSelected = specialty === pos.name
                 return (
@@ -279,8 +303,8 @@ export function StaffModal({
                     className={cn(
                       "text-[10px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer select-none",
                       isSelected
-                        ? "bg-sky-500/15 text-sky-600 dark:text-sky-400 border-sky-500/40 font-bold shadow-2xs scale-102"
-                        : "bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
+                        ? "bg-sky-500 text-white border-sky-500 font-bold shadow-2xs scale-102"
+                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-900"
                     )}
                   >
                     {pos.name}
@@ -288,70 +312,76 @@ export function StaffModal({
                 )
               })}
             </div>
+
+            {/* Otomatik Atanan Yetki Rozeti & Durum Özeti */}
+            <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 dark:border-slate-700/60 text-[11px]">
+              <span className="text-slate-500 dark:text-slate-400">Atanan Sistem Yetkisi:</span>
+              <Badge variant="outline" className={cn("text-[10px] font-bold px-2 py-0.5", roleMeta.badgeColor)}>
+                {roleMeta.roleTitle}
+              </Badge>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-xs font-semibold text-slate-900 dark:text-slate-100">
-                Sistem Rolü (Yetki Seviyesi)
-              </label>
-              <select
-                value={role}
-                onChange={(e) => setRole(e.target.value)}
-                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-              >
-                <option value="TECHNICIAN">Atölye Teknisyeni / Usta</option>
-                <option value="CONSULTANT">Servis Danışmanı (Kabul & Takip)</option>
-                <option value="SERVICE_MANAGER">Servis Yöneticisi / Şef</option>
-              </select>
-            </div>
-
+          {/* Usta İse Varsayılan Lift */}
+          {role === "TECHNICIAN" && (
             <div className="space-y-1">
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                Varsayılan Lift
+                Atanan Varsayılan Lift / İstasyon
               </label>
-              {role === "TECHNICIAN" ? (
-                <select
-                  value={lift}
-                  onChange={(e) => setLift(e.target.value)}
-                  className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
-                >
-                  {lift && !liftOptions.some((l) => l.id === lift || l.label.startsWith(lift)) && (
-                    <option value={lift}>
-                      {lift} (Mevcut)
-                    </option>
-                  )}
-                  {liftOptions.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.label}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="w-full h-9 px-3 flex items-center text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/60 text-slate-400 italic select-none">
-                  Gerekmez (Ofis / Yönetim)
-                </div>
-              )}
+              <select
+                value={lift}
+                onChange={(e) => setLift(e.target.value)}
+                className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+              >
+                {lift && !liftOptions.some((l) => l.id === lift || l.label.startsWith(lift)) && (
+                  <option value={lift}>
+                    {lift} (Mevcut)
+                  </option>
+                )}
+                {liftOptions.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.label}
+                  </option>
+                ))}
+              </select>
             </div>
-          </div>
+          )}
 
-          {/* Rol Yetki Bilgilendirme Kartı (Dinamik Bilgilendirme) */}
-          {(() => {
-            const roleMeta =
-              ROLE_PERMISSIONS[role as BaseSystemRole] || ROLE_PERMISSIONS.TECHNICIAN
-            return (
-              <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-2">
-                <div className="flex items-center justify-between border-b border-slate-200/60 dark:border-slate-800 pb-1.5">
-                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
-                    <Shield size={14} className="text-sky-500" />
-                    <span>Seçilen Rolün Sistem İzinleri & Sınırları:</span>
-                  </div>
-                  <Badge variant="outline" className={cn("text-[10px] font-bold", roleMeta.badgeColor)}>
-                    {roleMeta.roleTitle}
-                  </Badge>
+          {/* 2. GELİŞMİŞ YETKİ AYARLARI (İSTEĞE BAĞLI AKORDİYON) */}
+          <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowAdvancedRoles(!showAdvancedRoles)}
+              className="w-full flex items-center justify-between p-2.5 bg-slate-50 dark:bg-slate-900/60 text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors cursor-pointer"
+            >
+              <span className="flex items-center gap-1.5">
+                <Shield size={13} className="text-sky-500" />
+                <span>Gelişmiş Yetki ve Rol Ayarları (İsteğe Bağlı)</span>
+              </span>
+              <ChevronDown
+                size={14}
+                className={cn("transition-transform duration-200", showAdvancedRoles && "rotate-180")}
+              />
+            </button>
+
+            {showAdvancedRoles && (
+              <div className="p-3 bg-white dark:bg-slate-900 space-y-3 border-t border-slate-200 dark:border-slate-800">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-slate-900 dark:text-slate-100">
+                    Sistem Rolünü Elle Değiştir
+                  </label>
+                  <select
+                    value={role}
+                    onChange={(e) => setRole(e.target.value)}
+                    className="w-full h-9 px-3 text-xs rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer"
+                  >
+                    <option value="TECHNICIAN">Atölye Teknisyeni / Usta</option>
+                    <option value="CONSULTANT">Servis Danışmanı (Kabul & Takip)</option>
+                    <option value="SERVICE_MANAGER">Servis Yöneticisi / Şef</option>
+                  </select>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] pt-1">
                   <div className="space-y-1">
                     <span className="font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
                       <CheckCircle2 size={12} />
@@ -383,8 +413,8 @@ export function StaffModal({
                   </div>
                 </div>
               </div>
-            )
-          })()}
+            )}
+          </div>
 
           {/* Position Management Modal Portal */}
           <PositionManagementModal

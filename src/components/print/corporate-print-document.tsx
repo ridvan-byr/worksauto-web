@@ -114,20 +114,8 @@ export function CorporatePrintDocument({
           </div>
         </div>
 
-        {/* Sağ: Belge Başlığı, Referans Bilgileri & Şık WorksAuto Altyapı İmzası */}
-        <div className="text-left sm:text-right space-y-1.5 self-stretch sm:self-auto flex flex-col justify-between sm:justify-start">
-          <div className="flex items-center justify-start sm:justify-end gap-1.5 opacity-80 print:opacity-100">
-            <span className="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Altyapı</span>
-            <Image
-              src="/brand/worksauto-logo-dark.png"
-              alt="WorksAuto"
-              width={100}
-              height={20}
-              priority
-              className="h-3.5 w-auto object-contain shrink-0"
-            />
-          </div>
-
+        {/* Sağ: Belge Başlığı & Referans Bilgileri */}
+        <div className="text-left sm:text-right space-y-1 self-stretch sm:self-auto flex flex-col justify-between sm:justify-start">
           <p className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase font-mono">
             {title}
           </p>

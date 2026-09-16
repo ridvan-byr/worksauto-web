@@ -16,6 +16,9 @@ import {
   LayoutGrid,
   Table as TableIcon,
   Users,
+  Wand2,
+  Trash2,
+  RotateCcw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +35,16 @@ export interface CustomShiftDefinition {
   durationHours: number
   color: string
   badgeColor: string
+}
+
+export const UNASSIGNED_SHIFT: CustomShiftDefinition = {
+  id: "NONE",
+  label: "Planlanmadı",
+  shortLabel: "Boş",
+  hours: "Vardiya Yok",
+  durationHours: 0,
+  color: "text-slate-400 dark:text-slate-500 bg-slate-50/50 dark:bg-slate-900/30 border-slate-200/80 dark:border-slate-800 border-dashed",
+  badgeColor: "bg-slate-300 dark:bg-slate-700 text-slate-500",
 }
 
 export const INITIAL_SHIFTS: CustomShiftDefinition[] = [
@@ -263,7 +276,7 @@ export function StaffShiftTab({
 
   // Helper to resolve shift for a technician on a date
   const getShift = React.useCallback(
-    (staffId: string, dateStr: string, isWeekend: boolean): CustomShiftDefinition => {
+    (staffId: string, dateStr: string, _isWeekend: boolean): CustomShiftDefinition => {
       // 1. Check if user is on approved leave
       const leave = getStaffLeaveOnDate(staffId, dateStr)
       if (leave) {
@@ -287,31 +300,28 @@ export function StaffShiftTab({
       const key = `${staffId}_${dateStr}`
       const shiftId = scheduleState[key]
       if (shiftId) {
+        if (shiftId === "NONE") return UNASSIGNED_SHIFT
         const found = shiftDefinitions.find((s) => s.id === shiftId)
         if (found) return found
       }
 
-      // 3. Fallback defaults
-      if (dateStr.endsWith("-06") || isWeekend) {
-        // Saturday or Sunday default
-        const dateObj = new Date(dateStr)
-        if (dateObj.getDay() === 0) {
-          // Sunday is off
-          return shiftDefinitions.find((s) => s.id === "OFF") || INITIAL_SHIFTS[4]
-        }
-        // Saturday is half-day
-        return shiftDefinitions.find((s) => s.id === "HALF_DAY") || INITIAL_SHIFTS[3]
-      }
-
-      return shiftDefinitions.find((s) => s.id === "NORMAL") || INITIAL_SHIFTS[0]
+      // 3. Varsayılan: Planlanmamış / Boş (Dolu veri dayatması yapmaz)
+      return UNASSIGNED_SHIFT
     },
     [scheduleState, shiftDefinitions, getStaffLeaveOnDate]
   )
 
-  // Handle shift assignment
+  // Handle shift assignment (or clearing)
   const handleAssignShift = (staffId: string, dateStr: string, shiftId: string) => {
     const key = `${staffId}_${dateStr}`
-    const updated = { ...scheduleState, [key]: shiftId }
+    const updated = { ...scheduleState }
+    if (shiftId === "NONE") {
+      delete updated[key]
+      toast.info("Vardiya kaldırıldı / gün boşaltıldı.")
+    } else {
+      updated[key] = shiftId
+      toast.success("Vardiya güncellendi.")
+    }
     setScheduleState(updated)
     if (typeof window !== "undefined") {
       try {
@@ -319,7 +329,86 @@ export function StaffShiftTab({
       } catch {}
     }
     setActiveCell(null)
-    toast.success("Vardiya güncellendi.")
+  }
+
+  // Apply standard shift schedule to all active technicians for this week
+  const handleApplyStandardWeek = () => {
+    const updated = { ...scheduleState }
+    activeTechnicians.forEach((t) => {
+      weekInfo.days.forEach((day) => {
+        const key = `${t.id}_${day.dateStr}`
+        if (day.key === "sun") {
+          updated[key] = "OFF"
+        } else if (day.key === "sat") {
+          updated[key] = "HALF_DAY"
+        } else {
+          updated[key] = "NORMAL"
+        }
+      })
+    })
+    setScheduleState(updated)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("worksauto_staff_weekly_shifts", JSON.stringify(updated))
+      } catch {}
+    }
+    toast.success("Tüm ustalara haftalık standart mesai şablonu uygulandı.")
+  }
+
+  // Clear all shifts for current week
+  const handleClearCurrentWeek = () => {
+    const updated = { ...scheduleState }
+    activeTechnicians.forEach((t) => {
+      weekInfo.days.forEach((day) => {
+        const key = `${t.id}_${day.dateStr}`
+        delete updated[key]
+      })
+    })
+    setScheduleState(updated)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("worksauto_staff_weekly_shifts", JSON.stringify(updated))
+      } catch {}
+    }
+    toast.info("Bu haftanın vardiya planı temizlendi.")
+  }
+
+  // Apply standard week for a single technician
+  const handleApplyStandardWeekForTech = (techId: string) => {
+    const updated = { ...scheduleState }
+    weekInfo.days.forEach((day) => {
+      const key = `${techId}_${day.dateStr}`
+      if (day.key === "sun") {
+        updated[key] = "OFF"
+      } else if (day.key === "sat") {
+        updated[key] = "HALF_DAY"
+      } else {
+        updated[key] = "NORMAL"
+      }
+    })
+    setScheduleState(updated)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("worksauto_staff_weekly_shifts", JSON.stringify(updated))
+      } catch {}
+    }
+    toast.success("Ustanın haftalık mesaisi dolduruldu.")
+  }
+
+  // Clear week for a single technician
+  const handleClearWeekForTech = (techId: string) => {
+    const updated = { ...scheduleState }
+    weekInfo.days.forEach((day) => {
+      const key = `${techId}_${day.dateStr}`
+      delete updated[key]
+    })
+    setScheduleState(updated)
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem("worksauto_staff_weekly_shifts", JSON.stringify(updated))
+      } catch {}
+    }
+    toast.info("Ustanın bu haftaki vardiyaları temizlendi.")
   }
 
   // Add new shift definition
@@ -376,9 +465,9 @@ export function StaffShiftTab({
 
       activeTechnicians.forEach((t) => {
         const shift = getShift(t.id, day.dateStr, day.isWeekend)
-        if (shift.id === "OFF" || shift.durationHours === 0) {
+        if (shift.id === "OFF") {
           offStaffCount++
-        } else {
+        } else if (shift.id !== "NONE" && shift.durationHours > 0) {
           workingStaffCount++
         }
         if (shift.id === "LATE_DUTY") {
@@ -530,6 +619,32 @@ export function StaffShiftTab({
             </div>
           )}
 
+          {/* Apply Standard Week Schedule */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleApplyStandardWeek}
+            className="h-9 text-xs gap-1.5 cursor-pointer text-sky-700 dark:text-sky-300 border-sky-500/30 hover:bg-sky-50 dark:hover:bg-sky-950/30 font-semibold"
+            title="Tüm ustalara standart hafta içi 08:30-18:30 mesaisi atar"
+          >
+            <Wand2 size={14} className="text-sky-500" />
+            <span>Standart Şablon Doldur</span>
+          </Button>
+
+          {/* Clear Current Week Schedule */}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClearCurrentWeek}
+            className="h-9 text-xs gap-1.5 cursor-pointer text-slate-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+            title="Seçili haftanın tüm vardiyalarını temizler ve boşaltır"
+          >
+            <RotateCcw size={14} />
+            <span>Haftayı Temizle</span>
+          </Button>
+
           {/* Manage Shift Types Button */}
           <Button
             type="button"
@@ -656,20 +771,43 @@ export function StaffShiftTab({
                   return (
                     <div key={tech.id} className="grid grid-cols-8 min-h-[96px] items-stretch">
                       {/* Sol Sütun: Personel Profil Kartı */}
-                      <div className="p-3 border-r border-slate-200/80 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-950/20 flex flex-col justify-center">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-bold text-xs flex items-center justify-center shrink-0">
-                            {tech.name.charAt(0).toUpperCase()}
+                      <div className="p-3 border-r border-slate-200/80 dark:border-slate-800/80 bg-slate-50/40 dark:bg-slate-950/20 flex flex-col justify-between group/row">
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20 font-bold text-xs flex items-center justify-center shrink-0">
+                              {tech.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                                {tech.name}
+                              </p>
+                              <p className="text-[10px] text-slate-400 truncate">
+                                {tech.mechanic?.specialty || "Mekanik"}
+                              </p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
-                              {tech.name}
-                            </p>
-                            <p className="text-[10px] text-slate-400 truncate">
-                              {tech.mechanic?.specialty || "Mekanik"}
-                            </p>
+
+                          {/* Teknisyen Hızlı Haftalık Aksiyonları */}
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover/row:opacity-100 transition-opacity">
+                            <button
+                              type="button"
+                              onClick={() => handleApplyStandardWeekForTech(tech.id)}
+                              className="p-1 rounded text-slate-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-slate-800 cursor-pointer"
+                              title="Bu ustanın haftasını standart mesai ile doldur"
+                            >
+                              <Wand2 size={12} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleClearWeekForTech(tech.id)}
+                              className="p-1 rounded text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-slate-800 cursor-pointer"
+                              title="Bu ustanın bu haftaki vardiyalarını temizle"
+                            >
+                              <Trash2 size={12} />
+                            </button>
                           </div>
                         </div>
+
                         <div className="mt-2 flex items-center justify-between text-[10px] text-slate-500 font-mono">
                           <span>Haftalık:</span>
                           <span className="font-bold text-sky-600 dark:text-sky-400 bg-sky-500/10 px-1.5 py-0.2 rounded">
@@ -682,6 +820,7 @@ export function StaffShiftTab({
                       {weekInfo.days.map((day) => {
                         const shift = getShift(tech.id, day.dateStr, day.isWeekend)
                         const isOff = shift.id === "OFF" || shift.durationHours === 0
+                        const isUnassigned = shift.id === "NONE"
                         const todayStr = new Date().toISOString().split("T")[0]
                         const isToday = day.dateStr === todayStr
                         const isPast = day.dateStr < todayStr
@@ -708,13 +847,15 @@ export function StaffShiftTab({
                             <div
                               className={cn(
                                 "w-full p-2.5 rounded-2xl border transition-all shadow-xs group-hover:scale-[1.02] active:scale-98 flex flex-col justify-between min-h-[68px]",
-                                isOff
+                                isUnassigned
+                                  ? "bg-slate-50/40 dark:bg-slate-900/30 border-dashed border-slate-200/90 dark:border-slate-800 text-slate-400 hover:border-sky-400 hover:bg-sky-500/[0.03]"
+                                  : isOff
                                   ? "bg-slate-100/60 dark:bg-slate-800/40 border-slate-200/70 dark:border-slate-800 text-slate-400"
                                   : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700/80 group-hover:border-sky-400"
                               )}
                             >
                               <div className="flex items-center justify-between gap-1">
-                                <span className={cn("text-[10px] font-bold truncate", !isOff && "text-slate-900 dark:text-slate-100")}>
+                                <span className={cn("text-[10px] font-bold truncate", isUnassigned ? "text-slate-400 italic" : !isOff && "text-slate-900 dark:text-slate-100")}>
                                   {shift.label}
                                 </span>
                                 <span className={cn("w-2 h-2 rounded-full shrink-0", shift.badgeColor)} />
@@ -723,9 +864,9 @@ export function StaffShiftTab({
                               <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-slate-400 mt-2 font-mono">
                                 <span className="flex items-center gap-1">
                                   <Clock size={11} className="text-slate-400 shrink-0" />
-                                  <span className="truncate">{shift.hours}</span>
+                                  <span className="truncate">{isUnassigned ? "+ Vardiya Ata" : shift.hours}</span>
                                 </span>
-                                <span className="font-bold shrink-0">{shift.durationHours}s</span>
+                                <span className="font-bold shrink-0">{shift.durationHours > 0 ? `${shift.durationHours}s` : "-"}</span>
                               </div>
                             </div>
                           </div>
@@ -929,11 +1070,35 @@ export function StaffShiftTab({
               </button>
             </div>
 
-            <div className="space-y-2">
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
-                Vardiya Seçin:
-              </p>
-              <div className="grid grid-cols-1 gap-2">
+            <div className="space-y-2.5">
+              {/* Vardiyayı Kaldır / Temizle Butonu */}
+              <button
+                type="button"
+                onClick={() => handleAssignShift(activeCell.staffId, activeCell.dateStr, "NONE")}
+                className="w-full p-2.5 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/80 dark:bg-rose-950/20 text-rose-700 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/40 flex items-center justify-between text-left transition-all cursor-pointer group"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-xl bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                    <Trash2 size={13} />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-rose-700 dark:text-rose-400">Vardiyayı Kaldır (Boş Bırak)</p>
+                    <p className="text-[10px] text-rose-600/70 dark:text-rose-400/70 font-normal">Bu gün için herhangi bir mesai planlanmaz</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase bg-rose-100 dark:bg-rose-900/40 px-2 py-0.5 rounded-md">Temizle</span>
+              </button>
+
+              <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                </div>
+                <div className="relative flex justify-center text-[10px] uppercase font-bold text-slate-400">
+                  <span className="bg-white dark:bg-slate-900 px-2">veya Vardiya Ata</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-2 max-h-60 overflow-y-auto pr-0.5">
                 {shiftDefinitions.map((s) => (
                   <button
                     key={s.id}
@@ -948,7 +1113,7 @@ export function StaffShiftTab({
                       <p className="text-xs font-bold">{s.label}</p>
                       <p className="text-[11px] font-mono opacity-80 mt-0.5">{s.hours}</p>
                     </div>
-                    <span className="text-xs font-bold font-mono">{s.durationHours}s</span>
+                    <span className="text-xs font-bold font-mono">{s.durationHours > 0 ? `${s.durationHours}s` : "İzinli"}</span>
                   </button>
                 ))}
               </div>
