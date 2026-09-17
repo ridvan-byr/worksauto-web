@@ -71,6 +71,7 @@ export interface Tenant {
   logoUrl?: string
   logoWidth?: number | null
   logoHeight?: number | null
+  googleReviewUrl?: string
   bankName?: string
   iban?: string
   accountHolder?: string

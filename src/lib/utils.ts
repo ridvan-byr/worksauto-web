@@ -26,7 +26,11 @@ export function resolveMediaUrl(url?: string | null): string {
     url.startsWith("data:") ||
     url.startsWith("blob:") ||
     url.startsWith("http://") ||
-    url.startsWith("https://")
+    url.startsWith("https://") ||
+    url.startsWith("/brand/") ||
+    url.startsWith("/icons/") ||
+    url.startsWith("/images/") ||
+    url.startsWith("/favicon")
   ) {
     return url
   }

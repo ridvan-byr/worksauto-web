@@ -117,10 +117,21 @@ export function RecordPaymentModal({ isOpen, invoice, onClose, onSuccess }: Reco
               </div>
               <input
                 type="number"
-                min={1}
+                min={0.01}
                 max={invoice.remainingAmount}
+                step="0.01"
+                placeholder="0.00"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                onFocus={(e) => e.target.select()}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  if (raw === "") {
+                    setAmount("")
+                    return
+                  }
+                  const val = parseFloat(raw)
+                  setAmount(isNaN(val) ? "" : val)
+                }}
                 className="w-full h-11 px-3.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                 required
                 autoFocus
@@ -177,10 +188,17 @@ export function RecordPaymentModal({ isOpen, invoice, onClose, onSuccess }: Reco
               <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300">Slip No / Dekont No</label>
               <input
                 type="text"
-                placeholder="Örn: SLIP-98412 veya Dekont No"
+                placeholder="Örn: 98412 veya Dekont No"
                 value={referenceNo}
-                onChange={(e) => setReferenceNo(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500"
+                onChange={(e) =>
+                  setReferenceNo(
+                    e.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9-]/g, "")
+                      .slice(0, 24)
+                  )
+                }
+                className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs font-mono focus:outline-none focus:ring-2 focus:ring-sky-500 uppercase"
               />
             </div>
 
