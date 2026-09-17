@@ -4,13 +4,12 @@ import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@/components/ui/sonner"
-import { getAccessToken, setAccessToken, refreshAccessToken, setSessionCookie, apiClient } from "@/lib/api-client"
+import { getAccessToken, setAccessToken, refreshAccessToken, setSessionCookie, apiClient, getApiBaseUrl } from "@/lib/api-client"
 import { User, Tenant } from "./types"
 
 const AUTH_STORAGE_KEY = "worksauto_auth_session"
 const ACCESS_TOKEN_KEY = "worksauto_access_token"
 const REFRESH_TOKEN_KEY = "worksauto_refresh_token"
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"
 
 interface AuthContextType {
   user: User | null
@@ -90,7 +89,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!token) return
 
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        const res = await fetch(`${getApiBaseUrl()}/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -249,7 +248,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const sendOtp = React.useCallback(async (rawPhone: string) => {
     const cleanPhone = rawPhone.replace(/\D/g, "")
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/otp/send`, {
+      const res = await fetch(`${getApiBaseUrl()}/auth/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -280,7 +279,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (rawPhone: string, code: string) => {
       const cleanPhone = rawPhone.replace(/\D/g, "")
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+        const res = await fetch(`${getApiBaseUrl()}/auth/otp/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -300,7 +299,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         let dbTenant: Partial<Tenant> | null = null
         try {
-          const tenantRes = await fetch(`${API_BASE_URL}/tenants/current`, {
+          const tenantRes = await fetch(`${getApiBaseUrl()}/tenants/current`, {
             headers: { Authorization: `Bearer ${data.accessToken}` },
           })
           if (tenantRes.ok) {
@@ -392,7 +391,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = React.useCallback(async () => {
     try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
+      await fetch(`${getApiBaseUrl()}/auth/logout`, {
         method: "POST",
         credentials: "include",
       }).catch(() => {})

@@ -1,4 +1,15 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+export function getApiBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    if (window.location.protocol === 'https:') {
+      if (window.location.hostname.endsWith('.test')) {
+        return 'https://api.worksauto.test/api/v1';
+      }
+      return '/api/v1';
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+}
+
 const ACCESS_TOKEN_KEY = 'worksauto_access_token';
 const REFRESH_TOKEN_KEY = 'worksauto_refresh_token';
 
@@ -106,7 +117,7 @@ export async function refreshAccessToken(): Promise<string> {
     try {
       const legacyRefreshToken = typeof window !== 'undefined' ? localStorage.getItem(REFRESH_TOKEN_KEY) : null;
 
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const response = await fetch(`${getApiBaseUrl()}/auth/refresh`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -153,7 +164,7 @@ export async function apiRequest<T = unknown>(
 ): Promise<T> {
   const { params, headers = {}, ...rest } = options;
 
-  let url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
+  let url = endpoint.startsWith('http') ? endpoint : `${getApiBaseUrl()}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
 
   if (params) {
     const query = new URLSearchParams();

@@ -38,6 +38,16 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  allowedDevOrigins: [
+    "panel.worksauto.test",
+    "admin.worksauto.test",
+    "api.worksauto.test",
+    "*.worksauto.test",
+    "panel.localhost",
+    "admin.localhost",
+    "api.localhost",
+    "localhost",
+  ],
   async rewrites() {
     const isDocker = Boolean(process.env.HOSTNAME === "0.0.0.0" || process.env.API_INTERNAL_URL);
     const backendBase = (
