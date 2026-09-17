@@ -6,6 +6,17 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Formats a Date object into a local 'YYYY-MM-DD' string based on the user's local timezone.
+ * Avoids the UTC-offset bug where new Date().toISOString() returns yesterday between 00:00 and 03:00.
+ */
+export function formatLocalDate(date: Date = new Date()): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
+/**
  * Resolves media URLs (MinIO files, logos) so that relative paths like `/media/files/...`
  * or `/api/v1/media/files/...` point directly to the active API base URL.
  */

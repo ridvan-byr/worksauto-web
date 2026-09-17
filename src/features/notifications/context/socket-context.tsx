@@ -8,7 +8,7 @@ import { playNotificationChime } from "../sound/chime";
 import { NotificationItem } from "../types";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/auth-context";
-import { getAccessToken } from "@/lib/api-client";
+import { getAccessToken, refreshAccessToken } from "@/lib/api-client";
 
 interface SocketContextType {
   socket: Socket | null;
@@ -97,18 +97,54 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
     const socketHost = rawApiUrl.replace(/\/api\/v1\/?$/, "");
 
     const newSocket = io(`${socketHost}/events`, {
-      auth: { token },
+      auth: (cb) => {
+        const currentToken =
+          getAccessToken() ||
+          (typeof window !== "undefined"
+            ? localStorage.getItem("worksauto_access_token")
+            : null);
+        cb({ token: currentToken });
+      },
       transports: ["websocket", "polling"],
-      reconnectionAttempts: 10,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
       reconnectionDelay: 2000,
+      reconnectionDelayMax: 10000,
     });
 
     newSocket.on("connect", () => {
       setIsConnected(true);
     });
 
-    newSocket.on("disconnect", () => {
+    newSocket.on("disconnect", async (reason) => {
       setIsConnected(false);
+      // If server disconnected client (e.g. 15-minute JWT expired or server restart),
+      // seamlessly refresh the token and re-establish the connection.
+      if (reason === "io server disconnect") {
+        try {
+          const freshToken = await refreshAccessToken();
+          if (freshToken && socketRef.current) {
+            socketRef.current.auth = { token: freshToken };
+            socketRef.current.connect();
+          }
+        } catch {
+          // Token refresh failure will be handled by auth guard
+        }
+      }
+    });
+
+    newSocket.on("connect_error", async () => {
+      setIsConnected(false);
+      // On handshake or token expiration errors, attempt silent token refresh and retry
+      try {
+        const freshToken = await refreshAccessToken();
+        if (freshToken && socketRef.current) {
+          socketRef.current.auth = { token: freshToken };
+          socketRef.current.connect();
+        }
+      } catch {
+        // Will retry on next socket reconnect loop
+      }
     });
 
     // 1. In-App Notification Broadcast

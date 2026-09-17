@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, CheckCircle2, Lock, Shield, Settings2, ChevronDown } from "lucide-react"
+import { X, CheckCircle2, Lock, Shield, Settings2, ChevronDown, Calendar } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { DEFAULT_LIFTS } from "@/lib/workshop-constants"
@@ -38,6 +38,8 @@ interface StaffModalProps {
     assignedLift?: string | null
     specialty?: string
     isActive?: boolean
+    annualLeaveDays?: number
+    transferredLeaveDays?: number
   }) => Promise<void>
   isPending: boolean
 }
@@ -61,6 +63,8 @@ export function StaffModal({
   const [lift, setLift] = React.useState("Lift 1")
   const [specialty, setSpecialty] = React.useState("Genel Mekanik")
   const [isActive, setIsActive] = React.useState(true)
+  const [annualLeaveDays, setAnnualLeaveDays] = React.useState<number>(14)
+  const [transferredLeaveDays, setTransferredLeaveDays] = React.useState<number>(0)
 
   const [positions, setPositions] = React.useState<WorkshopPosition[]>([])
   const [isPosModalOpen, setIsPosModalOpen] = React.useState(false)
@@ -103,6 +107,8 @@ export function StaffModal({
       setLift(mechanic?.assignedLift || editingStaff.assignedLift || "Lift 1")
       setSpecialty(mechanic?.specialty || editingStaff.specialty || "Genel Mekanik")
       setIsActive(u.isActive !== false)
+      setAnnualLeaveDays(editingStaff.annualLeaveDays ?? u.annualLeaveDays ?? 14)
+      setTransferredLeaveDays(editingStaff.transferredLeaveDays ?? u.transferredLeaveDays ?? 0)
     } else {
       setName("")
       setSurname("")
@@ -112,6 +118,8 @@ export function StaffModal({
       setLift("Lift 1")
       setSpecialty("Genel Mekanik")
       setIsActive(true)
+      setAnnualLeaveDays(14)
+      setTransferredLeaveDays(0)
     }
     setShowAdvancedRoles(false)
   }, [editingStaff, isOpen])
@@ -154,6 +162,8 @@ export function StaffModal({
       assignedLift: role === "TECHNICIAN" ? lift : null,
       specialty: specialty || (role === "TECHNICIAN" ? "Genel Mekanik" : "Ofis / Yönetim"),
       isActive,
+      annualLeaveDays: Number(annualLeaveDays) || 14,
+      transferredLeaveDays: Number(transferredLeaveDays) || 0,
     })
   }
 
@@ -422,6 +432,51 @@ export function StaffModal({
             onClose={() => setIsPosModalOpen(false)}
             onPositionsChange={(newPositions) => setPositions(newPositions)}
           />
+
+          {/* Annual Leave Entitlement Settings */}
+          <div className="p-3.5 rounded-2xl bg-sky-500/5 dark:bg-sky-500/10 border border-sky-500/20 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-sky-950 dark:text-sky-200 flex items-center gap-1.5">
+                <Calendar className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />
+                <span>Yıllık İzin Hakkı & Devreden Bakiye</span>
+              </span>
+              <span className="text-[11px] text-sky-600 dark:text-sky-400 font-bold font-mono bg-white dark:bg-slate-900 px-2 py-0.5 rounded-lg border border-sky-500/30">
+                Toplam Kota: {(Number(annualLeaveDays) || 0) + (Number(transferredLeaveDays) || 0)} Gün
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-0.5">
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Yıllık İzin Hakkı (Gün)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="365"
+                  value={annualLeaveDays}
+                  onChange={(e) => setAnnualLeaveDays(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-full h-8 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-sky-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">Yasal standart: 14 gün</p>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Devreden İzin (Gün)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  max="365"
+                  value={transferredLeaveDays}
+                  onChange={(e) => setTransferredLeaveDays(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="w-full h-8 px-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-hidden focus:ring-2 focus:ring-sky-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-0.5">Geçmiş yıldan devreden</p>
+              </div>
+            </div>
+          </div>
 
           {isEdit && (
             <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">

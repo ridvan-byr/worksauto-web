@@ -78,6 +78,8 @@ export default function StaffPage() {
     assignedLift?: string | null;
     specialty?: string;
     isActive?: boolean;
+    annualLeaveDays?: number;
+    transferredLeaveDays?: number;
   }) => {
     if (editingStaff) {
       await updateStaffMutation.mutateAsync({ id: editingStaff.id, data });

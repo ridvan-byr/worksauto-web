@@ -19,6 +19,7 @@ import {
   ArrowRight,
   ChevronRight,
   CreditCard,
+  Layers,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -45,7 +46,7 @@ interface DashboardRecentOrder {
 }
 
 export default function DashboardPage() {
-  const { user } = useAuth()
+  const { user, tenant } = useAuth()
   const { data: summary } = useDashboardSummary()
   const { data: apiWorkOrders } = useWorkOrders()
 
@@ -95,6 +96,71 @@ export default function DashboardPage() {
       return mechName.length > 0 && mechName.includes(nameLower)
     }).length
   }, [isTechnician, apiWorkOrders, user])
+
+  // Technician shift calculation based on tenant schedule and user's today leave
+  const todayShift = React.useMemo(() => {
+    if (user?.todayLeave) {
+      const leaveTypeMap: Record<string, string> = {
+        ANNUAL: "Yıllık İzin",
+        SICK: "Sağlık Raporu",
+        CASUAL: "Mazeret İzni",
+        UNPAID: "Ücretsiz İzin",
+      }
+      const leaveLabel = leaveTypeMap[user.todayLeave.leaveType] || "İzinli"
+      return {
+        status: "LEAVE",
+        time: leaveLabel,
+        label: "Bugün onaylı izinlisiniz",
+        badgeColor: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
+        isWorkingDay: false,
+      }
+    }
+
+    const todayDayName = new Intl.DateTimeFormat("tr-TR", { weekday: "long" }).format(new Date())
+    const normalizedDay = todayDayName.charAt(0).toUpperCase() + todayDayName.slice(1).toLowerCase()
+
+    const workingDays =
+      tenant?.workingDays && Array.isArray(tenant.workingDays) && tenant.workingDays.length > 0
+        ? tenant.workingDays
+        : ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"]
+
+    const isWorkDay = workingDays.some((d) => d.toLowerCase() === normalizedDay.toLowerCase())
+    if (!isWorkDay) {
+      return {
+        status: "OFF",
+        time: "Haftalık İzin",
+        label: "Bugün servis tatil günü",
+        badgeColor: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/20",
+        isWorkingDay: false,
+      }
+    }
+
+    const start = tenant?.workStartTime || "08:30"
+    const end = tenant?.workEndTime || "18:30"
+    return {
+      status: "WORKING",
+      time: `${start} - ${end}`,
+      label: "Normal Vardiya Mesaisi",
+      badgeColor: "bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20",
+      isWorkingDay: true,
+    }
+  }, [user?.todayLeave, tenant?.workingDays, tenant?.workStartTime, tenant?.workEndTime])
+
+  // Technician leave balance
+  const userLeaveBalance = React.useMemo(() => {
+    if (user?.leaveBalance) {
+      return user.leaveBalance
+    }
+    const annual = user?.annualLeaveDays ?? 14
+    const transferred = user?.transferredLeaveDays ?? 0
+    return {
+      annualDays: annual,
+      transferredDays: transferred,
+      totalDays: annual + transferred,
+      usedDays: 0,
+      remainingDays: annual + transferred,
+    }
+  }, [user?.leaveBalance, user?.annualLeaveDays, user?.transferredLeaveDays])
 
   const displayName = user ? user.name : "Yetkili"
 
@@ -162,6 +228,19 @@ export default function DashboardPage() {
                   </span>
                 </>
               )}
+              {isTechnician && (
+                <>
+                  <span className="text-slate-300 dark:text-slate-700 hidden sm:inline">•</span>
+                  <span className={cn("inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border", todayShift.badgeColor)}>
+                    <Clock size={12} />
+                    Vardiya: {todayShift.time}
+                  </span>
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold border bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20">
+                    <Calendar size={12} />
+                    Kalan İzin: {userLeaveBalance.remainingDays} Gün
+                  </span>
+                </>
+              )}
             </div>
 
             {/* Greeting Title with Role Accent */}
@@ -183,10 +262,15 @@ export default function DashboardPage() {
             <p className="text-slate-600 dark:text-slate-400 text-sm max-w-2xl leading-relaxed">
               {(() => {
                 if (isTechnician) {
+                  const shiftStatusMsg = todayShift.status === "WORKING"
+                    ? `Bugün vardiyanız ${todayShift.time} saatleri arasında.`
+                    : `Bugün ${todayShift.time} durumundasınız.`
+                  const leaveMsg = `Kalan yıllık izin hakkınız: ${userLeaveBalance.remainingDays} gün (${userLeaveBalance.usedDays} gün kullanıldı).`
+
                   if (myAssignedOrdersCount > 0) {
-                    return `Bugün senin üzerinde ${myAssignedOrdersCount} aktif iş emri bulunuyor, lift seni bekliyor. Atölyede toplam ${inProgressCount} araç işlemde, ${queueCount} araç sırada bekliyor.`;
+                    return `${shiftStatusMsg} ${leaveMsg} Üzerinizde ${myAssignedOrdersCount} aktif iş emri bulunuyor, lift sizi bekliyor. Atölyede toplam ${inProgressCount} araç işlemde, ${queueCount} araç sırada bekliyor.`;
                   }
-                  return `Şu an üzerine doğrudan atanmış aktif iş emri bulunmuyor. Atölyede ${inProgressCount} araç işlemde, sıradaki ${queueCount} aracı inceleyebilirsin.`;
+                  return `${shiftStatusMsg} ${leaveMsg} Şu an üzerinize doğrudan atanmış aktif iş emri bulunmuyor. Atölyede ${inProgressCount} araç işlemde, sıradaki ${queueCount} aracı inceleyebilirsiniz.`;
                 }
 
                 const parts: string[] = [];
@@ -246,152 +330,233 @@ export default function DashboardPage() {
       {/* Live Dynamic KPI Stats Cards */}
       <div
         data-tour="tour-kpis"
-        className={cn(
-          "grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5",
-          isTechnician ? "lg:grid-cols-4" : "lg:grid-cols-5"
-        )}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 sm:gap-5"
       >
-        {/* Daily Cash & Revenue Card (for Service Managers / Owners) */}
-        {!isTechnician && (
-          <Link href="/reports" className="group">
-            <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full bg-gradient-to-br from-emerald-50/20 via-white to-white dark:from-emerald-950/10 dark:via-slate-900 dark:to-slate-900">
+        {isTechnician ? (
+          <>
+            {/* 1: Shift Hours / Status */}
+            <Card className="hover:border-sky-500/40 transition-all cursor-default h-full bg-gradient-to-br from-sky-50/20 via-white to-white dark:from-sky-950/10 dark:via-slate-900 dark:to-slate-900">
               <CardContent className="p-5 flex items-center justify-between">
                 <div className="space-y-1">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bugünkü Kasa / Ciro</p>
-                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                    ₺ {todayRevenue.toLocaleString("tr-TR")}
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bugünkü Vardiyam</p>
+                  <p className="text-2xl font-bold text-sky-600 dark:text-sky-400 font-mono tracking-tight">
+                    {todayShift.time}
                   </p>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
-                    <TrendingUp size={12} className="text-emerald-500" /> Bu ay: ₺{monthlyRevenue.toLocaleString("tr-TR")}
+                    <Clock size={12} className="text-sky-500" />
+                    <span>{todayShift.label}</span>
+                    {user?.mechanic?.assignedLift && (
+                      <span className="text-slate-400 font-semibold">• {user.mechanic.assignedLift}</span>
+                    )}
                   </p>
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
-                  <CreditCard size={22} />
+                <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20">
+                  <Clock size={22} />
                 </div>
               </CardContent>
             </Card>
-          </Link>
-        )}
 
-        {/* Appointments Card */}
-        <Link href="/appointments" className="group">
-          <Card className="hover:border-sky-500/40 transition-all cursor-pointer h-full">
-            <CardContent className="p-5 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Kayıtlı Randevular</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                  {todayAppCount} Randevu
-                </p>
-                <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                  <CheckCircle2 size={12} /> Takvim slotları aktif
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20 group-hover:scale-105 transition-transform">
-                <Calendar size={22} />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* Workshop In-Progress Card */}
-        <Link href="/work-orders" className="group">
-          <Card className="hover:border-amber-500/40 transition-all cursor-pointer h-full">
-            <CardContent className="p-5 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Atölye (Aktif Araçlar)</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                  {activeWOCount} İş Emri
-                </p>
-                <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
-                  <Clock size={12} /> {inProgressCount} liftte, {queueCount} sırada
-                </p>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-105 transition-transform">
-                <Wrench size={22} />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
-
-        {/* Critical Stock Alert Card */}
-        <Link href="/inventory" className="group">
-          <Card
-            className={cn(
-              "transition-all cursor-pointer h-full",
-              criticalStock > 0 ? "hover:border-rose-500/40" : "hover:border-emerald-500/40"
-            )}
-          >
-            <CardContent className="p-5 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  {criticalStock > 0 ? "Kritik Stok Uyarısı" : "Stok Durumu"}
-                </p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                  {criticalStock} Parça
-                </p>
-                {criticalStock > 0 ? (
-                  <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
-                    <AlertCircle size={12} /> Sipariş eşiği aşıldı
+            {/* 2: Annual Leave Balance */}
+            <Card className="hover:border-indigo-500/40 transition-all cursor-default h-full bg-gradient-to-br from-indigo-50/20 via-white to-white dark:from-indigo-950/10 dark:via-slate-900 dark:to-slate-900">
+              <CardContent className="p-5 flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Yıllık İzin Bakiyem</p>
+                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                    {userLeaveBalance.remainingDays} Gün
                   </p>
-                ) : (
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                    <CheckCircle2 size={12} /> Stok seviyeleri yeterli
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
+                    <Calendar size={12} className="text-indigo-500" />
+                    <span>{userLeaveBalance.usedDays} gün kullanıldı / {userLeaveBalance.totalDays} gün hak</span>
                   </p>
-                )}
-              </div>
-              <div
+                </div>
+                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20">
+                  <Calendar size={22} />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* 3: Assigned Active Work Orders */}
+            <Link href="/work-orders" className="group">
+              <Card className="hover:border-amber-500/40 transition-all cursor-pointer h-full">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Üzerimdeki İşler</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                      {myAssignedOrdersCount} Aktif İş
+                    </p>
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
+                      <Wrench size={12} /> Bana zimmetli iş emirleri
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-105 transition-transform">
+                    <Wrench size={22} />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {/* 4: Total Active Workshop Vehicles */}
+            <Link href="/work-orders" className="group">
+              <Card className="hover:border-sky-500/40 transition-all cursor-pointer h-full">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Atölye (Genel Durum)</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                      {activeWOCount} Araç
+                    </p>
+                    <p className="text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1 font-medium">
+                      <Layers size={12} /> {inProgressCount} liftte, {queueCount} sırada
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20 group-hover:scale-105 transition-transform">
+                    <Layers size={22} />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {/* 5: Completed Work Orders */}
+            <Link href="/work-orders" className="group">
+              <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tamamlanan İşler</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                      {recentOrders.filter((w) => w.status === "COMPLETED").length} Araç
+                    </p>
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                      <CheckCircle2 size={12} /> Teslimata hazır
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                    <CheckCircle2 size={22} />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </>
+        ) : (
+          <>
+            {/* Daily Cash & Revenue Card (for Service Managers / Owners) */}
+            <Link href="/reports" className="group">
+              <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full bg-gradient-to-br from-emerald-50/20 via-white to-white dark:from-emerald-950/10 dark:via-slate-900 dark:to-slate-900">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bugünkü Kasa / Ciro</p>
+                    <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
+                      ₺ {todayRevenue.toLocaleString("tr-TR")}
+                    </p>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
+                      <TrendingUp size={12} className="text-emerald-500" /> Bu ay: ₺{monthlyRevenue.toLocaleString("tr-TR")}
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
+                    <CreditCard size={22} />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {/* Appointments Card */}
+            <Link href="/appointments" className="group">
+              <Card className="hover:border-sky-500/40 transition-all cursor-pointer h-full">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Kayıtlı Randevular</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                      {todayAppCount} Randevu
+                    </p>
+                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                      <CheckCircle2 size={12} /> Takvim slotları aktif
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20 group-hover:scale-105 transition-transform">
+                    <Calendar size={22} />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {/* Workshop In-Progress Card */}
+            <Link href="/work-orders" className="group">
+              <Card className="hover:border-amber-500/40 transition-all cursor-pointer h-full">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Atölye (Aktif Araçlar)</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                      {activeWOCount} İş Emri
+                    </p>
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
+                      <Clock size={12} /> {inProgressCount} liftte, {queueCount} sırada
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-105 transition-transform">
+                    <Wrench size={22} />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+
+            {/* Critical Stock Alert Card */}
+            <Link href="/inventory" className="group">
+              <Card
                 className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center border group-hover:scale-105 transition-transform",
-                  criticalStock > 0
-                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-                    : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  "transition-all cursor-pointer h-full",
+                  criticalStock > 0 ? "hover:border-rose-500/40" : "hover:border-emerald-500/40"
                 )}
               >
-                <Package size={22} />
-              </div>
-            </CardContent>
-          </Card>
-        </Link>
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
+                      {criticalStock > 0 ? "Kritik Stok Uyarısı" : "Stok Durumu"}
+                    </p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                      {criticalStock} Parça
+                    </p>
+                    {criticalStock > 0 ? (
+                      <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
+                        <AlertCircle size={12} /> Sipariş eşiği aşıldı
+                      </p>
+                    ) : (
+                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
+                        <CheckCircle2 size={12} /> Stok seviyeleri yeterli
+                      </p>
+                    )}
+                  </div>
+                  <div
+                    className={cn(
+                      "w-12 h-12 rounded-2xl flex items-center justify-center border group-hover:scale-105 transition-transform",
+                      criticalStock > 0
+                        ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                    )}
+                  >
+                    <Package size={22} />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
 
-        {/* 4th Card: Receivables for Owner / Finished Orders for Technician */}
-        {isTechnician ? (
-          <Link href="/work-orders" className="group">
-            <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tamamlanan İşler</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                    {recentOrders.filter((w) => w.status === "COMPLETED").length} Araç
-                  </p>
-                  <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                    <CheckCircle2 size={12} /> Teslimata hazır
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
-                  <CheckCircle2 size={22} />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
-        ) : (
-          <Link href="/invoices" className="group">
-            <Card className="hover:border-indigo-500/40 transition-all cursor-pointer h-full">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bekleyen Alacak</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                    {totalReceivables.toLocaleString("tr-TR")} ₺
-                  </p>
-                  <p className="text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1 font-medium">
-                    <TrendingUp size={12} /> {openInvoicesCount} açık fatura
-                  </p>
-                </div>
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 group-hover:scale-105 transition-transform">
-                  <Receipt size={22} />
-                </div>
-              </CardContent>
-            </Card>
-          </Link>
+            {/* Bekleyen Alacak Card */}
+            <Link href="/invoices" className="group">
+              <Card className="hover:border-indigo-500/40 transition-all cursor-pointer h-full">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bekleyen Alacak</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
+                      {totalReceivables.toLocaleString("tr-TR")} ₺
+                    </p>
+                    <p className="text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1 font-medium">
+                      <TrendingUp size={12} /> {openInvoicesCount} açık fatura
+                    </p>
+                  </div>
+                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 group-hover:scale-105 transition-transform">
+                    <Receipt size={22} />
+                  </div>
+                </CardContent>
+              </Card>
+            </Link>
+          </>
         )}
       </div>
 

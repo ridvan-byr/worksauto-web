@@ -2,6 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api-client';
 import { toast } from 'sonner';
 
+export interface StaffLeaveBalance {
+  annualDays: number;
+  transferredDays: number;
+  totalDays: number;
+  usedDays: number;
+  remainingDays: number;
+}
+
 export interface StaffRecord {
   id: string;
   name: string;
@@ -10,6 +18,9 @@ export interface StaffRecord {
   email?: string | null;
   role: string;
   isActive: boolean;
+  annualLeaveDays?: number;
+  transferredLeaveDays?: number;
+  leaveBalance?: StaffLeaveBalance;
   createdAt: string;
   mechanic?: {
     id: string;
@@ -28,6 +39,8 @@ export interface CreateStaffInput {
   assignedLift?: string | null;
   specialty?: string;
   dailyCapacityHours?: number;
+  annualLeaveDays?: number;
+  transferredLeaveDays?: number;
 }
 
 export interface UpdateStaffInput {
@@ -39,6 +52,8 @@ export interface UpdateStaffInput {
   assignedLift?: string | null;
   specialty?: string;
   dailyCapacityHours?: number;
+  annualLeaveDays?: number;
+  transferredLeaveDays?: number;
   isActive?: boolean;
 }
 

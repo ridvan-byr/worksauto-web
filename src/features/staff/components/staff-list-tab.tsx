@@ -15,6 +15,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatLocalDate, cn } from "@/lib/utils";
 import { StaffRecord, StaffLeave } from "../api/use-staff-management";
 
 interface StaffListTabProps {
@@ -75,7 +76,7 @@ export function StaffListTab({
   const [roleFilter, setRoleFilter] = React.useState<string>("ALL");
   const [statusFilter, setStatusFilter] = React.useState<string>("ACTIVE");
 
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = formatLocalDate(new Date());
 
   // Set of staff IDs currently on approved leave today
   const onLeaveStaffIds = React.useMemo(() => {
@@ -361,6 +362,52 @@ export function StaffListTab({
                       </div>
                     </div>
                   )}
+
+                  {/* Yıllık İzin Bakiyesi Göstergesi */}
+                  <div className="mt-3 p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800 text-xs space-y-1.5">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-1">
+                        <Calendar className="w-3 h-3 text-sky-500" />
+                        <span>Yıllık İzin Bakiyesi</span>
+                      </span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">
+                        {s.leaveBalance ? (
+                          <>
+                            <span className={cn(
+                              s.leaveBalance.remainingDays > 4
+                                ? "text-emerald-600 dark:text-emerald-400"
+                                : s.leaveBalance.remainingDays > 0
+                                ? "text-amber-600 dark:text-amber-400"
+                                : "text-rose-600 dark:text-rose-400"
+                            )}>
+                              {s.leaveBalance.remainingDays}
+                            </span>
+                            <span className="text-slate-400 font-normal"> / {s.leaveBalance.totalDays} Gün</span>
+                          </>
+                        ) : (
+                          <span className="text-slate-400 font-normal">14 / 14 Gün</span>
+                        )}
+                      </span>
+                    </div>
+
+                    {s.leaveBalance && s.leaveBalance.totalDays > 0 && (
+                      <div className="w-full bg-slate-200 dark:bg-slate-700 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={cn(
+                            "h-full rounded-full transition-all duration-300",
+                            s.leaveBalance.remainingDays > 4
+                              ? "bg-emerald-500"
+                              : s.leaveBalance.remainingDays > 0
+                              ? "bg-amber-500"
+                              : "bg-rose-500"
+                          )}
+                          style={{
+                            width: `${Math.min(100, Math.max(0, Math.round((s.leaveBalance.remainingDays / s.leaveBalance.totalDays) * 100)))}%`,
+                          }}
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Bottom Actions */}
