@@ -2,12 +2,10 @@
 
 import * as React from "react"
 import { createPortal } from "react-dom"
-import { X, Printer, Receipt, FileCheck2, Loader2 } from "lucide-react"
+import { X, Printer, Receipt, FileCheck2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { CorporatePrintDocument } from "@/components/print/corporate-print-document"
-import { apiClient } from "@/lib/api-client"
-import { toast } from "@/components/ui/sonner"
 import { InvoiceStatusBadge } from "./invoice-status-badge"
 import { Invoice } from "../types"
 
@@ -20,7 +18,6 @@ interface InvoiceDetailModalProps {
 
 export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: InvoiceDetailModalProps) {
   const [mounted, setMounted] = React.useState(false)
-  const [isDownloadingPdf, setIsDownloadingPdf] = React.useState(false)
 
   React.useEffect(() => {
     setMounted(true)
@@ -46,70 +43,7 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
     }, 1000)
   }
 
-  const handleDownloadGibPdf = async () => {
-    setIsDownloadingPdf(true)
-    try {
-      const res = await apiClient.get<{
-        pdfUrl?: string
-        pdfBuffer?: { type: string; data: number[] } | string
-        htmlContent?: string
-      }>(`/invoices/${invoice.id}/pdf`)
 
-      if (res.pdfUrl) {
-        window.open(res.pdfUrl, "_blank")
-        return
-      }
-
-      if (res.htmlContent) {
-        const printWindow = window.open("", "_blank")
-        if (printWindow) {
-          printWindow.document.write(res.htmlContent)
-          printWindow.document.close()
-          printWindow.focus()
-          printWindow.print()
-        }
-        return
-      }
-
-      if (res.pdfBuffer) {
-        let blob: Blob
-        if (typeof res.pdfBuffer === "string") {
-          const byteCharacters = atob(res.pdfBuffer)
-          const byteNumbers = new Array(byteCharacters.length)
-          for (let i = 0; i < byteCharacters.length; i++) {
-            byteNumbers[i] = byteCharacters.charCodeAt(i)
-          }
-          const byteArray = new Uint8Array(byteNumbers)
-          blob = new Blob([byteArray], { type: "application/pdf" })
-        } else if (res.pdfBuffer.data) {
-          const byteArray = new Uint8Array(res.pdfBuffer.data)
-          blob = new Blob([byteArray], { type: "application/pdf" })
-        } else {
-          throw new Error("Geçersiz PDF formatı")
-        }
-
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement("a")
-        a.href = url
-        a.download = `${invoice.gibInvoiceNumber || invoice.invoiceNumber}_GIB.pdf`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        window.URL.revokeObjectURL(url)
-        toast.success("E-Belge PDF başarıyla indirildi")
-        return
-      }
-
-      // If nothing returned or fallback
-      handlePrint()
-    } catch (err: unknown) {
-      console.warn("Resmi PDF indirme:", err)
-      toast.info("Resmi E-Belge bulunamadı, dahili PDF çıktısı hazırlanıyor...")
-      handlePrint()
-    } finally {
-      setIsDownloadingPdf(false)
-    }
-  }
 
   const modalContent = (
     <div
@@ -161,21 +95,7 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
           </div>
 
           <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={isDownloadingPdf}
-              onClick={handleDownloadGibPdf}
-              className="h-9 px-3 text-xs font-semibold gap-1.5 cursor-pointer text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/50"
-            >
-              {isDownloadingPdf ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <FileCheck2 size={14} />
-              )}
-              <span>GİB / E-Belge İndir</span>
-            </Button>
+
 
             <Button
               type="button"
@@ -185,7 +105,7 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
               className="h-9 px-3 text-xs font-semibold gap-1.5 cursor-pointer"
             >
               <Printer size={14} />
-              <span>Yazdır</span>
+              <span>Yazdır / PDF</span>
             </Button>
 
             {invoice.status !== "PAID" && onOpenPayment && (

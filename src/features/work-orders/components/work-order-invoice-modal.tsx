@@ -13,6 +13,7 @@ import {
   AlertCircle,
   Loader2,
   CheckCircle2,
+  Coins,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { apiClient } from "@/lib/api-client"
@@ -26,7 +27,7 @@ interface WorkOrderInvoiceModalProps {
   onSuccess: () => void
 }
 
-type PaymentOption = "CASH" | "POS" | "BANK_TRANSFER" | "OPEN_ACCOUNT"
+type PaymentOption = "CASH" | "POS" | "BANK_TRANSFER" | "SPLIT" | "OPEN_ACCOUNT"
 
 export function WorkOrderInvoiceModal({
   isOpen,
@@ -47,6 +48,8 @@ export function WorkOrderInvoiceModal({
   const [dueDate, setDueDate] = React.useState(defaultDueDate)
   const [paymentOption, setPaymentOption] = React.useState<PaymentOption>("POS")
   const [paymentAmount, setPaymentAmount] = React.useState<number>(order.grandTotal || 0)
+  const [splitCashAmount, setSplitCashAmount] = React.useState<number>(0)
+  const [splitPosAmount, setSplitPosAmount] = React.useState<number>(0)
   const [posSlipNo, setPosSlipNo] = React.useState("")
   const [notes, setNotes] = React.useState("")
 
@@ -123,6 +126,9 @@ export function WorkOrderInvoiceModal({
   // Sync paymentAmount when remaining amount changes
   React.useEffect(() => {
     setPaymentAmount(effectiveRemainingToPay)
+    const half = Math.round((effectiveRemainingToPay / 2) * 100) / 100
+    setSplitCashAmount(half)
+    setSplitPosAmount(Math.round((effectiveRemainingToPay - half) * 100) / 100)
   }, [effectiveRemainingToPay])
 
   if (!mounted || !isOpen) return null
@@ -142,26 +148,51 @@ export function WorkOrderInvoiceModal({
         kdvAmount,
         grandTotal,
         offsetAdvanceAmount: offsetAdvance > 0 ? offsetAdvance : undefined,
+        items: order.items && order.items.length > 0 ? order.items : undefined,
       })
 
       // 2. If immediate payment was selected for the remaining balance, record Payment
-      if (effectiveRemainingToPay > 0 && paymentOption !== "OPEN_ACCOUNT" && paymentAmount > 0) {
-        await apiClient.post("/payments", {
-          invoiceId: invoiceRes.id,
-          customerId: order.customerId,
-          amount: Number(paymentAmount),
-          paymentMethod: paymentOption,
-          posSlipNo: posSlipNo.trim() || undefined,
-          notes: notes.trim() || `İş Emri #${order.workOrderNumber} Kalan Fatura Tahsilatı`,
-        })
+      if (effectiveRemainingToPay > 0 && paymentOption !== "OPEN_ACCOUNT") {
+        if (paymentOption === "SPLIT") {
+          if (splitCashAmount > 0) {
+            await apiClient.post("/payments", {
+              invoiceId: invoiceRes.id,
+              customerId: order.customerId,
+              amount: Number(splitCashAmount),
+              paymentMethod: "CASH",
+              notes: notes.trim() || `İş Emri #${order.workOrderNumber} Nakit Tahsilat`,
+            })
+          }
+          if (splitPosAmount > 0) {
+            await apiClient.post("/payments", {
+              invoiceId: invoiceRes.id,
+              customerId: order.customerId,
+              amount: Number(splitPosAmount),
+              paymentMethod: "POS",
+              posSlipNo: posSlipNo.trim() || undefined,
+              notes: notes.trim() || `İş Emri #${order.workOrderNumber} POS / Kredi Kartı Tahsilat`,
+            })
+          }
+        } else if (paymentAmount > 0) {
+          await apiClient.post("/payments", {
+            invoiceId: invoiceRes.id,
+            customerId: order.customerId,
+            amount: Number(paymentAmount),
+            paymentMethod: paymentOption,
+            posSlipNo: posSlipNo.trim() || undefined,
+            notes: notes.trim() || `İş Emri #${order.workOrderNumber} Kalan Fatura Tahsilatı`,
+          })
+        }
       }
 
       const advanceDesc = offsetAdvance > 0
         ? ` (${offsetAdvance.toLocaleString("tr-TR")} ₺ cari avansından mahsup edildi)`
         : ""
       const payDesc =
-        effectiveRemainingToPay > 0 && paymentOption !== "OPEN_ACCOUNT" && paymentAmount > 0
-          ? ` ve ${paymentAmount.toLocaleString("tr-TR")} ₺ tahsil edildi.`
+        effectiveRemainingToPay > 0 && paymentOption !== "OPEN_ACCOUNT"
+          ? paymentOption === "SPLIT"
+            ? ` ve ${splitCashAmount.toLocaleString("tr-TR")} ₺ Nakit + ${splitPosAmount.toLocaleString("tr-TR")} ₺ POS tahsil edildi.`
+            : ` ve ${paymentAmount.toLocaleString("tr-TR")} ₺ tahsil edildi.`
           : "."
 
       toast.success("Fatura başarıyla oluşturuldu!", {
@@ -355,7 +386,7 @@ export function WorkOrderInvoiceModal({
                     </span>
                   )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                   <button
                     type="button"
                     onClick={() => setPaymentOption("POS")}
@@ -380,6 +411,24 @@ export function WorkOrderInvoiceModal({
                   >
                     <Banknote size={18} />
                     <span className="text-[11px]">Nakit</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentOption("SPLIT")
+                      const half = Math.round((effectiveRemainingToPay / 2) * 100) / 100
+                      setSplitCashAmount(half)
+                      setSplitPosAmount(Math.round((effectiveRemainingToPay - half) * 100) / 100)
+                    }}
+                    className={`p-3 rounded-xl border text-center transition-all flex flex-col items-center gap-1.5 cursor-pointer ${
+                      paymentOption === "SPLIT"
+                        ? "border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold shadow-xs"
+                        : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    }`}
+                  >
+                    <Coins size={18} />
+                    <span className="text-[11px]">Parçalı (Nakit+Kart)</span>
                   </button>
 
                   <button
@@ -410,8 +459,77 @@ export function WorkOrderInvoiceModal({
                 </div>
               </div>
 
-              {/* If immediate payment selected, show amount & slip fields */}
-              {paymentOption !== "OPEN_ACCOUNT" ? (
+              {/* Payment Details Section */}
+              {paymentOption === "SPLIT" ? (
+                <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Parçalı Tahsilat Dağılımı (Nakit + Kart)
+                    </label>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
+                      Toplam: {(splitCashAmount + splitPosAmount).toFixed(2)} / {effectiveRemainingToPay.toFixed(2)} ₺
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Nakit Tutarı (₺)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max={effectiveRemainingToPay}
+                          step="0.01"
+                          value={splitCashAmount}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0
+                            setSplitCashAmount(val)
+                            const cardRemainder = Math.max(0, Math.round((effectiveRemainingToPay - val) * 100) / 100)
+                            setSplitPosAmount(cardRemainder)
+                          }}
+                          className="w-full h-10 px-3 pr-8 rounded-xl border border-emerald-500/30 bg-white dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">₺</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Kredi Kartı / POS Tutarı (₺)
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max={effectiveRemainingToPay}
+                          step="0.01"
+                          value={splitPosAmount}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0
+                            setSplitPosAmount(val)
+                            const cashRemainder = Math.max(0, Math.round((effectiveRemainingToPay - val) * 100) / 100)
+                            setSplitCashAmount(cashRemainder)
+                          }}
+                          className="w-full h-10 px-3 pr-8 rounded-xl border border-emerald-500/30 bg-white dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                        />
+                        <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">₺</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      POS Slip / Onay No (Opsiyonel)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Örn: 984512"
+                      value={posSlipNo}
+                      onChange={(e) => setPosSlipNo(e.target.value)}
+                      className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              ) : paymentOption !== "OPEN_ACCOUNT" ? (
                 <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 space-y-3">
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-slate-800 dark:text-slate-200">

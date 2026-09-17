@@ -4,6 +4,7 @@ import * as React from "react";
 import { createPortal } from "react-dom";
 import { X, Calendar, Clock, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatLocalDate, cn } from "@/lib/utils";
 import { StaffRecord, CreateStaffLeaveInput } from "../api/use-staff-management";
 
 interface CreateLeaveModalProps {
@@ -42,6 +43,20 @@ export function CreateLeaveModal({
     return (staffList || []).filter((st) => st.isActive !== false);
   }, [staffList]);
 
+  const selectedStaff = React.useMemo(() => {
+    return activeStaffList.find((s) => s.id === userId) || null;
+  }, [activeStaffList, userId]);
+
+  const isOverBalance = Boolean(
+    leaveType === "ANNUAL" &&
+    selectedStaff?.leaveBalance &&
+    totalDays > selectedStaff.leaveBalance.remainingDays
+  );
+
+  const overDays = isOverBalance && selectedStaff?.leaveBalance
+    ? Math.round((totalDays - selectedStaff.leaveBalance.remainingDays) * 10) / 10
+    : 0;
+
   React.useEffect(() => {
     if (preselectedUserId && activeStaffList.some((s) => s.id === preselectedUserId)) {
       setUserId(preselectedUserId);
@@ -53,7 +68,7 @@ export function CreateLeaveModal({
   React.useEffect(() => {
     if (isOpen) {
       // Default to tomorrow or today
-      const today = new Date().toISOString().split("T")[0];
+      const today = formatLocalDate(new Date());
       setStartDate(today);
       setEndDate(today);
       setTotalDays(1);
@@ -175,6 +190,53 @@ export function CreateLeaveModal({
               ))}
             </select>
           </div>
+
+          {/* Canlı İzin Bakiyesi Bilgi Kartı */}
+          {selectedStaff && selectedStaff.leaveBalance && (
+            <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-xs animate-in fade-in">
+              <div className="space-y-1">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                  {selectedStaff.name} {selectedStaff.surname || ""} — Yıllık İzin Durumu
+                </span>
+                <div className="flex items-center gap-2.5">
+                  <span className="text-slate-600 dark:text-slate-300">
+                    Toplam Hak: <strong className="font-bold text-slate-800 dark:text-slate-100">{selectedStaff.leaveBalance.totalDays} Gün</strong>
+                  </span>
+                  <span className="text-slate-300 dark:text-slate-600">•</span>
+                  <span className="text-slate-600 dark:text-slate-300">
+                    Kullanılan: <strong className="font-bold text-amber-600 dark:text-amber-400">{selectedStaff.leaveBalance.usedDays} Gün</strong>
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Kalan Hak</span>
+                <span className={cn(
+                  "text-xs font-bold font-mono px-2.5 py-1 rounded-lg border",
+                  selectedStaff.leaveBalance.remainingDays > 4
+                    ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-500/30"
+                    : selectedStaff.leaveBalance.remainingDays > 0
+                    ? "bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-500/30"
+                    : "bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-500/30"
+                )}>
+                  {selectedStaff.leaveBalance.remainingDays} Gün
+                </span>
+              </div>
+            </div>
+          )}
+
+          {/* Yıllık İzin Kotası Aşımı Uyarısı */}
+          {isOverBalance && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-start gap-2.5 animate-in fade-in">
+              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold">Yıllık İzin Kotası Aşımı Uyarısı</p>
+                <p className="text-[11px] leading-relaxed">
+                  Talep edilen izin süresi ({totalDays} gün), personelin kalan yıllık izin hakkını ({selectedStaff?.leaveBalance?.remainingDays} gün) <strong>{overDays} gün</strong> aşıyor. Servis sahibi inisiyatifiyle kaydedebilir veya gün sayısını düzenleyebilirsiniz.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* İzin Türü */}
           <div>

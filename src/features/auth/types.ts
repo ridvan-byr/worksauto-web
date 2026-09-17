@@ -15,6 +15,28 @@ export interface User {
   phone: string
   email?: string
   role: UserRole
+  annualLeaveDays?: number
+  transferredLeaveDays?: number
+  leaveBalance?: {
+    annualDays: number
+    transferredDays: number
+    totalDays: number
+    usedDays: number
+    remainingDays: number
+  }
+  todayLeave?: {
+    id: string
+    leaveType: string
+    startDate: string
+    endDate: string
+    totalDays: number
+  } | null
+  mechanic?: {
+    id?: string
+    specialty?: string | null
+    assignedLift?: string | null
+    dailyCapacityHours?: number
+  } | null
 }
 
 export interface ServiceItem {

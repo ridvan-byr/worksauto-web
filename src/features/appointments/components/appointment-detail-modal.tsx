@@ -40,7 +40,14 @@ export interface CheckInFormData {
   assignedLift?: string
 }
 
-const RESCHEDULE_REASONS = [
+const RESCHEDULE_EARLIER_REASONS = [
+  { id: "customer_request", label: "Müşteri erken teslim / giriş talep etti", icon: "📞" },
+  { id: "bay_available", label: "Erken boşalan lift & teknisyen imkanı", icon: "⚡" },
+  { id: "parts_ready", label: "Yedek parçalar erkenden temin edildi", icon: "📦" },
+  { id: "custom", label: "Diğer (Özel Gerekçe)", icon: "✏️" },
+]
+
+const RESCHEDULE_POSTPONE_REASONS = [
   { id: "parts", label: "Yedek parça tedarik süreci", icon: "📦" },
   { id: "repair_delay", label: "Önceki araç onarımı uzadı", icon: "🔧" },
   { id: "customer_request", label: "Müşteri erteleme talep etti", icon: "📞" },
@@ -132,6 +139,36 @@ export function AppointmentDetailModal({
   const [rescheduleCustomReason, setRescheduleCustomReason] = React.useState("Yedek parça tedarik süreci")
   const [notifyCustomerOnReschedule, setNotifyCustomerOnReschedule] = React.useState(true)
   const [selectedChannels, setSelectedChannels] = React.useState<("WHATSAPP" | "SMS" | "EMAIL")[]>(["WHATSAPP", "EMAIL"])
+
+  // Detect whether appointment is being moved earlier or later
+  const isRescheduleEarlier = React.useMemo(() => {
+    if (!appointment?.date || !appointment?.time || !rescheduleDate || !rescheduleTime) return false
+    try {
+      const oldDateTime = `${appointment.date}T${appointment.time.slice(0, 5)}`
+      const newDateTime = `${rescheduleDate}T${rescheduleTime.slice(0, 5)}`
+      return newDateTime < oldDateTime
+    } catch {
+      return false
+    }
+  }, [appointment, rescheduleDate, rescheduleTime])
+
+  const activeRescheduleReasons = isRescheduleEarlier
+    ? RESCHEDULE_EARLIER_REASONS
+    : RESCHEDULE_POSTPONE_REASONS
+
+  const prevRescheduleEarlierRef = React.useRef(isRescheduleEarlier)
+  React.useEffect(() => {
+    if (viewMode === "reschedule" && prevRescheduleEarlierRef.current !== isRescheduleEarlier) {
+      prevRescheduleEarlierRef.current = isRescheduleEarlier
+      if (isRescheduleEarlier) {
+        setRescheduleReasonChip("customer_request")
+        setRescheduleCustomReason("Müşteri erken teslim / giriş talep etti")
+      } else {
+        setRescheduleReasonChip("parts")
+        setRescheduleCustomReason("Yedek parça tedarik süreci")
+      }
+    }
+  }, [isRescheduleEarlier, viewMode])
 
   const todayStr = React.useMemo(() => {
     const d = new Date()
@@ -234,10 +271,10 @@ export function AppointmentDetailModal({
     const [yr, mo, dy] = rescheduleDate.split("-").map(Number)
     const targetDt = new Date(yr, mo - 1, dy, h || 0, m || 0, 0, 0)
     if (targetDt.getTime() < Date.now()) {
-      toast.error("Geçmiş bir tarih veya saate randevu ertelenemez.")
+      toast.error(isRescheduleEarlier ? "Geçmiş bir tarih veya saate randevu erkene alınamaz." : "Geçmiş bir tarih veya saate randevu ertelenemez.")
       return
     }
-    const selectedObj = RESCHEDULE_REASONS.find((r) => r.id === rescheduleReasonChip)
+    const selectedObj = activeRescheduleReasons.find((r) => r.id === rescheduleReasonChip)
     const finalReason =
       rescheduleReasonChip === "custom"
         ? rescheduleCustomReason.trim() || "Randevu saati güncellendi"
@@ -706,13 +743,25 @@ export function AppointmentDetailModal({
           <div className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
             <div>
               <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <CalendarClock size={16} className="text-purple-500" />
-                <span>Randevu Saatini Ertele & Müşteriyi Bilgilendir</span>
+                <CalendarClock size={16} className={isRescheduleEarlier ? "text-emerald-500" : "text-purple-500"} />
+                <span>{isRescheduleEarlier ? "Randevuyu Erkene Al & Müşteriyi Bilgilendir" : "Randevu Saatini Ertele & Müşteriyi Bilgilendir"}</span>
               </h3>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Müşteri ile mutabık kalınan yeni randevu zamanını ve erteleme gerekçesini belirleyin.
+                {isRescheduleEarlier
+                  ? "Müşteri talebi veya erken lift uygunluğu doğrultusunda randevuyu öne çekin."
+                  : "Müşteri ile mutabık kalınan yeni randevu zamanını ve erteleme gerekçesini belirleyin."}
               </p>
             </div>
+
+            {/* Parça / Stok Erken Randevu Uyarısı */}
+            {isRescheduleEarlier && (
+              <div className="p-3 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-900/60 flex items-start gap-2 text-xs">
+                <span className="text-sm shrink-0">💡</span>
+                <span className="text-[11px] text-emerald-900 dark:text-emerald-300 leading-relaxed">
+                  <strong>Erken Randevu Hatırlatması:</strong> Bu işlemde özel/harici yedek parça gereksinimi varsa depoda hazır olduğunu teyit ediniz.
+                </span>
+              </div>
+            )}
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
@@ -739,14 +788,14 @@ export function AppointmentDetailModal({
               </div>
             </div>
 
-            {/* Erteleme Gerekçesi Çipleri */}
+            {/* Gerekçe Çipleri */}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 flex items-center justify-between">
-                <span>Erteleme Gerekçesi</span>
+                <span>{isRescheduleEarlier ? "Erkene Alma Gerekçesi" : "Erteleme Gerekçesi"}</span>
                 <span className="text-[10px] text-slate-400">Bildirime eklenecektir</span>
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {RESCHEDULE_REASONS.map((reason) => (
+                {activeRescheduleReasons.map((reason) => (
                   <button
                     key={reason.id}
                     type="button"
@@ -759,7 +808,9 @@ export function AppointmentDetailModal({
                     className={cn(
                       "flex items-center gap-2 p-2.5 rounded-xl border text-xs font-medium text-left transition-all cursor-pointer",
                       rescheduleReasonChip === reason.id
-                        ? "bg-purple-500/10 border-purple-500 text-purple-700 dark:text-purple-300 font-semibold shadow-xs"
+                        ? isRescheduleEarlier
+                          ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-300 font-semibold shadow-xs"
+                          : "bg-purple-500/10 border-purple-500 text-purple-700 dark:text-purple-300 font-semibold shadow-xs"
                         : "bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-100"
                     )}
                   >
@@ -773,7 +824,7 @@ export function AppointmentDetailModal({
               {rescheduleReasonChip === "custom" && (
                 <input
                   type="text"
-                  placeholder="Özel gerekçe yazınız (örn: Müşteri seyahatte vb.)..."
+                  placeholder={isRescheduleEarlier ? "Özel gerekçe yazınız (örn: Müşteri erken saat talep etti vb.)..." : "Özel gerekçe yazınız (örn: Müşteri seyahatte vb.)..."}
                   value={rescheduleCustomReason}
                   onChange={(e) => setRescheduleCustomReason(e.target.value)}
                   className="w-full h-10 px-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-purple-500 mt-1"
@@ -931,7 +982,20 @@ export function AppointmentDetailModal({
                             })
                           }
                         } catch {}
-                        return (
+                        return isRescheduleEarlier ? (
+                          <>
+                            Sayın {appointment.customerName || "Müşterimiz"},{" "}
+                            {appointment.plate ? `${appointment.plate} plakalı ` : ""}
+                            aracınızın servis randevusu talebiniz/oluşan müsaitlik doğrultusunda{" "}
+                            <strong>
+                              {dateText} saat {rescheduleTime}
+                            </strong>{" "}
+                            olarak erkene alınmıştır.
+                            {rescheduleCustomReason.trim()
+                              ? ` (${rescheduleCustomReason.trim()})`
+                              : ""}
+                          </>
+                        ) : (
                           <>
                             Sayın {appointment.customerName || "Müşterimiz"},{" "}
                             {appointment.plate ? `${appointment.plate} plakalı ` : ""}
@@ -964,10 +1028,15 @@ export function AppointmentDetailModal({
               <Button
                 type="button"
                 onClick={handleConfirmReschedule}
-                className="h-9 px-4 text-xs font-semibold bg-purple-600 hover:bg-purple-700 text-white cursor-pointer gap-1.5"
+                className={cn(
+                  "h-9 px-4 text-xs font-semibold text-white cursor-pointer gap-1.5 transition-colors",
+                  isRescheduleEarlier
+                    ? "bg-emerald-600 hover:bg-emerald-700 shadow-xs shadow-emerald-500/20"
+                    : "bg-purple-600 hover:bg-purple-700"
+                )}
               >
                 <CalendarClock size={14} />
-                <span>Yeni Saati ve Bildirimi Onayla</span>
+                <span>{isRescheduleEarlier ? "Erken Saati ve Bildirimi Onayla" : "Yeni Saati ve Bildirimi Onayla"}</span>
               </Button>
             </div>
           </div>

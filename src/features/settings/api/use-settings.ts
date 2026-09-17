@@ -152,6 +152,15 @@ export interface StaffRecord {
   isActive?: boolean;
   assignedLift?: string;
   specialty?: string;
+  annualLeaveDays?: number;
+  transferredLeaveDays?: number;
+  leaveBalance?: {
+    annualDays: number;
+    transferredDays: number;
+    totalDays: number;
+    usedDays: number;
+    remainingDays: number;
+  };
   user?: {
     id: string;
     name: string;
@@ -160,6 +169,8 @@ export interface StaffRecord {
     email?: string;
     role: string;
     isActive?: boolean;
+    annualLeaveDays?: number;
+    transferredLeaveDays?: number;
     mechanic?: {
       id?: string;
       assignedLift?: string;
@@ -181,6 +192,8 @@ export interface CreateStaffInput {
   role: string;
   assignedLift?: string | null;
   specialty?: string;
+  annualLeaveDays?: number;
+  transferredLeaveDays?: number;
 }
 
 export interface UpdateStaffInput {
@@ -192,6 +205,8 @@ export interface UpdateStaffInput {
   assignedLift?: string | null;
   specialty?: string;
   isActive?: boolean;
+  annualLeaveDays?: number;
+  transferredLeaveDays?: number;
 }
 
 export function useStaff() {

@@ -13,13 +13,18 @@ import {
   CheckCircle2,
   AlertCircle,
   FileText,
+  Plus,
+  FileSpreadsheet,
 } from "lucide-react"
 
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { InvoiceStatusBadge } from "@/features/billing/components/invoice-status-badge"
 import { RecordPaymentModal } from "@/features/billing/components/record-payment-modal"
 import { InvoiceDetailModal } from "@/features/billing/components/invoice-detail-modal"
+import { CreateDirectInvoiceModal } from "@/features/billing/components/create-direct-invoice-modal"
+import { DailyReconciliationModal } from "@/features/billing/components/daily-reconciliation-modal"
 import { Invoice, PaymentMethod, type InvoiceStatus } from "@/features/billing/types"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 export default function InvoicesPage() {
@@ -38,7 +43,10 @@ export default function InvoicesPage() {
     invoice: Invoice | null
   }>({ isOpen: false, invoice: null })
 
-  const { data: apiInvoices } = useInvoices()
+  const [isCreateDirectOpen, setIsCreateDirectOpen] = React.useState(false)
+  const [isReconciliationOpen, setIsReconciliationOpen] = React.useState(false)
+
+  const { data: apiInvoices, refetch: refetchInvoices } = useInvoices()
   const createPaymentMutation = useCreatePayment()
 
   // Live API sync with mock fallback
@@ -234,6 +242,27 @@ export default function InvoicesPage() {
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
             Servis iş emirlerinden kesilen faturalar, kısmi ödemeler ve günlük kasa hareketleri.
           </p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setIsReconciliationOpen(true)}
+            className="h-10 px-4 rounded-xl text-xs font-semibold gap-2 cursor-pointer"
+          >
+            <FileSpreadsheet size={16} className="text-indigo-600 dark:text-indigo-400" />
+            <span>Kasa Z-Raporu</span>
+          </Button>
+
+          <Button
+            type="button"
+            onClick={() => setIsCreateDirectOpen(true)}
+            className="h-10 px-4 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-xs cursor-pointer"
+          >
+            <Plus size={16} />
+            <span>Yeni Fatura Kes</span>
+          </Button>
         </div>
       </div>
 
@@ -507,6 +536,19 @@ export default function InvoicesPage() {
         invoice={detailModalState.invoice}
         onClose={() => setDetailModalState({ isOpen: false, invoice: null })}
         onOpenPayment={(inv) => setPaymentModalState({ isOpen: true, invoice: inv })}
+      />
+
+      {/* Direct Invoice Creation Modal */}
+      <CreateDirectInvoiceModal
+        isOpen={isCreateDirectOpen}
+        onClose={() => setIsCreateDirectOpen(false)}
+        onSuccess={() => refetchInvoices()}
+      />
+
+      {/* Daily Reconciliation Modal */}
+      <DailyReconciliationModal
+        isOpen={isReconciliationOpen}
+        onClose={() => setIsReconciliationOpen(false)}
       />
     </div>
   )

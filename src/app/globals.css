@@ -180,7 +180,7 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm 10mm;
+    margin: 5mm 8mm 6mm 8mm;
   }
 
   /* Force light theme, neutralize dark background tokens and kill minimum heights */
@@ -208,6 +208,7 @@ body {
   .dark .corporate-print-document,
   .dark #invoice-card-container,
   .dark #cari-card-container,
+  .dark #reconciliation-card-container,
   .corporate-print-document {
     background-color: #ffffff !important;
     color: #0f172a !important;
@@ -229,7 +230,7 @@ body {
   }
 
   /* Hide the entire AppShell and everything except portaled print roots */
-  body > *:not(#invoice-modal-root):not(#cari-modal-root):not(#reports-print-root):not(.corporate-print-root),
+  body > *:not(#invoice-modal-root):not(#cari-modal-root):not(#reports-print-root):not(#print-schedule-root):not(#reconciliation-modal-root):not(.corporate-print-root),
   body.printing-reports > *:not(#reports-print-root) {
     display: none !important;
   }
@@ -237,6 +238,8 @@ body {
   #invoice-modal-root,
   #cari-modal-root,
   #reports-print-root,
+  #print-schedule-root,
+  #reconciliation-modal-root,
   .corporate-print-root {
     position: static !important;
     background: #ffffff !important;
@@ -260,7 +263,8 @@ body {
   }
 
   #invoice-card-container,
-  #cari-card-container {
+  #cari-card-container,
+  #reconciliation-card-container {
     box-shadow: none !important;
     border: none !important;
     max-height: none !important;
@@ -268,6 +272,37 @@ body {
     margin: 0 !important;
     background-color: #ffffff !important;
     color: #0f172a !important;
+  }
+
+  /* Kurumsal Belge Şablonu: Tek Sayfa A4'ü Tam Doldurur, İmzaları ve Alt Bilgiyi En Alta Sabitler */
+  .corporate-print-document {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    min-height: 285mm !important;
+    height: auto !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+  }
+
+  .corporate-print-body {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+  }
+
+  .corporate-print-footer {
+    margin-top: auto !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    width: 100% !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
   }
 }
 

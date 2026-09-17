@@ -118,12 +118,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             else if (role === "technician") role = "TECHNICIAN"
 
             const updatedUser: User = {
+              ...freshData.user,
               id: freshData.user.id,
               name: freshData.user.name,
               surname: freshData.user.surname,
               phone: freshData.user.phone || "",
               email: freshData.user.email || "",
               role: role || "OWNER",
+              annualLeaveDays: freshData.user.annualLeaveDays,
+              transferredLeaveDays: freshData.user.transferredLeaveDays,
+              leaveBalance: freshData.user.leaveBalance ?? freshData.leaveBalance,
+              todayLeave: freshData.user.todayLeave ?? freshData.todayLeave,
+              mechanic: freshData.user.mechanic ?? freshData.mechanic,
             }
 
             setUser(updatedUser)
@@ -306,12 +312,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         // Live user & tenant mapping
         const liveUser: User = {
+          ...data.user,
           id: data.user.id,
           name: data.user.name,
           surname: data.user.surname,
           phone: data.user.phone || cleanPhone,
           email: data.user.email || "",
           role: data.user.role || "OWNER",
+          annualLeaveDays: data.user.annualLeaveDays,
+          transferredLeaveDays: data.user.transferredLeaveDays,
+          leaveBalance: data.user.leaveBalance ?? data.leaveBalance,
+          todayLeave: data.user.todayLeave ?? data.todayLeave,
+          mechanic: data.user.mechanic ?? data.mechanic,
         }
 
         const liveTenant: Tenant = {

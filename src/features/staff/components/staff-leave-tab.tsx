@@ -13,6 +13,7 @@ import {
   CalendarDays,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { formatLocalDate } from "@/lib/utils";
 import { StaffLeave, useCancelStaffLeave } from "../api/use-staff-management";
 
 interface StaffLeaveTabProps {
@@ -79,7 +80,7 @@ export function StaffLeaveTab({
   };
 
   // KPIs
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = formatLocalDate(new Date());
   const activeTodayCount = React.useMemo(() => {
     return leaves.filter((l) => {
       if (l.status === "CANCELLED") return false;
@@ -91,6 +92,12 @@ export function StaffLeaveTab({
 
   const annualCount = React.useMemo(() => {
     return leaves.filter((l) => l.leaveType === "ANNUAL" && l.status !== "CANCELLED").length;
+  }, [leaves]);
+
+  const totalAnnualDaysUsed = React.useMemo(() => {
+    return leaves
+      .filter((l) => l.leaveType === "ANNUAL" && l.status !== "CANCELLED")
+      .reduce((sum, l) => sum + (Number(l.totalDays) || 0), 0);
   }, [leaves]);
 
   const sickCount = React.useMemo(() => {
@@ -149,16 +156,18 @@ export function StaffLeaveTab({
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
           <div className="flex items-center justify-between">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">
-              Yıllık İzin Kayıtları
+              Yıllık İzin Kullanımı
             </span>
             <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600">
               <CheckCircle2 className="h-4 w-4" />
             </div>
           </div>
           <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {annualCount}
+            {totalAnnualDaysUsed} Gün
           </p>
-          <span className="text-[11px] text-slate-400">Onaylanmış hakedişler</span>
+          <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+            Toplam {annualCount} izin kaydı
+          </span>
         </div>
 
         <div className="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-xs">
