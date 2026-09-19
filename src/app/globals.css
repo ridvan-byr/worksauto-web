@@ -171,47 +171,44 @@ body {
   animation: unsavedBarEnter 0.28s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-/* Screen mode: hide isolated print roots from display */
-#reports-print-root {
-  display: none !important;
-}
 
 /* Isolated Clean Invoice, Cari & Reports Print Styles (Prevents dual-page printing & preserves design) */
 @media print {
   @page {
     size: A4 portrait;
-    margin: 5mm 8mm 6mm 8mm;
+    margin: 5mm 8mm 4mm 8mm;
   }
 
-  /* Force light theme, neutralize dark background tokens and kill minimum heights */
-  :root,
-  html,
-  html.dark,
-  body,
-  body.dark,
-  .dark {
+  /* Target all print document containers and ensure pure white background, dark text, clean borders without mutating global screen root */
+  #invoice-modal-root,
+  #cari-modal-root,
+  #reports-modal-root,
+  #reports-print-root,
+  #print-schedule-root,
+  #reconciliation-modal-root,
+  .corporate-print-root,
+  .corporate-print-document,
+  .dark #invoice-modal-root,
+  .dark #cari-modal-root,
+  .dark #reports-modal-root,
+  .dark #reports-print-root,
+  .dark #print-schedule-root,
+  .dark #reconciliation-modal-root,
+  .dark .corporate-print-root,
+  .dark .corporate-print-document,
+  .dark #invoice-card-container,
+  .dark #cari-card-container,
+  .dark #reports-card-container,
+  .dark #reconciliation-card-container {
     color-scheme: light !important;
     background: #ffffff !important;
     background-color: #ffffff !important;
     color: #0f172a !important;
     --background: #ffffff !important;
     --foreground: #0f172a !important;
-    min-height: 0 !important;
-    height: auto !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-
-  /* Neutralize all dark mode classes on printed documents */
-  .dark .corporate-print-document,
-  .dark #invoice-card-container,
-  .dark #cari-card-container,
-  .dark #reconciliation-card-container,
-  .corporate-print-document {
-    background-color: #ffffff !important;
-    color: #0f172a !important;
+    --card: #ffffff !important;
+    --card-foreground: #0f172a !important;
+    --border: #e2e8f0 !important;
     border-color: #e2e8f0 !important;
   }
 
@@ -230,14 +227,14 @@ body {
   }
 
   /* Hide the entire AppShell and everything except portaled print roots */
-  body > *:not(#invoice-modal-root):not(#cari-modal-root):not(#reports-print-root):not(#print-schedule-root):not(#reconciliation-modal-root):not(.corporate-print-root),
-  body.printing-reports > *:not(#reports-print-root) {
+  body > *:not(#invoice-modal-root):not(#cari-modal-root):not(#reports-modal-root):not(#reports-print-root):not(#print-schedule-root):not(#reconciliation-modal-root):not(.corporate-print-root),
+  body.printing-reports > *:not(#reports-modal-root):not(#reports-print-root) {
     display: none !important;
   }
 
   #invoice-modal-root,
   #cari-modal-root,
-  #reports-print-root,
+  #reports-modal-root,
   #print-schedule-root,
   #reconciliation-modal-root,
   .corporate-print-root {
@@ -262,17 +259,46 @@ body {
     print-color-adjust: exact !important;
   }
 
+  #reports-print-root {
+    position: static !important;
+    background: #ffffff !important;
+    background-color: #ffffff !important;
+    color: #0f172a !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    height: 285mm !important;
+    min-height: 285mm !important;
+    max-height: 286mm !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    page-break-before: avoid !important;
+    overflow: hidden !important;
+    border: none !important;
+    box-shadow: none !important;
+    outline: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
   #invoice-card-container,
   #cari-card-container,
+  #reports-card-container,
   #reconciliation-card-container {
     box-shadow: none !important;
     border: none !important;
     max-height: none !important;
     width: 100% !important;
     margin: 0 !important;
-    background-color: #ffffff !important;
-    color: #0f172a !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
   }
+
 
   /* Kurumsal Belge Şablonu: Tek Sayfa A4'ü Tam Doldurur, İmzaları ve Alt Bilgiyi En Alta Sabitler */
   .corporate-print-document {

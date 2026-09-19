@@ -53,11 +53,20 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
       {/* Printable Invoice Card */}
       <div
         id="invoice-card-container"
-        className="w-full max-w-2xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:rounded-none print:w-full print:m-0"
+        className="relative w-full max-w-2xl rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200 max-h-[90vh] print:max-h-none print:shadow-none print:border-none print:rounded-none print:w-full print:m-0"
       >
-        
+        {/* Absolute Top-Right Close Button */}
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Kapat"
+          className="absolute top-3 right-3 sm:top-3.5 sm:right-4 z-20 p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition-colors cursor-pointer print:hidden"
+        >
+          <X size={18} />
+        </button>
+
         {/* Top Action Bar (Print sırasında gizlenir) */}
-        <div className="px-6 py-3.5 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50 dark:bg-slate-900 print:hidden flex-wrap gap-2">
+        <div className="px-5 py-3 sm:px-6 sm:py-3.5 pr-14 sm:pr-14 border-b border-slate-200/80 dark:border-slate-800/80 flex items-center justify-between bg-slate-50 dark:bg-slate-900 print:hidden flex-wrap gap-2.5">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-mono font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
               {invoice.invoiceNumber}
@@ -95,8 +104,6 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
           </div>
 
           <div className="flex items-center gap-2">
-
-
             <Button
               type="button"
               variant="outline"
@@ -122,14 +129,6 @@ export function InvoiceDetailModal({ isOpen, invoice, onClose, onOpenPayment }: 
                 <span>Tahsilat Al</span>
               </Button>
             )}
-
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-            >
-              <X size={18} />
-            </button>
           </div>
         </div>
 

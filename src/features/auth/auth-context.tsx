@@ -4,20 +4,20 @@ import * as React from "react"
 import { useRouter, usePathname } from "next/navigation"
 import { useQueryClient } from "@tanstack/react-query"
 import { toast } from "@/components/ui/sonner"
-import { getAccessToken, setAccessToken, refreshAccessToken, setSessionCookie, apiClient } from "@/lib/api-client"
+import { getAccessToken, setAccessToken, refreshAccessToken, setSessionCookie, apiClient, getApiBaseUrl } from "@/lib/api-client"
 import { User, Tenant } from "./types"
 
 const AUTH_STORAGE_KEY = "worksauto_auth_session"
 const ACCESS_TOKEN_KEY = "worksauto_access_token"
 const REFRESH_TOKEN_KEY = "worksauto_refresh_token"
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1"
+const TRUSTED_DEVICE_KEY = "worksauto_trusted_device"
 
 interface AuthContextType {
   user: User | null
   tenant: Tenant | null
   isAuthenticated: boolean
   isLoading: boolean
-  sendOtp: (phone: string) => Promise<{ success: boolean; error?: string; devCode?: string }>
+  sendOtp: (phone: string) => Promise<{ success: boolean; message?: string; error?: string; devCode?: string; trustedDevice?: boolean }>
   verifyOtp: (phone: string, code: string) => Promise<{ success: boolean; error?: string }>
   login: (userData: User, tenantData: Tenant) => void
   logout: () => void
@@ -90,7 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!token) return
 
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/me`, {
+        const res = await fetch(`${getApiBaseUrl()}/auth/me`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -179,9 +179,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     window.addEventListener("worksauto:suspended", handleSuspended)
 
+    // Listen to tenant profile & logo live updates
+    const handleTenantUpdated = (e: Event) => {
+      const customEvt = e as CustomEvent<Partial<Tenant>>
+      if (customEvt.detail) {
+        setTenant((prev) => {
+          if (!prev) return null
+          const updated = { ...prev, ...customEvt.detail }
+          try {
+            const saved = localStorage.getItem(AUTH_STORAGE_KEY)
+            if (saved) {
+              const parsed = JSON.parse(saved)
+              parsed.tenant = updated
+              localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(parsed))
+            }
+          } catch {}
+          return updated
+        })
+      }
+    }
+    window.addEventListener("worksauto:tenant-updated", handleTenantUpdated)
+
     return () => {
       window.removeEventListener("focus", verifyLiveSession)
       window.removeEventListener("worksauto:suspended", handleSuspended)
+      window.removeEventListener("worksauto:tenant-updated", handleTenantUpdated)
     }
   }, [router])
 
@@ -244,16 +266,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [user, tenant, isLoading, pathname, router])
 
   /**
-   * Canlı API: Kullanıcı telefonuna SMS OTP gönderir
+   * Canlı API: Kullanıcı telefonuna SMS OTP gönderir veya 30 günlük güvenilir cihazla oturum açar
    */
   const sendOtp = React.useCallback(async (rawPhone: string) => {
     const cleanPhone = rawPhone.replace(/\D/g, "")
+    const trustedDeviceToken = typeof window !== "undefined" ? localStorage.getItem(TRUSTED_DEVICE_KEY) : null
+
     try {
-      const res = await fetch(`${API_BASE_URL}/auth/otp/send`, {
+      const res = await fetch(`${getApiBaseUrl()}/auth/otp/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ phone: cleanPhone }),
+        body: JSON.stringify({
+          phone: cleanPhone,
+          ...(trustedDeviceToken ? { trustedDeviceToken } : {}),
+        }),
       })
 
       const data = await res.json()
@@ -264,14 +291,110 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
+      // 30 Günlük Güvenilir Cihaz Doğrulandı: SMS sormadan doğrudan oturum başlatılır
+      if (data.trustedDevice && data.accessToken) {
+        setAccessToken(data.accessToken)
+        setSessionCookie(true)
+
+        if (data.trustedDeviceToken && typeof window !== "undefined") {
+          localStorage.setItem(TRUSTED_DEVICE_KEY, data.trustedDeviceToken)
+        }
+        if (data.refreshToken && typeof window !== "undefined") {
+          localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken)
+        }
+
+        let dbTenant: Partial<Tenant> | null = null
+        try {
+          const tenantRes = await fetch(`${getApiBaseUrl()}/tenants/current`, {
+            headers: { Authorization: `Bearer ${data.accessToken}` },
+          })
+          if (tenantRes.ok) {
+            dbTenant = await tenantRes.json()
+          }
+        } catch {
+          // fallback
+        }
+
+        const liveUser: User = {
+          ...data.user,
+          id: data.user.id,
+          name: data.user.name,
+          surname: data.user.surname,
+          phone: data.user.phone || cleanPhone,
+          email: data.user.email || "",
+          role: data.user.role || "OWNER",
+          annualLeaveDays: data.user.annualLeaveDays,
+          transferredLeaveDays: data.user.transferredLeaveDays,
+          leaveBalance: data.user.leaveBalance ?? data.leaveBalance,
+          todayLeave: data.user.todayLeave ?? data.todayLeave,
+          mechanic: data.user.mechanic ?? data.mechanic,
+        }
+
+        const liveTenant: Tenant = {
+          id: data.user.tenantId,
+          name: dbTenant?.title || data.user.tenantTitle || "Oto Servis",
+          title: dbTenant?.title || data.user.tenantTitle || "Oto Servis",
+          legalName: dbTenant?.legalName || dbTenant?.title || data.user.tenantTitle || "Oto Servis",
+          taxOffice: dbTenant?.taxOffice || "",
+          taxNumber: dbTenant?.taxNumber || "",
+          city: dbTenant?.city || "İstanbul",
+          district: dbTenant?.district || "",
+          address: dbTenant?.address || "",
+          phone: dbTenant?.phone || "",
+          email: dbTenant?.email || "",
+          logo: dbTenant?.logoUrl || "/brand/worksauto-icon-white-tight.png",
+          logoUrl: dbTenant?.logoUrl || undefined,
+          logoWidth: dbTenant?.logoWidth ?? 36,
+          logoHeight: dbTenant?.logoHeight ?? 36,
+          googleReviewUrl: dbTenant?.googleReviewUrl || "",
+          primaryColor: dbTenant?.primaryColor || "#0284c7",
+          slogan: dbTenant?.slogan || "Güvenilir & Garantili Araç Bakım ve Onarım Merkezi",
+          workingDays: dbTenant?.workingDays || ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
+          workStartTime: dbTenant?.workStartTime || "08:30",
+          workEndTime: dbTenant?.workEndTime || "18:30",
+          breakStartTime: dbTenant?.breakStartTime || "12:30",
+          breakEndTime: dbTenant?.breakEndTime || "13:30",
+          services: [],
+          staff: [],
+          appointmentSlotDuration: dbTenant?.appointmentSlotDuration || 45,
+          autoWorkOrder: true,
+          criticalStockThreshold: dbTenant?.criticalStockThreshold || 5,
+          onboardingCompleted: dbTenant?.onboardingCompleted ?? true,
+          b2bConsentAccepted: dbTenant?.b2bConsentAccepted ?? true,
+          b2bConsentAcceptedAt: dbTenant?.b2bConsentAcceptedAt || undefined,
+        }
+
+        setUser(liveUser)
+        setTenant(liveTenant)
+
+        try {
+          localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: liveUser, tenant: liveTenant }))
+        } catch {
+          // ignore
+        }
+
+        if (!liveTenant.onboardingCompleted) {
+          router.push("/onboarding")
+        } else {
+          router.push("/")
+        }
+
+        return {
+          success: true,
+          trustedDevice: true,
+          message: data.message || "Güvenilir cihazınız doğrulandı.",
+        }
+      }
+
       return {
         success: true,
-        devCode: data.devCode,
+        trustedDevice: false,
+        message: data.message,
       }
     } catch {
       return { success: false, error: "Sunucu bağlantı hatası oluştu." }
     }
-  }, [])
+  }, [router])
 
   /**
    * Canlı API: SMS kodunu doğrular ve 30 günlük oturum başlatır
@@ -280,7 +403,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async (rawPhone: string, code: string) => {
       const cleanPhone = rawPhone.replace(/\D/g, "")
       try {
-        const res = await fetch(`${API_BASE_URL}/auth/otp/verify`, {
+        const res = await fetch(`${getApiBaseUrl()}/auth/otp/verify`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -300,7 +423,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         let dbTenant: Partial<Tenant> | null = null
         try {
-          const tenantRes = await fetch(`${API_BASE_URL}/tenants/current`, {
+          const tenantRes = await fetch(`${getApiBaseUrl()}/tenants/current`, {
             headers: { Authorization: `Bearer ${data.accessToken}` },
           })
           if (tenantRes.ok) {
@@ -329,15 +452,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const liveTenant: Tenant = {
           id: data.user.tenantId,
           name: dbTenant?.title || data.user.tenantTitle || "Oto Servis",
+          title: dbTenant?.title || data.user.tenantTitle || "Oto Servis",
           legalName: dbTenant?.legalName || dbTenant?.title || data.user.tenantTitle || "Oto Servis",
           taxOffice: dbTenant?.taxOffice || "",
           taxNumber: dbTenant?.taxNumber || "",
           city: dbTenant?.city || "İstanbul",
           district: dbTenant?.district || "",
           address: dbTenant?.address || "",
-          logo: "/brand/worksauto-icon-white-tight.png",
-          primaryColor: "#0284c7",
-          slogan: "Güvenilir & Garantili Araç Bakım ve Onarım Merkezi",
+          phone: dbTenant?.phone || "",
+          email: dbTenant?.email || "",
+          logo: dbTenant?.logoUrl || "/brand/worksauto-icon-white-tight.png",
+          logoUrl: dbTenant?.logoUrl || undefined,
+          logoWidth: dbTenant?.logoWidth ?? 36,
+          logoHeight: dbTenant?.logoHeight ?? 36,
+          googleReviewUrl: dbTenant?.googleReviewUrl || "",
+          primaryColor: dbTenant?.primaryColor || "#0284c7",
+          slogan: dbTenant?.slogan || "Güvenilir & Garantili Araç Bakım ve Onarım Merkezi",
           workingDays: dbTenant?.workingDays || ["Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi"],
           workStartTime: dbTenant?.workStartTime || "08:30",
           workEndTime: dbTenant?.workEndTime || "18:30",
@@ -349,6 +479,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           autoWorkOrder: true,
           criticalStockThreshold: dbTenant?.criticalStockThreshold || 5,
           onboardingCompleted: dbTenant?.onboardingCompleted ?? true,
+          b2bConsentAccepted: dbTenant?.b2bConsentAccepted ?? true,
+          b2bConsentAcceptedAt: dbTenant?.b2bConsentAcceptedAt || undefined,
         }
 
         setUser(liveUser)
@@ -358,7 +490,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ user: liveUser, tenant: liveTenant }))
           localStorage.removeItem(ACCESS_TOKEN_KEY)
-          localStorage.removeItem(REFRESH_TOKEN_KEY)
+          if (data.refreshToken) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken)
+          }
+          if (data.trustedDeviceToken) {
+            localStorage.setItem(TRUSTED_DEVICE_KEY, data.trustedDeviceToken)
+          }
         } catch {
           // ignore
         }
@@ -392,7 +529,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = React.useCallback(async () => {
     try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
+      await fetch(`${getApiBaseUrl()}/auth/logout`, {
         method: "POST",
         credentials: "include",
       }).catch(() => {})

@@ -1,8 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { createPortal } from "react-dom"
-import Image from "next/image"
 import {
   BarChart3,
   TrendingUp,
@@ -27,6 +25,7 @@ import {
 } from "@/features/dashboard/api/use-financial-reports"
 import { exportFinancialReportToExcel } from "@/features/import-export/utils/aesthetic-excel"
 import { ExcelPreviewModal } from "@/features/dashboard/components/excel-preview-modal"
+import { ReportPrintModal } from "@/features/dashboard/components/report-print-modal"
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { toast } from "@/components/ui/sonner"
 import { cn } from "@/lib/utils"
@@ -42,11 +41,7 @@ export default function ReportsPage() {
   const [isExporting, setIsExporting] = React.useState(false)
   const [isManualRefreshing, setIsManualRefreshing] = React.useState(false)
   const [isExcelPreviewOpen, setIsExcelPreviewOpen] = React.useState(false)
-  const [mounted, setMounted] = React.useState(false)
-
-  React.useEffect(() => {
-    setMounted(true)
-  }, [])
+  const [isPrintModalOpen, setIsPrintModalOpen] = React.useState(false)
 
   const { data: report, isLoading, refetch, isFetching } = useFinancialReport({
     period,
@@ -71,15 +66,6 @@ export default function ReportsPage() {
     }
   }
 
-  // Print Handler (Single Page PDF Export)
-  const handlePrint = () => {
-    const originalTitle = document.title
-    document.title = `WorksAuto_Finansal_Rapor_${new Date().toISOString().slice(0, 10)}`
-    window.print()
-    setTimeout(() => {
-      document.title = originalTitle
-    }, 1000)
-  }
 
   // Excel Export Handler
   const handleExportExcel = async () => {
@@ -203,7 +189,7 @@ export default function ReportsPage() {
             <Button
               type="button"
               size="sm"
-              onClick={handlePrint}
+              onClick={() => setIsPrintModalOpen(true)}
               disabled={isLoading || !report}
               className="h-10 px-4 text-xs font-semibold gap-1.5 cursor-pointer bg-sky-600 hover:bg-sky-500 text-white shadow-md shadow-sky-500/20"
             >
@@ -551,220 +537,25 @@ export default function ReportsPage() {
 
       </div>
 
-      {/* ========================================================================= */}
-      {/* 2. DEDICATED PIXEL-PERFECT SINGLE-PAGE A4 PRINT LAYOUT (PORTALED TO BODY) */}
-      {/* Fits cleanly on 1 page with WorksAuto Logo, Header, KPI, Breakdown & Signatures */}
-      {/* ========================================================================= */}
-      {mounted &&
-        createPortal(
-          <div
-            id="reports-print-root"
-            className="hidden print:block text-slate-900 bg-white font-sans text-xs w-full max-w-none print:p-0 print:m-0 print:border-none print:shadow-none"
-          >
-            {/* PRINT HEADER */}
-            <div className="flex items-center justify-between pb-2 border-b-2 border-sky-600">
-              <div className="flex items-center gap-3">
-                <Image
-                  src="/brand/worksauto-logo-dark.png"
-                  alt="WorksAuto"
-                  width={150}
-                  height={32}
-                  className="h-7 w-auto object-contain"
-                  priority
-                />
-                <span className="text-[10px] font-bold text-slate-500 border-l border-slate-300 pl-2.5 uppercase tracking-wider my-auto">
-                  Bulut Servis & Atölye Yönetim Platformu
-                </span>
-              </div>
-              <div className="text-right">
-                <h2 className="text-xs font-black uppercase tracking-tight text-slate-900">
-                  {tenantName}
-                </h2>
-                <p className="text-[11px] font-black text-sky-800 uppercase tracking-tight">
-                  RESMİ FİNANSAL VE KÂRLILIK RAPORU
-                </p>
-                <p className="text-[9px] text-slate-600 mt-0.5">
-                  Kapsam: <strong>{getPeriodDisplay()}</strong> • Düzenleme: {new Date().toLocaleDateString("tr-TR")}
-                </p>
-              </div>
-            </div>
-
-            {/* 5 EXECUTIVE KPI CARDS IN 1 COMPACT ROW */}
-            <div className="grid grid-cols-5 gap-1.5 mt-2">
-              <div className="p-2 rounded-lg border border-slate-300 bg-slate-50/50">
-                <p className="text-[9px] font-bold text-slate-500 uppercase">Toplam Ciro</p>
-                <p className="text-sm font-black text-slate-900 mt-0.5">₺{fmt(summary?.totalRevenue)}</p>
-                <p className="text-[8px] text-slate-500">İşçilik + Parça</p>
-              </div>
-
-              <div className="p-2 rounded-lg border border-emerald-300 bg-emerald-50/30">
-                <p className="text-[9px] font-bold text-emerald-800 uppercase">Net Faaliyet Kârı</p>
-                <p className="text-sm font-black text-emerald-700 mt-0.5">₺{fmt(summary?.netProfit)}</p>
-                <p className="text-[8px] text-emerald-800 font-bold">Kâr Marjı: %{summary?.profitMargin}</p>
-              </div>
-
-              <div className="p-2 rounded-lg border border-slate-300 bg-slate-50/50">
-                <p className="text-[9px] font-bold text-slate-500 uppercase">İşçilik Hasılatı</p>
-                <p className="text-sm font-black text-indigo-700 mt-0.5">₺{fmt(summary?.totalLabourRevenue)}</p>
-                <p className="text-[8px] text-slate-500">
-                  Ciro Payı: %{summary && summary.totalRevenue > 0 ? Math.round((summary.totalLabourRevenue / summary.totalRevenue) * 100) : 0}
-                </p>
-              </div>
-
-              <div className="p-2 rounded-lg border border-slate-300 bg-slate-50/50">
-                <p className="text-[9px] font-bold text-slate-500 uppercase">Kasa Tahsilatı</p>
-                <p className="text-sm font-black text-teal-700 mt-0.5">₺{fmt(summary?.cashCollected)}</p>
-                <p className="text-[8px] text-amber-700 font-medium">Açık Hesap: ₺{fmt(summary?.unpaidReceivables)}</p>
-              </div>
-
-              <div className="p-2 rounded-lg border border-slate-300 bg-slate-50/50">
-                <p className="text-[9px] font-bold text-slate-500 uppercase">Araç Başı Sepet</p>
-                <p className="text-sm font-black text-slate-900 mt-0.5">₺{fmt(summary?.averageOrderValue)}</p>
-                <p className="text-[8px] text-slate-500">{summary?.completedWorkOrdersCount} Araç Tamamlandı</p>
-              </div>
-            </div>
-
-            {/* 2-COLUMN BREAKDOWN: LABOUR VS PARTS & CASH PAYMENT CHANNELS */}
-            <div className="grid grid-cols-2 gap-2 mt-2">
-              {/* Left: Revenue & Cost Structure */}
-              <div className="p-2 rounded-lg border border-slate-300 bg-slate-50/40 space-y-1">
-                <p className="text-[10px] font-black uppercase text-slate-800 border-b border-slate-200 pb-0.5">
-                  Hasılat & Maliyet Dağılımı
-                </p>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-600">İşçilik Emeği Hasılatı:</span>
-                  <strong className="text-indigo-700">
-                    ₺{fmt(summary?.totalLabourRevenue)} (%{summary && summary.totalRevenue > 0 ? Math.round((summary.totalLabourRevenue / summary.totalRevenue) * 100) : 0})
-                  </strong>
-                </div>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-600">Yedek Parça Satış Tutarı:</span>
-                  <strong>
-                    ₺{fmt(summary?.totalPartsRevenue)} (%{summary && summary.totalRevenue > 0 ? 100 - Math.round((summary.totalLabourRevenue / summary.totalRevenue) * 100) : 0})
-                  </strong>
-                </div>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-600">Yedek Parça Alış Maliyeti:</span>
-                  <span className="text-rose-700 font-semibold">₺{fmt(summary?.totalPartsCost)}</span>
-                </div>
-                <div className="flex justify-between text-[10px] pt-0.5 border-t border-slate-200 font-bold">
-                  <span>Net Parça Kârı:</span>
-                  <span className="text-emerald-700">₺{fmt((summary?.totalPartsRevenue || 0) - (summary?.totalPartsCost || 0))}</span>
-                </div>
-              </div>
-
-              {/* Right: Payment Channels */}
-              <div className="p-2 rounded-lg border border-slate-300 bg-slate-50/40 space-y-1">
-                <p className="text-[10px] font-black uppercase text-slate-800 border-b border-slate-200 pb-0.5">
-                  Kasa Tahsilat Kanalları
-                </p>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-600">Nakit Tahsilat:</span>
-                  <strong>₺{fmt(report?.paymentBreakdown?.find(p => p.method === "CASH")?.amount)}</strong>
-                </div>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-600">Kredi Kartı / POS:</span>
-                  <strong>₺{fmt(report?.paymentBreakdown?.find(p => p.method === "POS")?.amount)}</strong>
-                </div>
-                <div className="flex justify-between text-[10px]">
-                  <span className="text-slate-600">Banka Transferi / Havale:</span>
-                  <strong>₺{fmt(report?.paymentBreakdown?.find(p => p.method === "BANK_TRANSFER")?.amount)}</strong>
-                </div>
-                <div className="flex justify-between text-[10px] pt-0.5 border-t border-slate-200 font-bold text-amber-800">
-                  <span>Açık Hesap (Veresiye Cari Alacak):</span>
-                  <span>₺{fmt(summary?.unpaidReceivables)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* COMPLETED WORK ORDERS PROFITABILITY TABLE */}
-            <div className="border border-slate-300 rounded-lg overflow-hidden mt-2">
-              <div className="bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-800 flex justify-between border-b border-slate-300">
-                <span>TAMAMLANAN İŞ EMİRLERİ KÂRLILIK DÖKÜMÜ ({filteredOrders.length} Kayıt{filteredOrders.length > 6 ? " • İlk 6 Kayıt Gösteriliyor" : ""})</span>
-                <span>Para Birimi: TRY (₺)</span>
-              </div>
-              <table className="w-full text-left text-[9px] border-collapse">
-                <thead>
-                  <tr className="bg-slate-50 text-slate-600 font-bold border-b border-slate-300">
-                    <th className="py-1 px-1.5">İş Emri</th>
-                    <th className="py-1 px-1.5">Tarih</th>
-                    <th className="py-1 px-1.5">Plaka</th>
-                    <th className="py-1 px-1.5">Müşteri</th>
-                    <th className="py-1 px-1 text-right">İşçilik</th>
-                    <th className="py-1 px-1 text-right">Parça</th>
-                    <th className="py-1 px-1 text-right">Maliyet</th>
-                    <th className="py-1 px-1.5 text-right">Toplam Ciro</th>
-                    <th className="py-1 px-1.5 text-right font-black">Net Kâr</th>
-                    <th className="py-1 px-1 text-center">Marj</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200">
-                  {filteredOrders.slice(0, 6).map((order) => (
-                    <tr key={order.id}>
-                      <td className="py-0.5 px-1.5 font-mono font-bold">{order.workOrderNumber}</td>
-                      <td className="py-0.5 px-1.5 whitespace-nowrap">{new Date(order.completedAt).toLocaleDateString("tr-TR")}</td>
-                      <td className="py-0.5 px-1.5 font-bold">{order.plate}</td>
-                      <td className="py-0.5 px-1.5 truncate max-w-[110px]">{order.customerName}</td>
-                      <td className="py-0.5 px-1 text-right font-mono">₺{fmt(order.labourTotal)}</td>
-                      <td className="py-0.5 px-1 text-right font-mono">₺{fmt(order.partsTotal)}</td>
-                      <td className="py-0.5 px-1 text-right font-mono text-slate-500">₺{fmt(order.partsCost)}</td>
-                      <td className="py-0.5 px-1.5 text-right font-mono font-bold">₺{fmt(order.grandTotal)}</td>
-                      <td className="py-0.5 px-1.5 text-right font-mono font-black text-emerald-700">₺{fmt(order.estimatedProfit)}</td>
-                      <td className="py-0.5 px-1 text-center font-bold">%{order.profitMargin}</td>
-                    </tr>
-                  ))}
-                </tbody>
-                <tfoot>
-                  <tr className="bg-slate-100 font-bold border-t-2 border-slate-400 text-slate-900 text-[9.5px]">
-                    <td colSpan={4} className="py-1 px-1.5 text-right">DÖNEM TOPLAMLARI:</td>
-                    <td className="py-1 px-1 text-right font-mono">₺{fmt(filteredOrders.reduce((s, o) => s + o.labourTotal, 0))}</td>
-                    <td className="py-1 px-1 text-right font-mono">₺{fmt(filteredOrders.reduce((s, o) => s + o.partsTotal, 0))}</td>
-                    <td className="py-1 px-1 text-right font-mono text-slate-600">₺{fmt(filteredOrders.reduce((s, o) => s + o.partsCost, 0))}</td>
-                    <td className="py-1 px-1.5 text-right font-mono font-black">₺{fmt(filteredOrders.reduce((s, o) => s + o.grandTotal, 0))}</td>
-                    <td className="py-1 px-1.5 text-right font-mono font-black text-emerald-800">₺{fmt(filteredOrders.reduce((s, o) => s + o.estimatedProfit, 0))}</td>
-                    <td className="py-1 px-1 text-center font-bold">%{summary?.profitMargin ?? 0}</td>
-                  </tr>
-                </tfoot>
-              </table>
-            </div>
-
-            {/* PRINT SIGNATURE BLOCK & LEGAL FOOTER */}
-            <div className="pt-2 border-t border-slate-300 mt-2">
-              <div className="grid grid-cols-3 gap-6 text-center text-[9.5px] text-slate-800 mb-1.5">
-                <div className="space-y-3">
-                  <p className="font-bold">Raporu Düzenleyen</p>
-                  <div className="border-b border-slate-400 w-28 mx-auto" />
-                  <p className="text-[8.5px] text-slate-500">{user ? `${user.name} ${user.surname || ""}` : "Servis Yetkilisi"}</p>
-                </div>
-                <div className="space-y-3">
-                  <p className="font-bold">Mali İşler / Muhasebe</p>
-                  <div className="border-b border-slate-400 w-28 mx-auto" />
-                  <p className="text-[8.5px] text-slate-500">İmza & Paraf</p>
-                </div>
-                <div className="space-y-3">
-                  <p className="font-bold">Servis Müdürü Onayı</p>
-                  <div className="border-b border-slate-400 w-28 mx-auto" />
-                  <p className="text-[8.5px] text-slate-500">Yetkili İmza & Kaşe</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between text-[8px] text-slate-400 border-t border-slate-200 pt-1">
-                <span>Bu resmi finansal icmal WorksAuto Bulut Servis Yönetim Sistemi tarafından üretilmiştir.</span>
-                <span>Resmi İcra Raporu • Sayfa 1 / 1</span>
-              </div>
-            </div>
-          </div>,
-          document.body
-        )}
-
-      {/* ========================================================================= */}
-      {/* 3. IN-APP EXCEL SPREADSHEET PREVIEW MODAL */}
-      {/* ========================================================================= */}
+      {/* 2. IN-APP EXCEL SPREADSHEET PREVIEW MODAL */}
       <ExcelPreviewModal
         isOpen={isExcelPreviewOpen}
         onClose={() => setIsExcelPreviewOpen(false)}
         report={report}
         tenantName={tenantName}
+      />
+
+      {/* 3. IN-APP REPORT PRINT & PDF PREVIEW MODAL */}
+      <ReportPrintModal
+        isOpen={isPrintModalOpen}
+        onClose={() => setIsPrintModalOpen(false)}
+        report={report}
+        tenant={tenant}
+        user={user}
+        tenantName={tenantName}
+        getPeriodDisplay={getPeriodDisplay}
+        filteredOrders={filteredOrders}
+        fmt={fmt}
       />
     </div>
   )

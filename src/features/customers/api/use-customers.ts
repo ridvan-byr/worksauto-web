@@ -53,7 +53,7 @@ export function useCreateCustomer() {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-summary'] });
       toast.success('Müşteri başarıyla kaydedildi.', {
-        description: data?.name ? `${data.name} ${data.surname || ''} müşteri rehberine eklendi.` : undefined,
+        description: data?.name ? `${data.name} ${data.surname || ''} müşteri listesine eklendi.` : undefined,
       });
     },
     onError: (err: Error) => {

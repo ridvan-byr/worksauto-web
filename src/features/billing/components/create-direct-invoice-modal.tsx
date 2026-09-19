@@ -95,9 +95,9 @@ export function CreateDirectInvoiceModal({
   }, [])
   const [dueDate, setDueDate] = React.useState(defaultDueDate)
   const [paymentOption, setPaymentOption] = React.useState<PaymentOption>("POS")
-  const [paymentAmount, setPaymentAmount] = React.useState<number>(0)
-  const [splitCashAmount, setSplitCashAmount] = React.useState<number>(0)
-  const [splitPosAmount, setSplitPosAmount] = React.useState<number>(0)
+  const [paymentAmount, setPaymentAmount] = React.useState<number | "">(0)
+  const [splitCashAmount, setSplitCashAmount] = React.useState<number | "">(0)
+  const [splitPosAmount, setSplitPosAmount] = React.useState<number | "">(0)
   const [posSlipNo, setPosSlipNo] = React.useState("")
   const [notes, setNotes] = React.useState("")
 
@@ -355,6 +355,7 @@ export function CreateDirectInvoiceModal({
 
     setIsSubmitting(true)
     try {
+      const isImmediatePayment = effectiveRemainingToPay > 0 && paymentOption !== "OPEN_ACCOUNT"
       const invoicePayload = {
         customerId: selectedCustomerId,
         dueDate,
@@ -363,6 +364,7 @@ export function CreateDirectInvoiceModal({
         grandTotal,
         offsetAdvanceAmount: offsetAdvance > 0 ? offsetAdvance : undefined,
         notes: notes.trim() || undefined,
+        sendPaymentLinkNotification: !isImmediatePayment,
         items: items.map((item) => ({
           name: item.name.trim(),
           quantity: Number(item.quantity),
@@ -386,32 +388,36 @@ export function CreateDirectInvoiceModal({
       )
 
       // Handle Immediate Payment Collection if applicable
+      const numCash = Number(splitCashAmount) || 0
+      const numPos = Number(splitPosAmount) || 0
+      const numPayment = Number(paymentAmount) || 0
+
       if (effectiveRemainingToPay > 0 && paymentOption !== "OPEN_ACCOUNT") {
         if (paymentOption === "SPLIT") {
-          if (splitCashAmount > 0) {
+          if (numCash > 0) {
             await apiClient.post("/payments", {
               invoiceId: invoiceRes.id,
               customerId: selectedCustomerId,
-              amount: Number(splitCashAmount),
+              amount: numCash,
               paymentMethod: "CASH",
               notes: notes.trim() || `Fatura #${invoiceRes.invoiceNumber} Nakit Tahsilat`,
             })
           }
-          if (splitPosAmount > 0) {
+          if (numPos > 0) {
             await apiClient.post("/payments", {
               invoiceId: invoiceRes.id,
               customerId: selectedCustomerId,
-              amount: Number(splitPosAmount),
+              amount: numPos,
               paymentMethod: "POS",
               posSlipNo: posSlipNo.trim() || undefined,
               notes: notes.trim() || `Fatura #${invoiceRes.invoiceNumber} POS / Kredi Kartı`,
             })
           }
-        } else if (paymentAmount > 0) {
+        } else if (numPayment > 0) {
           await apiClient.post("/payments", {
             invoiceId: invoiceRes.id,
             customerId: selectedCustomerId,
-            amount: Number(paymentAmount),
+            amount: numPayment,
             paymentMethod: paymentOption,
             posSlipNo: posSlipNo.trim() || undefined,
             notes: notes.trim() || `Fatura #${invoiceRes.invoiceNumber} Tahsilatı`,
@@ -427,8 +433,8 @@ export function CreateDirectInvoiceModal({
       const payDesc =
         effectiveRemainingToPay > 0 && paymentOption !== "OPEN_ACCOUNT"
           ? paymentOption === "SPLIT"
-            ? ` ve ${splitCashAmount.toLocaleString("tr-TR")} ₺ Nakit + ${splitPosAmount.toLocaleString("tr-TR")} ₺ POS tahsil edildi.`
-            : ` ve ${paymentAmount.toLocaleString("tr-TR")} ₺ tahsil edildi.`
+            ? ` ve ${numCash.toLocaleString("tr-TR")} ₺ Nakit + ${numPos.toLocaleString("tr-TR")} ₺ POS tahsil edildi.`
+            : ` ve ${numPayment.toLocaleString("tr-TR")} ₺ tahsil edildi.`
           : "."
 
       toast.success("Fatura başarıyla oluşturuldu!", {
@@ -1062,7 +1068,7 @@ export function CreateDirectInvoiceModal({
                         Parçalı Tahsilat Dağılımı (Nakit + Kart)
                       </label>
                       <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold font-mono">
-                        Toplam: {(splitCashAmount + splitPosAmount).toFixed(2)} / {effectiveRemainingToPay.toFixed(2)} ₺
+                        Toplam: {((Number(splitCashAmount) || 0) + (Number(splitPosAmount) || 0)).toFixed(2)} / {effectiveRemainingToPay.toFixed(2)} ₺
                       </span>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1076,9 +1082,21 @@ export function CreateDirectInvoiceModal({
                             min="0"
                             max={effectiveRemainingToPay}
                             step="0.01"
-                            value={splitCashAmount}
+                            placeholder="0.00"
+                            value={splitCashAmount === "" ? "" : splitCashAmount}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0
+                              const raw = e.target.value
+                              if (raw === "") {
+                                setSplitCashAmount("")
+                                setSplitPosAmount(effectiveRemainingToPay)
+                                return
+                              }
+                              const val = parseFloat(raw)
+                              if (isNaN(val)) {
+                                setSplitCashAmount("")
+                                return
+                              }
                               setSplitCashAmount(val)
                               const cardRemainder = Math.max(
                                 0,
@@ -1101,9 +1119,21 @@ export function CreateDirectInvoiceModal({
                             min="0"
                             max={effectiveRemainingToPay}
                             step="0.01"
-                            value={splitPosAmount}
+                            placeholder="0.00"
+                            value={splitPosAmount === "" ? "" : splitPosAmount}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
-                              const val = parseFloat(e.target.value) || 0
+                              const raw = e.target.value
+                              if (raw === "") {
+                                setSplitPosAmount("")
+                                setSplitCashAmount(effectiveRemainingToPay)
+                                return
+                              }
+                              const val = parseFloat(raw)
+                              if (isNaN(val)) {
+                                setSplitPosAmount("")
+                                return
+                              }
                               setSplitPosAmount(val)
                               const cashRemainder = Math.max(
                                 0,
@@ -1125,8 +1155,15 @@ export function CreateDirectInvoiceModal({
                         type="text"
                         placeholder="Örn: 984512"
                         value={posSlipNo}
-                        onChange={(e) => setPosSlipNo(e.target.value)}
-                        className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                        onChange={(e) =>
+                          setPosSlipNo(
+                            e.target.value
+                              .toUpperCase()
+                              .replace(/[^A-Z0-9-]/g, "")
+                              .slice(0, 16)
+                          )
+                        }
+                        className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none uppercase font-mono"
                       />
                     </div>
                   </div>
@@ -1146,8 +1183,18 @@ export function CreateDirectInvoiceModal({
                         min="0.01"
                         max={effectiveRemainingToPay}
                         step="0.01"
-                        value={paymentAmount}
-                        onChange={(e) => setPaymentAmount(parseFloat(e.target.value) || 0)}
+                        placeholder="0.00"
+                        value={paymentAmount === "" ? "" : paymentAmount}
+                        onFocus={(e) => e.target.select()}
+                        onChange={(e) => {
+                          const raw = e.target.value
+                          if (raw === "") {
+                            setPaymentAmount("")
+                            return
+                          }
+                          const val = parseFloat(raw)
+                          setPaymentAmount(isNaN(val) ? "" : val)
+                        }}
                         className="w-full h-10 px-3 pr-10 rounded-xl border border-emerald-500/30 bg-white dark:bg-slate-900 text-xs font-mono font-bold text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
                       />
                       <span className="absolute right-3 top-2.5 text-xs font-bold text-slate-400">₺</span>
@@ -1162,8 +1209,15 @@ export function CreateDirectInvoiceModal({
                           type="text"
                           placeholder="Örn: 984512"
                           value={posSlipNo}
-                          onChange={(e) => setPosSlipNo(e.target.value)}
-                          className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none"
+                          onChange={(e) =>
+                            setPosSlipNo(
+                              e.target.value
+                                .toUpperCase()
+                                .replace(/[^A-Z0-9-]/g, "")
+                                .slice(0, 16)
+                            )
+                          }
+                          className="w-full h-9 px-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-900 dark:text-slate-100 focus:outline-none uppercase font-mono"
                         />
                       </div>
                     )}

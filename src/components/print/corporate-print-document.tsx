@@ -3,7 +3,7 @@
 import * as React from "react"
 import Image from "next/image"
 import { useTenantSettings } from "@/features/settings/api/use-settings"
-import { cn } from "@/lib/utils"
+import { cn, resolveMediaUrl } from "@/lib/utils"
 
 export interface CorporatePrintDocumentProps {
   /** Belge Ana Başlığı (örn. "CARİ HESAP EKSTRESİ", "FATURA", "İŞ EMRİ TESLİM FORMU") */
@@ -83,7 +83,7 @@ export function CorporatePrintDocument({
             <div className="flex items-center gap-3">
               {tenant?.logoUrl ? (
                 <img
-                  src={tenant.logoUrl}
+                  src={resolveMediaUrl(tenant.logoUrl)}
                   alt={companyName}
                   style={{
                     maxHeight: `${tenant.logoHeight || 48}px`,

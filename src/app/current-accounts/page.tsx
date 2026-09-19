@@ -13,13 +13,16 @@ import {
   TrendingDown,
   FileSpreadsheet,
   Receipt,
+  SlidersHorizontal,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { ManualCollectionModal } from "@/features/billing/components/manual-collection-modal"
 import { CariHistoryModal } from "@/features/billing/components/cari-history-modal"
 import { DailyReconciliationModal } from "@/features/billing/components/daily-reconciliation-modal"
+import { SetCreditLimitModal } from "@/features/billing/components/set-credit-limit-modal"
 import { CurrentAccount, PaymentMethod } from "@/features/billing/types"
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 import { cn } from "@/lib/utils"
 
 export default function CurrentAccountsPage() {
@@ -39,6 +42,11 @@ export default function CurrentAccountsPage() {
     account: CurrentAccount | null
   }>({ isOpen: false, account: null })
 
+  const [limitModalState, setLimitModalState] = React.useState<{
+    isOpen: boolean
+    account: CurrentAccount | null
+  }>({ isOpen: false, account: null })
+
   const { data: apiAccounts } = useCurrentAccounts()
   const createPaymentMutation = useCreatePayment()
 
@@ -53,7 +61,8 @@ export default function CurrentAccountsPage() {
         customerType: a.customer?.type === 'CORPORATE' ? 'corporate' : 'individual',
         companyTitle: a.customer?.companyTitle,
         balance: Number(a.balance),
-        creditLimit: Number(a.creditLimit || 15000),
+        creditLimit: Number(a.creditLimit ?? 0),
+        isBlocked: Boolean(a.isBlocked),
         totalDebits: Number(a.totalDebits || a.totalDebit || 0),
         totalCredits: Number(a.totalCredits || a.totalCredit || 0),
         lastActivityDate: a.lastTransactionAt || new Date().toISOString(),
@@ -85,12 +94,12 @@ export default function CurrentAccountsPage() {
     .filter((a) => a.balance < 0)
     .reduce((sum, a) => sum + Math.abs(a.balance), 0)
   const totalCredits = accounts.reduce((sum, a) => sum + a.totalCredits, 0)
-  const exceededCount = accounts.filter((a) => a.balance > a.creditLimit).length
+  const exceededCount = accounts.filter((a) => a.creditLimit > 0 && a.balance > a.creditLimit).length
   const totalAccountsCount = accounts.length
 
   const filteredAccounts = React.useMemo(() => {
     return accounts.filter((a) => {
-      if (filterType === "exceeded" && a.balance <= a.creditLimit) return false
+      if (filterType === "exceeded" && (a.creditLimit <= 0 || a.balance <= a.creditLimit)) return false
       if (filterType === "has_balance" && a.balance <= 0) return false
       if (filterType === "has_advance" && a.balance >= 0) return false
 
@@ -302,7 +311,7 @@ export default function CurrentAccountsPage() {
                 </tr>
               ) : (
                 filteredAccounts.map((acc) => {
-                  const isExceeded = acc.balance > acc.creditLimit
+                  const isExceeded = acc.creditLimit > 0 && acc.balance > acc.creditLimit
                   return (
                     <tr
                       key={acc.customerId}
@@ -311,9 +320,16 @@ export default function CurrentAccountsPage() {
                     >
                       {/* Customer Name / Company */}
                       <td className="py-4 px-4 sm:px-6">
-                        <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                          {acc.companyTitle || acc.customerName}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                            {acc.companyTitle || acc.customerName}
+                          </p>
+                          {acc.isBlocked && (
+                            <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-rose-500/10 text-rose-600 border border-rose-500/20">
+                              BLOKELİ
+                            </span>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 mt-0.5 text-[10px] text-slate-400">
                           {acc.companyTitle && <span>Yetkili: {acc.customerName} •</span>}
                           <span>{acc.customerPhone}</span>
@@ -321,8 +337,27 @@ export default function CurrentAccountsPage() {
                       </td>
 
                       {/* Credit Limit */}
-                      <td className="py-4 px-4 font-mono text-slate-500 text-xs">
-                        {acc.creditLimit.toLocaleString("tr-TR")} ₺
+                      <td
+                        className="py-4 px-4 font-mono text-xs"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setLimitModalState({ isOpen: true, account: acc })
+                        }}
+                      >
+                        <div className="inline-flex items-center gap-1.5 group/limit cursor-pointer">
+                          {acc.creditLimit > 0 ? (
+                            <span className="font-bold text-slate-700 dark:text-slate-300">
+                              {acc.creditLimit.toLocaleString("tr-TR")} ₺
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              Limitsiz
+                            </span>
+                          )}
+                          <span className="opacity-0 group-hover/limit:opacity-100 text-[10px] text-indigo-600 dark:text-indigo-400 underline transition-opacity">
+                            Ayarla
+                          </span>
+                        </div>
                       </td>
 
                       {/* Total Debits */}
@@ -352,10 +387,20 @@ export default function CurrentAccountsPage() {
 
                       {/* Risk Badge */}
                       <td className="py-4 px-4">
-                        {isExceeded ? (
+                        {acc.isBlocked ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                            <AlertTriangle size={11} />
+                            <span>Hesap Blokeli</span>
+                          </span>
+                        ) : isExceeded ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                             <AlertTriangle size={11} />
                             <span>Limit Aşıldı (+{(acc.balance - acc.creditLimit).toLocaleString("tr-TR")} ₺)</span>
+                          </span>
+                        ) : acc.creditLimit > 0 && acc.balance > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                            <ShieldCheck size={11} />
+                            <span>Kalan: {(acc.creditLimit - acc.balance).toLocaleString("tr-TR")} ₺</span>
                           </span>
                         ) : acc.balance > 0 ? (
                           <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
@@ -378,6 +423,23 @@ export default function CurrentAccountsPage() {
                       {/* Actions */}
                       <td className="py-4 px-4 sm:px-6 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="inline-flex items-center gap-1.5">
+                          {acc.balance > 0 && acc.customerPhone && (
+                            <a
+                              href={`https://wa.me/${(() => {
+                                const clean = acc.customerPhone.replace(/\D/g, "");
+                                return clean.startsWith("90") ? clean : clean.startsWith("0") ? `9${clean}` : `90${clean}`;
+                              })()}?text=${encodeURIComponent(
+                                `Sayın ${acc.companyTitle || acc.customerName},\nWorksAuto servis sistemimizdeki cari hesabınızda ${acc.balance.toLocaleString("tr-TR")} ₺ açık bakiye bulunmaktadır.\nÖdeme ve hesap mutabakatı için bizimle iletişime geçebilirsiniz.\nİyi çalışmalar dileriz.`
+                              )}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="h-8 w-8 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center transition-colors cursor-pointer"
+                              title="WhatsApp ile Bakiye Hatırlatması Gönder"
+                            >
+                              <WhatsAppIcon size={14} />
+                            </a>
+                          )}
+
                           {acc.balance > 0 && (
                             <button
                               type="button"
@@ -389,6 +451,16 @@ export default function CurrentAccountsPage() {
                               <span>Tahsilat</span>
                             </button>
                           )}
+
+                          <button
+                            type="button"
+                            onClick={() => setLimitModalState({ isOpen: true, account: acc })}
+                            className="h-8 px-2 rounded-lg border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-[11px] font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                            title="Kredi Limiti ve Bloke Ayarı"
+                          >
+                            <SlidersHorizontal size={13} />
+                            <span className="hidden sm:inline">Limit</span>
+                          </button>
 
                           <button
                             type="button"
@@ -416,6 +488,18 @@ export default function CurrentAccountsPage() {
         account={collectionModalState.account}
         onClose={() => setCollectionModalState({ isOpen: false, account: null })}
         onSuccess={handleApplyCollection}
+      />
+
+      {/* Set Credit Limit Modal */}
+      <SetCreditLimitModal
+        isOpen={limitModalState.isOpen}
+        account={limitModalState.account}
+        onClose={() => setLimitModalState({ isOpen: false, account: null })}
+        onSuccess={() => {
+          if (limitModalState.account) {
+            // optimistically or query invalidation handled
+          }
+        }}
       />
 
       {/* Cari History Modal */}

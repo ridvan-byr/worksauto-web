@@ -26,7 +26,11 @@ export function resolveMediaUrl(url?: string | null): string {
     url.startsWith("data:") ||
     url.startsWith("blob:") ||
     url.startsWith("http://") ||
-    url.startsWith("https://")
+    url.startsWith("https://") ||
+    url.startsWith("/brand/") ||
+    url.startsWith("/icons/") ||
+    url.startsWith("/images/") ||
+    url.startsWith("/favicon")
   ) {
     return url
   }
@@ -43,12 +47,13 @@ export function resolveMediaUrl(url?: string | null): string {
     path = `/${path}`
   }
 
-  // In browser/client, NEXT_PUBLIC_API_URL might be "http://localhost:4000/api/v1" or "/api/v1"
-  const apiBase = (process.env.NEXT_PUBLIC_API_URL || "/api/v1").replace(/\/$/, "")
-
-  if (apiBase.startsWith("http://") || apiBase.startsWith("https://")) {
-    return `${apiBase}${path}`
+  // In browser/client, always use same-origin relative path /api/v1 so that Next rewrites
+  // and reverse proxies route the media request without CORS or loopback address space blocking.
+  if (typeof window !== "undefined") {
+    return `/api/v1${path}`
   }
 
-  return `/api/v1${path}`
+  const isDocker = Boolean(process.env.HOSTNAME === "0.0.0.0" || process.env.API_INTERNAL_URL)
+  const serverApi = process.env.API_INTERNAL_URL || (isDocker ? "http://api:4000/api/v1" : "http://localhost:4000/api/v1")
+  return `${serverApi.replace(/\/$/, "")}${path}`
 }

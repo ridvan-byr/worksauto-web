@@ -18,6 +18,8 @@ import {
   triggerDownloadBlob,
   ExportColumnDef,
   LOGO_CONFIG,
+  AestheticExcelSheetDef,
+  CellLinkInfo,
 } from "../utils/aesthetic-excel"
 import { cn } from "@/lib/utils"
 
@@ -31,6 +33,13 @@ export interface ExcelExportModalProps {
   data: Record<string, unknown>[]
   availableColumns: ExportColumnDef[]
   authorName?: string
+  linkResolver?: (
+    rowItem: Record<string, unknown>,
+    colKey: string,
+    rowIndex: number
+  ) => CellLinkInfo | undefined
+  secondarySheet?: AestheticExcelSheetDef
+  sheets?: AestheticExcelSheetDef[]
 }
 
 export function ExcelExportModal({
@@ -43,6 +52,9 @@ export function ExcelExportModal({
   data,
   availableColumns,
   authorName,
+  linkResolver,
+  secondarySheet,
+  sheets,
 }: ExcelExportModalProps) {
   const { user } = useAuth()
   const effectiveAuthor = authorName && authorName !== "WorksAuto Yetkili"
@@ -112,10 +124,18 @@ export function ExcelExportModal({
         columns: activeColumns,
         data,
         author: effectiveAuthor,
+        linkResolver,
+        secondarySheet,
+        sheets,
       })
 
       triggerDownloadBlob(blob, cleanFileName)
-      toast.success(`${data.length} kayıt kurumsal Excel formatında başarıyla indirildi.`)
+      const totalCount = data.length + (secondarySheet?.data.length || 0)
+      toast.success(
+        secondarySheet
+          ? `${data.length} ${sheetName} ve ${secondarySheet.data.length} ${secondarySheet.sheetName} kaydı köprülü Excel formatında başarıyla indirildi.`
+          : `${totalCount} kayıt kurumsal Excel formatında başarıyla indirildi.`
+      )
       onClose()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Excel dosyası oluşturulurken bir hata oluştu."
@@ -196,18 +216,24 @@ export function ExcelExportModal({
           {/* Quick Features Info Pills */}
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60">
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Toplam Kayıt</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">
+                {secondarySheet ? sheetName : "Toplam Kayıt"}
+              </span>
               <span className="text-xs font-bold text-slate-900 dark:text-slate-100 font-mono">{data.length} Satır</span>
             </div>
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60">
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Dahil Sütunlar</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">
+                {secondarySheet ? secondarySheet.sheetName : "Dahil Sütunlar"}
+              </span>
               <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                {selectedColumnKeys.length} / {availableColumns.length} Sütun
+                {secondarySheet ? `${secondarySheet.data.length} Satır` : `${selectedColumnKeys.length} / ${availableColumns.length} Sütun`}
               </span>
             </div>
             <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800/60">
-              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Tasarım Düzeni</span>
-              <span className="text-xs font-bold text-sky-600 dark:text-sky-400 font-mono">A4 / Fit to Page</span>
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 block font-medium">Tasarım & Bağlantı</span>
+              <span className="text-xs font-bold text-sky-600 dark:text-sky-400 font-mono">
+                {secondarySheet ? "2 Sekme (Köprülü)" : "A4 / Fit to Page"}
+              </span>
             </div>
           </div>
 
@@ -474,7 +500,13 @@ export function ExcelExportModal({
             ) : (
               <>
                 <Download size={15} />
-                <span>Excel Olarak İndir ({data.length} Kayıt)</span>
+                <span>
+                  Excel Olarak İndir (
+                  {secondarySheet
+                    ? `${data.length + secondarySheet.data.length} Kayıt • 2 Sayfa`
+                    : `${data.length} Kayıt`}
+                  )
+                </span>
               </>
             )}
           </Button>
