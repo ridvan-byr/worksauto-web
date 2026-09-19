@@ -25,7 +25,7 @@ import { BrandLogo } from "@/components/shared/brand-logo"
 import { useAuth } from "@/features/auth/auth-context"
 import { useDashboardSummary } from "@/features/dashboard/api/use-dashboard-summary"
 import { restartPageAnimation } from "@/lib/animation"
-import { cn } from "@/lib/utils"
+import { cn, resolveMediaUrl } from "@/lib/utils"
 
 import type { LucideIcon } from "lucide-react"
 
@@ -122,7 +122,7 @@ export function AppSidebar({
             : undefined,
         children: [
           {
-            title: "Müşteri Rehberi",
+            title: "Müşteri Listesi",
             href: "/customers",
             icon: Users,
           },
@@ -419,9 +419,19 @@ export function AppSidebar({
           {!collapsed ? (
             <div className="flex items-center justify-between p-2 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 transition-opacity duration-200">
               <div className="flex items-center gap-2.5 overflow-hidden">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 font-bold text-xs border border-sky-500/20">
-                  {tenant?.name ? tenant.name.slice(0, 2).toUpperCase() : "WA"}
-                </div>
+                {tenant?.logoUrl ? (
+                  <div className="w-8 h-8 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-0.5 flex items-center justify-center shrink-0 overflow-hidden shadow-xs">
+                    <img
+                      src={resolveMediaUrl(tenant.logoUrl)}
+                      alt={tenant.title || tenant.name}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-sky-500/15 text-sky-500 flex items-center justify-center shrink-0 font-bold text-xs border border-sky-500/20">
+                    {tenant?.name ? tenant.name.slice(0, 2).toUpperCase() : "WA"}
+                  </div>
+                )}
                 <div className="overflow-hidden flex-1">
                   <p className="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">
                     {tenant?.name || "Servis Paneli"}
@@ -443,12 +453,25 @@ export function AppSidebar({
             </div>
           ) : (
             <div className="flex flex-col items-center gap-1.5">
-              <div
-                className="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-500 flex items-center justify-center font-bold text-xs border border-sky-500/20 cursor-pointer hover:scale-105 transition-transform"
-                title={`${tenant?.name || "Servis"} (Pro Plan)`}
-              >
-                {tenant?.name ? tenant.name.slice(0, 2).toUpperCase() : "WA"}
-              </div>
+              {tenant?.logoUrl ? (
+                <div
+                  className="w-10 h-10 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-1 flex items-center justify-center shrink-0 overflow-hidden cursor-pointer hover:scale-105 transition-transform shadow-xs"
+                  title={`${tenant?.name || "Servis"} (Pro Plan)`}
+                >
+                  <img
+                    src={resolveMediaUrl(tenant.logoUrl)}
+                    alt={tenant.title || tenant.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div
+                  className="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-500 flex items-center justify-center font-bold text-xs border border-sky-500/20 cursor-pointer hover:scale-105 transition-transform"
+                  title={`${tenant?.name || "Servis"} (Pro Plan)`}
+                >
+                  {tenant?.name ? tenant.name.slice(0, 2).toUpperCase() : "WA"}
+                </div>
+              )}
               <button
                 type="button"
                 onClick={logout}

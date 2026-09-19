@@ -92,9 +92,21 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
-    // Strip trailing /api/v1 to reach the root WebSocket host
-    const socketHost = rawApiUrl.replace(/\/api\/v1\/?$/, "");
+    let socketHost = "";
+    if (typeof window !== "undefined") {
+      if (window.location.hostname.endsWith(".test")) {
+        socketHost = "https://api.worksauto.test";
+      } else if (window.location.hostname.includes("worksauto.com.tr")) {
+        socketHost = "https://api.worksauto.com.tr";
+      } else if (window.location.protocol === "https:") {
+        socketHost = window.location.origin;
+      } else {
+        const rawApiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
+        socketHost = rawApiUrl.replace(/\/api\/v1\/?$/, "") || "http://localhost:4000";
+      }
+    } else {
+      socketHost = "http://api:4000";
+    }
 
     const newSocket = io(`${socketHost}/events`, {
       auth: (cb) => {
@@ -241,6 +253,15 @@ export function SocketProvider({ children }: { children: React.ReactNode }) {
       queryClient.invalidateQueries({ queryKey: ["current-accounts"] });
       queryClient.invalidateQueries({ queryKey: ["invoices"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+    });
+
+    // 6. Tenant Profile & Logo Broadcast
+    newSocket.on("tenant:updated", (payload: Record<string, unknown>) => {
+      queryClient.invalidateQueries({ queryKey: ["tenant-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["tenant-profile"] });
+      if (typeof window !== "undefined" && payload) {
+        window.dispatchEvent(new CustomEvent("worksauto:tenant-updated", { detail: payload }));
+      }
     });
 
     socketRef.current = newSocket;

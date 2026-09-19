@@ -39,6 +39,10 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   allowedDevOrigins: [
+    "panel.worksauto.com.tr",
+    "admin.worksauto.com.tr",
+    "api.worksauto.com.tr",
+    "*.worksauto.com.tr",
     "panel.worksauto.test",
     "admin.worksauto.test",
     "api.worksauto.test",

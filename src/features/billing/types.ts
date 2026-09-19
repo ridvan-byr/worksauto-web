@@ -83,6 +83,7 @@ export interface CariMovementItem {
 }
 
 export interface CurrentAccount {
+  id?: string
   customerId: string
   customerName: string
   customerPhone: string
@@ -91,6 +92,9 @@ export interface CurrentAccount {
   totalDebits: number // Toplam Borç
   totalCredits: number // Toplam Ödenen
   balance: number // Kalan Açık Bakiye
-  creditLimit: number // Tanımlı Borç Limiti
+  creditLimit: number // Tanımlı Borç Limiti (0 = Sınırsız)
+  isBlocked?: boolean // Cari Hesap Blokesi
+  lastActivityDate?: string
   movements: CariMovementItem[]
 }
+

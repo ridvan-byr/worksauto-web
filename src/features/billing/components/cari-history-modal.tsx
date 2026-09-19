@@ -5,6 +5,7 @@ import { createPortal } from "react-dom"
 import { X, Printer, AlertTriangle, ShieldCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { CorporatePrintDocument } from "@/components/print/corporate-print-document"
+import { WhatsAppIcon } from "@/components/icons/whatsapp-icon"
 import { CurrentAccount } from "../types"
 import { cn } from "@/lib/utils"
 
@@ -32,7 +33,7 @@ export function CariHistoryModal({ isOpen, account, onClose }: CariHistoryModalP
 
   if (!isOpen || !mounted || !account) return null
 
-  const isLimitExceeded = account.balance > account.creditLimit
+  const isLimitExceeded = account.creditLimit > 0 && account.balance > account.creditLimit
 
   const handlePrint = () => {
     const originalTitle = document.title
@@ -61,20 +62,48 @@ export function CariHistoryModal({ isOpen, account, onClose }: CariHistoryModalP
             <span className="text-xs font-mono font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
               CARİ EKSTRE
             </span>
-            {isLimitExceeded ? (
+            {account.isBlocked ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
                 <AlertTriangle size={12} />
-                <span>Borç Limiti Aşıldı!</span>
+                <span>Hesap Blokeli</span>
+              </span>
+            ) : isLimitExceeded ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                <AlertTriangle size={12} />
+                <span>Borç Limiti Aşıldı! (+{(account.balance - account.creditLimit).toLocaleString("tr-TR")} ₺)</span>
+              </span>
+            ) : account.creditLimit > 0 ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <ShieldCheck size={12} />
+                <span>Limit: {account.creditLimit.toLocaleString("tr-TR")} ₺</span>
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                 <ShieldCheck size={12} />
-                <span>Limit Dahilinde</span>
+                <span>Limitsiz Cari</span>
               </span>
             )}
           </div>
 
           <div className="flex items-center gap-2">
+            {account.customerPhone && (
+              <a
+                href={`https://wa.me/${(() => {
+                  const clean = account.customerPhone.replace(/\D/g, "");
+                  return clean.startsWith("90") ? clean : clean.startsWith("0") ? `9${clean}` : `90${clean}`;
+                })()}?text=${encodeURIComponent(
+                  `Sayın ${account.companyTitle || account.customerName},\nWorksAuto cari hesap hareket dökümünüz incelenmiştir.\nGüncel Bakiyeniz: ${account.balance.toLocaleString("tr-TR")} ₺ (${account.balance > 0 ? "Açık Borç" : account.balance < 0 ? "Avans Alacağı" : "Kapalı"})\n\nDetaylı hesap mutabakatı için lütfen bilgi veriniz.\nİyi çalışmalar dileriz.`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="h-9 px-3 text-xs font-semibold gap-1.5 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center justify-center transition-colors cursor-pointer"
+                title="WhatsApp ile Bakiye/Ekstre Özeti Gönder"
+              >
+                <WhatsAppIcon size={14} />
+                <span className="hidden sm:inline">WhatsApp</span>
+              </a>
+            )}
+
             <Button
               type="button"
               variant="outline"

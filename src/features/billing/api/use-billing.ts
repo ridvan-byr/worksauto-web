@@ -126,6 +126,7 @@ export interface CurrentAccountRecord {
   totalDebits?: number;
   totalCredits?: number;
   creditLimit?: number;
+  isBlocked?: boolean;
   balance: number;
   lastTransactionAt?: string;
   movements?: Array<Record<string, unknown>>;
@@ -235,3 +236,31 @@ export function useCustomerCurrentAccount(customerId?: string) {
     enabled: !!customerId,
   });
 }
+
+export function useUpdateCreditLimit() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      customerId,
+      creditLimit,
+      isBlocked,
+    }: {
+      customerId: string;
+      creditLimit: number;
+      isBlocked?: boolean;
+    }) =>
+      apiClient.patch(`/current-accounts/customer/${customerId}/limit`, {
+        creditLimit,
+        isBlocked,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['current-accounts'] });
+      toast.success('Müşteri kredi limiti güncellendi.');
+    },
+    onError: (err: unknown) => {
+      const message = err instanceof Error ? err.message : 'Kredi limiti güncellenemedi.';
+      toast.error(message);
+    },
+  });
+}
+

@@ -6,6 +6,10 @@ export function getApiBaseUrl(): string {
       }
       return '/api/v1';
     }
+    // Local dev same-origin rewrite support
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return '/api/v1';
+    }
   }
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 }
@@ -108,7 +112,11 @@ export class ApiError extends Error {
   }
 }
 
-export async function refreshAccessToken(): Promise<string> {
+export async function refreshAccessToken(forceRefresh = false): Promise<string> {
+  if (!forceRefresh && inMemoryTenantToken) {
+    return inMemoryTenantToken;
+  }
+
   if (refreshPromise) {
     return refreshPromise;
   }
@@ -145,8 +153,8 @@ export async function refreshAccessToken(): Promise<string> {
       const data = await response.json();
       setAccessToken(data.accessToken);
       setSessionCookie(true);
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
+      if (typeof window !== 'undefined' && data.refreshToken) {
+        localStorage.setItem(REFRESH_TOKEN_KEY, data.refreshToken);
       }
 
       return data.accessToken;
@@ -246,7 +254,7 @@ export async function apiRequest<T = unknown>(
       if (!isRefreshing) {
         isRefreshing = true;
         try {
-          const newToken = await refreshAccessToken();
+          const newToken = await refreshAccessToken(true);
           isRefreshing = false;
           processQueue(null);
 

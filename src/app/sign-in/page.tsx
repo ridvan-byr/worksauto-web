@@ -11,7 +11,6 @@ import {
   MessageSquare,
   AlertCircle,
   HelpCircle,
-  CheckCircle2,
   RefreshCw,
 } from "lucide-react"
 import { BrandLogo } from "@/components/shared/brand-logo"
@@ -30,6 +29,7 @@ export default function SignInPage() {
   const [otpCode, setOtpCode] = React.useState("")
   const [errorStatus, setErrorStatus] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
+  const [isResending, setIsResending] = React.useState(false)
   const [timerSeconds, setTimerSeconds] = React.useState(59)
   const [showSupportModal, setShowSupportModal] = React.useState(false)
   const [isSuspendedParam, setIsSuspendedParam] = React.useState(false)
@@ -108,16 +108,42 @@ export default function SignInPage() {
     setIsLoading(false)
 
     if (res.success) {
+      if (res.trustedDevice) {
+        toast.success("Güvenilir cihaz doğrulandı!", {
+          description: "Atölye yönetim paneline yönlendiriliyorsunuz...",
+        })
+        return
+      }
+
       setStep(2)
       setTimerSeconds(59)
-      toast.success("Doğrulama kodu gönderildi.", {
-        description: `${phone} numarasına 6 haneli SMS kodu iletildi.`,
+      toast.success(res.message || "Doğrulama kodu gönderildi.", {
+        description: `${phone} numarasına 6 haneli doğrulama kodu iletildi.`,
+        duration: 10000,
       })
-      if (process.env.NODE_ENV === "development" && res.devCode) {
-        setOtpCode(res.devCode)
-      }
     } else {
       const err = res.error || "Telefon numarası sistemde bulunamadı veya yetkisiz."
+      setErrorStatus(err)
+      toast.error(err)
+    }
+  }
+
+  // Resend OTP handler: sends new code and shows toast with generated code
+  const handleResendOtp = async () => {
+    if (isResending || timerSeconds > 0) return
+    setIsResending(true)
+    setErrorStatus(null)
+    setOtpCode("")
+    const res = await sendOtp(phone)
+    setIsResending(false)
+    if (res.success) {
+      setTimerSeconds(59)
+      toast.success(res.message || "Yeni doğrulama kodu gönderildi.", {
+        description: `${phone} numarasına yeni 6 haneli doğrulama kodu iletildi.`,
+        duration: 10000,
+      })
+    } else {
+      const err = res.error || "Doğrulama kodu gönderilemedi."
       setErrorStatus(err)
       toast.error(err)
     }
@@ -149,14 +175,6 @@ export default function SignInPage() {
     }
   }
 
-  // Quick fill test shortcut
-  const handleQuickSelect = (testPhone: string, code: string = "123456") => {
-    setErrorStatus(null)
-    setPhone(testPhone)
-    setOtpCode(code)
-    setStep(2)
-    setTimerSeconds(59)
-  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row bg-slate-50 dark:bg-[#070b12] text-slate-900 dark:text-slate-100">
@@ -307,7 +325,7 @@ export default function SignInPage() {
                 </div>
               )}
 
-              <form action="javascript:void(0);" onSubmit={handlePhoneSubmit} className="space-y-4">
+              <form onSubmit={handlePhoneSubmit} className="space-y-4" suppressHydrationWarning>
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                     Yetkili Cep Telefonu Numarası
@@ -406,20 +424,11 @@ export default function SignInPage() {
                 </div>
               ) : null}
 
-              <form action="javascript:void(0);" onSubmit={handleOtpSubmit} className="space-y-4">
+              <form onSubmit={handleOtpSubmit} className="space-y-4" suppressHydrationWarning>
                 <div className="space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      6 Haneli SMS Kodu
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setOtpCode("123456")}
-                      className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 hover:underline cursor-pointer"
-                    >
-                      Kodu Doldur (123456)
-                    </button>
-                  </div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    6 Haneli SMS Kodu
+                  </label>
 
                   <input
                     type="text"
@@ -453,14 +462,12 @@ export default function SignInPage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => {
-                        setTimerSeconds(59)
-                        setOtpCode("")
-                      }}
-                      className="text-sky-600 dark:text-sky-400 font-semibold flex items-center gap-1 cursor-pointer hover:underline"
+                      onClick={handleResendOtp}
+                      disabled={isResending}
+                      className="text-sky-600 dark:text-sky-400 font-semibold flex items-center gap-1 cursor-pointer hover:underline disabled:opacity-50"
                     >
-                      <RefreshCw size={12} />
-                      <span>Tekrar Kod Gönder</span>
+                      <RefreshCw size={12} className={isResending ? "animate-spin" : ""} />
+                      <span>{isResending ? "Gönderiliyor..." : "Tekrar Kod Gönder"}</span>
                     </button>
                   )}
                 </div>
@@ -494,51 +501,7 @@ export default function SignInPage() {
             </p>
           </div>
 
-          {/* Quick Real DB Accounts Switcher (PostgreSQL Live Seed) */}
-          <div className="pt-3 border-t border-slate-200/80 dark:border-slate-800/80 space-y-2">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">
-              Canlı Test & Hızlı Giriş Hesapları (PostgreSQL)
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleQuickSelect("0 (555) 111 22 33", "123456")}
-                className="p-2.5 rounded-xl border border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10 text-sky-600 dark:text-sky-400 text-left transition-all cursor-pointer"
-              >
-                <p className="font-bold flex items-center gap-1">
-                  <CheckCircle2 size={12} className="text-emerald-500" />
-                  <span>Bayar Oto Servis</span>
-                </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">Rıdvan Bayar (Patron / Yönetici)</p>
-              </button>
 
-              <button
-                type="button"
-                onClick={() => handleQuickSelect("0 (555) 222 33 44", "123456")}
-                className="p-2.5 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-600 dark:text-amber-400 text-left transition-all cursor-pointer"
-              >
-                <p className="font-bold flex items-center gap-1">
-                  <Sparkles size={12} className="text-amber-500" />
-                  <span>Teknisyen Paneli</span>
-                </p>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400">Mehmet Usta (Atölye Teknisyeni)</p>
-              </button>
-            </div>
-
-            <div className="flex justify-center">
-              <button
-                type="button"
-                onClick={() => {
-                  setStep(1)
-                  setErrorStatus(null)
-                  setPhone("0 (555) 000 00 00")
-                }}
-                className="text-[11px] text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline cursor-pointer"
-              >
-                Kayıtsız Numara Testi (Hata simülasyonu)
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 

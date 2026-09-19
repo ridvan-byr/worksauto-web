@@ -22,7 +22,7 @@ import {
   Layers,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 
 import { PlateBadge } from "@/features/customers/components/plate-badge"
 import { WorkOrderStatusBadge } from "@/features/work-orders/components/work-order-status-badge"
@@ -335,226 +335,277 @@ export default function DashboardPage() {
         {isTechnician ? (
           <>
             {/* 1: Shift Hours / Status */}
-            <Card className="hover:border-sky-500/40 transition-all cursor-default h-full bg-gradient-to-br from-sky-50/20 via-white to-white dark:from-sky-950/10 dark:via-slate-900 dark:to-slate-900">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bugünkü Vardiyam</p>
-                  <p className="text-2xl font-bold text-sky-600 dark:text-sky-400 font-mono tracking-tight">
-                    {todayShift.time}
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
-                    <Clock size={12} className="text-sky-500" />
-                    <span>{todayShift.label}</span>
-                    {user?.mechanic?.assignedLift && (
-                      <span className="text-slate-400 font-semibold">• {user.mechanic.assignedLift}</span>
-                    )}
-                  </p>
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:border-sky-500/40 dark:hover:border-sky-500/40 transition-all duration-200 p-4.5 flex flex-col justify-between group">
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-500 to-sky-400/30" />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                  Bugünkü Vardiyam
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                  <Clock size={16} />
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20">
-                  <Clock size={22} />
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="my-2.5">
+                <p className="text-xl sm:text-[21px] font-black text-sky-600 dark:text-sky-400 font-mono tracking-tight whitespace-nowrap">
+                  {todayShift.time}
+                </p>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-sky-500 shrink-0 animate-pulse" />
+                <span className="truncate">{todayShift.label}</span>
+                {user?.mechanic?.assignedLift && (
+                  <span className="text-slate-400 dark:text-slate-500 font-semibold shrink-0">• {user.mechanic.assignedLift}</span>
+                )}
+              </div>
+            </div>
 
             {/* 2: Annual Leave Balance */}
-            <Card className="hover:border-indigo-500/40 transition-all cursor-default h-full bg-gradient-to-br from-indigo-50/20 via-white to-white dark:from-indigo-950/10 dark:via-slate-900 dark:to-slate-900">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Yıllık İzin Bakiyem</p>
-                  <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400 font-mono">
-                    {userLeaveBalance.remainingDays} Gün
-                  </p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
-                    <Calendar size={12} className="text-indigo-500" />
-                    <span>{userLeaveBalance.usedDays} gün kullanıldı / {userLeaveBalance.totalDays} gün hak</span>
-                  </p>
+            <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:border-indigo-500/40 dark:hover:border-indigo-500/40 transition-all duration-200 p-4.5 flex flex-col justify-between group">
+              <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-indigo-400/30" />
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                  Yıllık İzin Bakiyem
+                </span>
+                <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                  <Calendar size={16} />
                 </div>
-                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20">
-                  <Calendar size={22} />
-                </div>
-              </CardContent>
-            </Card>
+              </div>
+              <div className="my-2.5 flex items-baseline gap-1.5">
+                <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 font-mono tracking-tight">
+                  {userLeaveBalance.remainingDays}
+                </span>
+                <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Gün Kaldı</span>
+              </div>
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                <Calendar size={12} className="text-indigo-500 shrink-0" />
+                <span className="truncate">{userLeaveBalance.usedDays} gün kullanıldı / {userLeaveBalance.totalDays} hak</span>
+              </div>
+            </div>
 
             {/* 3: Assigned Active Work Orders */}
-            <Link href="/work-orders" className="group">
-              <Card className="hover:border-amber-500/40 transition-all cursor-pointer h-full">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Üzerimdeki İşler</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                      {myAssignedOrdersCount} Aktif İş
-                    </p>
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
-                      <Wrench size={12} /> Bana zimmetli iş emirleri
-                    </p>
+            <Link href="/work-orders" className="group h-full">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:border-amber-500/40 dark:hover:border-amber-500/40 hover:-translate-y-0.5 transition-all duration-200 p-4.5 flex flex-col justify-between h-full">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-500 to-amber-400/30" />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    Üzerimdeki İşler
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                    <Wrench size={16} />
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-105 transition-transform">
-                    <Wrench size={22} />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="my-2.5 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                    {myAssignedOrdersCount}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Aktif İş</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <Wrench size={12} className="shrink-0" />
+                  <span className="truncate">Bana zimmetli iş emirleri</span>
+                </div>
+              </div>
             </Link>
 
             {/* 4: Total Active Workshop Vehicles */}
-            <Link href="/work-orders" className="group">
-              <Card className="hover:border-sky-500/40 transition-all cursor-pointer h-full">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Atölye (Genel Durum)</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                      {activeWOCount} Araç
-                    </p>
-                    <p className="text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1 font-medium">
-                      <Layers size={12} /> {inProgressCount} liftte, {queueCount} sırada
-                    </p>
+            <Link href="/work-orders" className="group h-full">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:border-sky-500/40 dark:hover:border-sky-500/40 hover:-translate-y-0.5 transition-all duration-200 p-4.5 flex flex-col justify-between h-full">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-blue-500 to-sky-400/30" />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    Atölye (Genel Durum)
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                    <Layers size={16} />
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20 group-hover:scale-105 transition-transform">
-                    <Layers size={22} />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="my-2.5 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                    {activeWOCount}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Araç Serviste</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-sky-600 dark:text-sky-400 font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <Layers size={12} className="shrink-0" />
+                  <span className="truncate">{inProgressCount} liftte, {queueCount} sırada</span>
+                </div>
+              </div>
             </Link>
 
             {/* 5: Completed Work Orders */}
-            <Link href="/work-orders" className="group">
-              <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Tamamlanan İşler</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                      {recentOrders.filter((w) => w.status === "COMPLETED").length} Araç
-                    </p>
-                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                      <CheckCircle2 size={12} /> Teslimata hazır
-                    </p>
+            <Link href="/work-orders" className="group h-full">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:border-emerald-500/40 dark:hover:border-emerald-500/40 hover:-translate-y-0.5 transition-all duration-200 p-4.5 flex flex-col justify-between h-full">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-500 to-emerald-400/30" />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    Tamamlanan İşler
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                    <CheckCircle2 size={16} />
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
-                    <CheckCircle2 size={22} />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="my-2.5 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight">
+                    {recentOrders.filter((w) => w.status === "COMPLETED").length}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Araç Bitti</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <CheckCircle2 size={12} className="shrink-0" />
+                  <span className="truncate">Teslimata hazır araçlar</span>
+                </div>
+              </div>
             </Link>
           </>
         ) : (
           <>
             {/* Daily Cash & Revenue Card (for Service Managers / Owners) */}
-            <Link href="/reports" className="group">
-              <Card className="hover:border-emerald-500/40 transition-all cursor-pointer h-full bg-gradient-to-br from-emerald-50/20 via-white to-white dark:from-emerald-950/10 dark:via-slate-900 dark:to-slate-900">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bugünkü Kasa / Ciro</p>
-                    <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400 font-mono">
-                      ₺ {todayRevenue.toLocaleString("tr-TR")}
-                    </p>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1 font-medium">
-                      <TrendingUp size={12} className="text-emerald-500" /> Bu ay: ₺{monthlyRevenue.toLocaleString("tr-TR")}
-                    </p>
+            <Link href="/reports" className="group h-full">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:border-emerald-500/40 dark:hover:border-emerald-500/40 hover:-translate-y-0.5 transition-all duration-200 p-4.5 flex flex-col justify-between h-full">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-400/30" />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    Bugünkü Kasa / Ciro
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                    <CreditCard size={16} />
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-500/20 group-hover:scale-105 transition-transform">
-                    <CreditCard size={22} />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="my-2.5">
+                  <p className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono tracking-tight whitespace-nowrap truncate">
+                    ₺ {todayRevenue.toLocaleString("tr-TR")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <TrendingUp size={12} className="text-emerald-500 shrink-0" />
+                  <span className="truncate">Bu ay: ₺{monthlyRevenue.toLocaleString("tr-TR")}</span>
+                </div>
+              </div>
             </Link>
 
             {/* Appointments Card */}
-            <Link href="/appointments" className="group">
-              <Card className="hover:border-sky-500/40 transition-all cursor-pointer h-full">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Kayıtlı Randevular</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                      {todayAppCount} Randevu
-                    </p>
-                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                      <CheckCircle2 size={12} /> Takvim slotları aktif
-                    </p>
+            <Link href="/appointments" className="group h-full">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:border-sky-500/40 dark:hover:border-sky-500/40 hover:-translate-y-0.5 transition-all duration-200 p-4.5 flex flex-col justify-between h-full">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-sky-500 to-sky-400/30" />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    Kayıtlı Randevular
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                    <Calendar size={16} />
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-sky-500/10 text-sky-600 dark:text-sky-400 flex items-center justify-center border border-sky-500/20 group-hover:scale-105 transition-transform">
-                    <Calendar size={22} />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="my-2.5 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                    {todayAppCount}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Randevu</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <CheckCircle2 size={12} className="shrink-0" />
+                  <span className="truncate">Takvim slotları aktif</span>
+                </div>
+              </div>
             </Link>
 
             {/* Workshop In-Progress Card */}
-            <Link href="/work-orders" className="group">
-              <Card className="hover:border-amber-500/40 transition-all cursor-pointer h-full">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Atölye (Aktif Araçlar)</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                      {activeWOCount} İş Emri
-                    </p>
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
-                      <Clock size={12} /> {inProgressCount} liftte, {queueCount} sırada
-                    </p>
+            <Link href="/work-orders" className="group h-full">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:border-amber-500/40 dark:hover:border-amber-500/40 hover:-translate-y-0.5 transition-all duration-200 p-4.5 flex flex-col justify-between h-full">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-amber-500 to-amber-400/30" />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    Atölye (Aktif Araçlar)
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                    <Wrench size={16} />
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20 group-hover:scale-105 transition-transform">
-                    <Wrench size={22} />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="my-2.5 flex items-baseline gap-1.5">
+                  <span className="text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight">
+                    {activeWOCount}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">İş Emri</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <Clock size={12} className="shrink-0" />
+                  <span className="truncate">{inProgressCount} liftte, {queueCount} sırada</span>
+                </div>
+              </div>
             </Link>
 
             {/* Critical Stock Alert Card */}
-            <Link href="/inventory" className="group">
-              <Card
-                className={cn(
-                  "transition-all cursor-pointer h-full",
-                  criticalStock > 0 ? "hover:border-rose-500/40" : "hover:border-emerald-500/40"
-                )}
-              >
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                      {criticalStock > 0 ? "Kritik Stok Uyarısı" : "Stok Durumu"}
-                    </p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                      {criticalStock} Parça
-                    </p>
-                    {criticalStock > 0 ? (
-                      <p className="text-[11px] text-rose-600 dark:text-rose-400 flex items-center gap-1 font-medium">
-                        <AlertCircle size={12} /> Sipariş eşiği aşıldı
-                      </p>
-                    ) : (
-                      <p className="text-[11px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-medium">
-                        <CheckCircle2 size={12} /> Stok seviyeleri yeterli
-                      </p>
-                    )}
+            <Link href="/inventory" className="group h-full">
+              <div className={cn(
+                "relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 p-4.5 flex flex-col justify-between h-full",
+                criticalStock > 0 ? "hover:border-rose-500/40 dark:hover:border-rose-500/40" : "hover:border-emerald-500/40 dark:hover:border-emerald-500/40"
+              )}>
+                <div className={cn(
+                  "absolute top-0 inset-x-0 h-1 bg-gradient-to-r",
+                  criticalStock > 0 ? "from-rose-500 to-rose-400/30" : "from-emerald-500 to-emerald-400/30"
+                )} />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    {criticalStock > 0 ? "Kritik Stok Uyarısı" : "Stok Durumu"}
+                  </span>
+                  <div className={cn(
+                    "w-8 h-8 rounded-xl flex items-center justify-center border shrink-0 group-hover:scale-105 transition-transform",
+                    criticalStock > 0
+                      ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
+                      : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
+                  )}>
+                    <Package size={16} />
                   </div>
-                  <div
-                    className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center border group-hover:scale-105 transition-transform",
-                      criticalStock > 0
-                        ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20"
-                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                    )}
-                  >
-                    <Package size={22} />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="my-2.5 flex items-baseline gap-1.5">
+                  <span className={cn(
+                    "text-2xl font-black font-mono tracking-tight",
+                    criticalStock > 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-900 dark:text-slate-100"
+                  )}>
+                    {criticalStock}
+                  </span>
+                  <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">Parça</span>
+                </div>
+                <div className={cn(
+                  "flex items-center gap-1.5 text-[11px] font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80",
+                  criticalStock > 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"
+                )}>
+                  {criticalStock > 0 ? (
+                    <>
+                      <AlertCircle size={12} className="shrink-0" />
+                      <span className="truncate">Sipariş eşiği aşıldı</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={12} className="shrink-0" />
+                      <span className="truncate">Stok seviyeleri yeterli</span>
+                    </>
+                  )}
+                </div>
+              </div>
             </Link>
 
             {/* Bekleyen Alacak Card */}
-            <Link href="/invoices" className="group">
-              <Card className="hover:border-indigo-500/40 transition-all cursor-pointer h-full">
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Bekleyen Alacak</p>
-                    <p className="text-2xl font-bold text-slate-900 dark:text-slate-100 font-mono">
-                      {totalReceivables.toLocaleString("tr-TR")} ₺
-                    </p>
-                    <p className="text-[11px] text-sky-600 dark:text-sky-400 flex items-center gap-1 font-medium">
-                      <TrendingUp size={12} /> {openInvoicesCount} açık fatura
-                    </p>
+            <Link href="/invoices" className="group h-full">
+              <div className="relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800/80 bg-white/90 dark:bg-slate-900/90 shadow-xs hover:shadow-md hover:border-indigo-500/40 dark:hover:border-indigo-500/40 hover:-translate-y-0.5 transition-all duration-200 p-4.5 flex flex-col justify-between h-full">
+                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-indigo-500 to-indigo-400/30" />
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 truncate">
+                    Bekleyen Alacak
+                  </span>
+                  <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 shrink-0 group-hover:scale-105 transition-transform">
+                    <Receipt size={16} />
                   </div>
-                  <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-500/20 group-hover:scale-105 transition-transform">
-                    <Receipt size={22} />
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+                <div className="my-2.5">
+                  <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-slate-100 font-mono tracking-tight whitespace-nowrap truncate">
+                    {totalReceivables.toLocaleString("tr-TR")} ₺
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] text-sky-600 dark:text-sky-400 font-medium truncate pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                  <TrendingUp size={12} className="shrink-0" />
+                  <span className="truncate">{openInvoicesCount} açık fatura</span>
+                </div>
+              </div>
             </Link>
           </>
         )}

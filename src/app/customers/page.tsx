@@ -36,6 +36,34 @@ import { formatFuelType, formatTransmission } from "@/features/vehicles/utils/ve
 import { cn } from "@/lib/utils"
 import { toast } from "@/components/ui/sonner"
 
+const CUSTOMER_EXPORT_COLUMNS: ExportColumnDef[] = [
+  { key: "fullName", label: "Müşteri Adı Soyadı", type: "text" },
+  { key: "type", label: "Müşteri Türü", type: "text" },
+  { key: "companyTitle", label: "Firma Ünvanı", type: "text" },
+  { key: "phone", label: "Telefon Numarası", type: "phone" },
+  { key: "email", label: "E-Posta", type: "text" },
+  { key: "taxNumber", label: "Vergi / TC No", type: "text" },
+  { key: "taxOffice", label: "Vergi Dairesi", type: "text" },
+  { key: "balance", label: "Cari Bakiye", type: "currency" },
+  { key: "vehiclePlates", label: "Kayıtlı Plakalar", type: "text" },
+  { key: "vehicleCount", label: "Araç Sayısı", type: "number" },
+  { key: "status", label: "Kayıt Durumu", type: "text" },
+]
+
+const VEHICLE_EXPORT_COLUMNS: ExportColumnDef[] = [
+  { key: "plate", label: "Plaka", type: "plate" },
+  { key: "brand", label: "Marka", type: "text" },
+  { key: "model", label: "Model", type: "text" },
+  { key: "year", label: "Model Yılı", type: "number" },
+  { key: "kilometer", label: "Güncel KM", type: "number" },
+  { key: "fuelType", label: "Yakıt Türü", type: "text" },
+  { key: "transmission", label: "Vites Türü", type: "text" },
+  { key: "color", label: "Renk", type: "text" },
+  { key: "vin", label: "Şasi No (VIN)", type: "text" },
+  { key: "customerName", label: "Araç Sahibi", type: "text" },
+  { key: "customerPhone", label: "Sahip Telefonu", type: "phone" },
+]
+
 export default function CustomersPage() {
   const queryClient = useQueryClient()
   const [mounted, setMounted] = React.useState(false)
@@ -82,6 +110,8 @@ export default function CustomersPage() {
           kilometer: v.currentKm ?? v.mileage ?? 0,
           fuelType: formatFuelType(v.fuelType),
           transmission: formatTransmission(v.transmission),
+          color: v.color || '',
+          vin: v.vin || '',
         })),
         appointments: [],
         workOrders: [],
@@ -167,20 +197,6 @@ export default function CustomersPage() {
 
   const [isExportModalOpen, setIsExportModalOpen] = React.useState(false)
 
-  const customerExportColumns: ExportColumnDef[] = [
-    { key: "fullName", label: "Müşteri Adı Soyadı", type: "text" },
-    { key: "type", label: "Müşteri Türü", type: "text" },
-    { key: "companyTitle", label: "Firma Ünvanı", type: "text" },
-    { key: "phone", label: "Telefon Numarası", type: "phone" },
-    { key: "email", label: "E-Posta", type: "text" },
-    { key: "taxNumber", label: "Vergi / TC No", type: "text" },
-    { key: "taxOffice", label: "Vergi Dairesi", type: "text" },
-    { key: "balance", label: "Cari Bakiye", type: "currency" },
-    { key: "vehiclePlates", label: "Kayıtlı Plakalar", type: "text" },
-    { key: "vehicleCount", label: "Araç Sayısı", type: "number" },
-    { key: "status", label: "Kayıt Durumu", type: "text" },
-  ]
-
   const exportData = React.useMemo(() => {
     return filteredCustomers.map((c) => ({
       fullName: `${c.name} ${c.surname}`.trim(),
@@ -191,11 +207,106 @@ export default function CustomersPage() {
       taxNumber: c.taxNumber || "",
       taxOffice: c.taxOffice || "",
       balance: c.balance,
-      vehiclePlates: c.vehicles.map((v) => v.plate).join(", "),
+      vehiclePlates: c.vehicles.map((v) => v.plate).join(" • "),
       vehicleCount: c.vehicles.length,
       status: c.isLead ? "Potansiyel Müşteri" : "Kayıtlı Müşteri",
     }))
   }, [filteredCustomers])
+
+  const { vehicleExportData, plateToVehicleRowMap } = React.useMemo(() => {
+    const vRows: Record<string, unknown>[] = []
+    const plateMap = new Map<string, number>()
+
+    filteredCustomers.forEach((c, cIdx) => {
+      const customerRow = 6 + cIdx
+      const ownerName =
+        c.type === "corporate" && c.companyTitle
+          ? c.companyTitle
+          : `${c.name} ${c.surname}`.trim()
+
+      ;(c.vehicles || []).forEach((v) => {
+        const vehicleRow = 6 + vRows.length
+        const cleanPlate = (v.plate || "").toUpperCase().replace(/\s+/g, "")
+        if (cleanPlate && !plateMap.has(cleanPlate)) {
+          plateMap.set(cleanPlate, vehicleRow)
+        }
+
+        vRows.push({
+          plate: (v.plate || "").toUpperCase(),
+          brand: v.brand || "-",
+          model: v.model || "-",
+          year: v.year || "-",
+          kilometer: v.kilometer || 0,
+          fuelType: v.fuelType || "-",
+          transmission: v.transmission || "-",
+          color: v.color || "-",
+          vin: v.vin || "-",
+          customerName: ownerName || "-",
+          customerPhone: c.phone || "-",
+          _customerId: c.id,
+          _customerRow: customerRow,
+        })
+      })
+    })
+
+    return {
+      vehicleExportData: vRows,
+      plateToVehicleRowMap: plateMap,
+    }
+  }, [filteredCustomers])
+
+  const customerLinkResolver = React.useCallback(
+    (rowItem: Record<string, unknown>, colKey: string) => {
+      if (colKey === "vehiclePlates") {
+        const rawPlates = String(rowItem.vehiclePlates || "").trim()
+        if (!rawPlates || rawPlates === "-") return undefined
+        const plates = rawPlates
+          .split(/[•,]/)
+          .map((p) => p.trim().toUpperCase().replace(/\s+/g, ""))
+          .filter(Boolean)
+        if (plates.length === 0) return undefined
+
+        const targetRow = plateToVehicleRowMap.get(plates[0])
+        if (targetRow) {
+          return {
+            targetSheet: "Araçlar",
+            targetCell: `A${targetRow}`,
+            tooltip: `'Araçlar' sayfasında ${plates[0]} detayına git`,
+          }
+        }
+      }
+      return undefined
+    },
+    [plateToVehicleRowMap]
+  )
+
+  const vehicleLinkResolver = React.useCallback(
+    (rowItem: Record<string, unknown>, colKey: string) => {
+      if (colKey === "customerName") {
+        const targetRow = rowItem._customerRow as number | undefined
+        if (targetRow) {
+          return {
+            targetSheet: "Müşteriler",
+            targetCell: `A${targetRow}`,
+            tooltip: `'Müşteriler' sayfasında müşteri kartına git`,
+          }
+        }
+      }
+      return undefined
+    },
+    []
+  )
+
+  const secondaryVehiclesSheet = React.useMemo(() => {
+    return {
+      sheetName: "Araçlar",
+      title: "KAYITLI ARAÇLAR LİSTESİ",
+      subtitle: "WorksAuto Müşteri Araç Filosu ve Teknik Özellikler Raporu",
+      columns: VEHICLE_EXPORT_COLUMNS,
+      data: vehicleExportData,
+      linkResolver: vehicleLinkResolver,
+    }
+  }, [vehicleExportData, vehicleLinkResolver])
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300 pb-12">
@@ -689,7 +800,9 @@ export default function CustomersPage() {
         sheetName="Müşteriler"
         defaultFileName={`WorksAuto_Musteri_Listesi_${new Date().toISOString().split("T")[0]}`}
         data={exportData}
-        availableColumns={customerExportColumns}
+        availableColumns={CUSTOMER_EXPORT_COLUMNS}
+        linkResolver={customerLinkResolver}
+        secondarySheet={secondaryVehiclesSheet}
       />
 
       {/* Delete Customer Confirmation Modal */}
